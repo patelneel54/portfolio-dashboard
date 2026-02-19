@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  portfolio:
+    build: .
+    container_name: portfolio-dashboard
+    ports:
+      - "8000:8000"
+    volumes:
+      - portfolio_data:/app/data
+    env_file:
+      - .env
+    environment:
+      - DATABASE_PATH=/app/data/portfolio.db
+    restart: unless-stopped
+
+volumes:
+  portfolio_data:

@@ -1,0 +1,169 @@
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { api } from '../hooks/useApi';
+import { C, MONO } from '../styles/theme';
+import OverviewTab from './OverviewTab';
+import AllocationTab from './AllocationTab';
+import PerformanceTab from './PerformanceTab';
+import ProjectionTab from './ProjectionTab';
+import TechnicalsTab from './TechnicalsTab';
+import ManageHoldings from './ManageHoldings';
+
+const TABS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'allocation', label: 'Allocation' },
+  { id: 'performance', label: 'Performance' },
+  { id: 'projection', label: 'Projections' },
+  { id: 'technicals', label: 'Technicals' },
+];
+
+const Stat = ({ label, value, sub, color }) => (
+  <div style={{ padding: '16px 20px', background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, minWidth: 140, flex: 1 }}>
+    <div style={{ fontSize: 11, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 600 }}>{label}</div>
+    <div style={{ fontSize: 24, fontWeight: 800, color: color || C.text, marginTop: 4, fontFamily: MONO }}>{value}</div>
+    {sub && <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{sub}</div>}
+  </div>
+);
+
+export default function Dashboard() {
+  const [activeTab, setActiveTab] = useState('overview');
+  const [data, setData] = useState(null);
+  const [settings, setSettings] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showManage, setShowManage] = useState(false);
+  const [showGuides, setShowGuides] = useState(true);
+  const navigate = useNavigate();
+
+  const fetchData = useCallback(async () => {
+    try {
+      const [holdingsData, settingsData] = await Promise.all([
+        api.getHoldings(),
+        api.getSettings(),
+      ]);
+      setData(holdingsData);
+      setSettings(settingsData);
+    } catch (err) {
+      console.error('Failed to fetch data:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await api.refreshPrices();
+      await fetchData();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>&#128200;</div>
+          <div style={{ color: C.textMuted, fontSize: 14 }}>Loading portfolio...</div>
+        </div>
+      </div>
+    );
+  }
+
+  const holdings = data?.holdings || [];
+  const totalValue = data?.total_value || 0;
+  const totalCost = data?.total_cost || 0;
+  const totalGL = data?.total_gain_loss || 0;
+  const totalGLPct = data?.total_gain_loss_pct || 0;
+  const etfTotal = holdings.filter(h => h.type === 'ETF').reduce((s, h) => s + h.market_value, 0);
+  const stockTotal = holdings.filter(h => h.type === 'Stock').reduce((s, h) => s + h.market_value, 0);
+
+  const fmtK = (v) => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v.toFixed(0)}`;
+
+  return (
+    <div style={{ padding: '16px 12px', maxWidth: 1200, margin: '0 auto', paddingTop: 'max(16px, env(safe-area-inset-top))', paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0, letterSpacing: -0.5, background: `linear-gradient(135deg, ${C.text}, ${C.accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            Portfolio Command Center
+          </h1>
+          <p style={{ color: C.textMuted, fontSize: 13, margin: '4px 0 0' }}>
+            {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <button onClick={() => setShowGuides(!showGuides)} style={{ background: showGuides ? C.accent + '22' : 'transparent', border: `1px solid ${showGuides ? C.accent : C.border}`, color: showGuides ? C.accent : C.textMuted, padding: '6px 10px', borderRadius: 8, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+            {showGuides ? 'Guides On' : 'Guides Off'}
+          </button>
+          <button onClick={handleRefresh} disabled={refreshing} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.textMuted, padding: '6px 10px', borderRadius: 8, fontSize: 11, cursor: 'pointer', fontWeight: 600, opacity: refreshing ? 0.5 : 1 }}>
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+          <button onClick={() => setShowManage(true)} style={{ background: C.accent + '22', border: `1px solid ${C.accent}`, color: C.accent, padding: '6px 10px', borderRadius: 8, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+            Manage
+          </button>
+          <button onClick={() => navigate('/settings')} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.textMuted, padding: '6px 10px', borderRadius: 8, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+            Settings
+          </button>
+        </div>
+      </div>
+
+      {/* Stats Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 20 }}>
+        <Stat label="Total Value" value={fmtK(totalValue)} sub={`Cost: ${fmtK(totalCost)}`} />
+        <Stat label="Total Gain" value={`${totalGL >= 0 ? '+' : ''}${fmtK(Math.abs(totalGL))}`} sub={`${totalGLPct >= 0 ? '+' : ''}${totalGLPct.toFixed(1)}% return`} color={totalGL >= 0 ? C.green : C.red} />
+        <Stat label="ETF / Stock" value={`${totalValue ? ((etfTotal / totalValue) * 100).toFixed(0) : 0}% / ${totalValue ? ((stockTotal / totalValue) * 100).toFixed(0) : 0}%`} sub={`${fmtK(etfTotal)} / ${fmtK(stockTotal)}`} color={C.blue} />
+        <Stat label="Positions" value={holdings.length} sub={`${holdings.filter(h => h.type === 'ETF').length} ETFs \u2022 ${holdings.filter(h => h.type === 'Stock').length} Stocks`} color={C.purple} />
+      </div>
+
+      {/* Tab Bar */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: C.card, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, overflowX: 'auto', WebkitOverflowScrolling: 'touch', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+        {TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              flex: '1 0 auto', padding: '10px 14px', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+              background: activeTab === tab.id ? C.accent : 'transparent',
+              color: activeTab === tab.id ? '#fff' : C.textMuted,
+              transition: 'all 0.2s',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      {holdings.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 60, color: C.textMuted }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>&#128188;</div>
+          <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>No Holdings Yet</div>
+          <div style={{ fontSize: 13, marginBottom: 20 }}>Add your first stock or ETF to get started.</div>
+          <button onClick={() => setShowManage(true)} style={{ background: C.accent, color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+            Add Holdings
+          </button>
+        </div>
+      ) : (
+        <>
+          {activeTab === 'overview' && <OverviewTab holdings={holdings} totalValue={totalValue} showGuides={showGuides} />}
+          {activeTab === 'allocation' && <AllocationTab holdings={holdings} totalValue={totalValue} showGuides={showGuides} />}
+          {activeTab === 'performance' && <PerformanceTab holdings={holdings} showGuides={showGuides} />}
+          {activeTab === 'projection' && <ProjectionTab totalValue={totalValue} settings={settings} showGuides={showGuides} />}
+          {activeTab === 'technicals' && <TechnicalsTab holdings={holdings} showGuides={showGuides} />}
+        </>
+      )}
+
+      {/* Footer */}
+      <div style={{ marginTop: 32, padding: '16px 0', borderTop: `1px solid ${C.border}`, fontSize: 11, color: C.textDim, textAlign: 'center' }}>
+        Technical levels are approximate. Not financial advice. Prices refresh daily at market close.
+      </div>
+
+      {/* Manage Holdings Modal */}
+      {showManage && <ManageHoldings holdings={holdings} onClose={() => setShowManage(false)} onUpdate={fetchData} />}
+    </div>
+  );
+}
