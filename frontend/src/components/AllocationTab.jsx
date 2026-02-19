@@ -1,35 +1,10 @@
 import { useMemo } from 'react';
-import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Legend, Tooltip, ResponsiveContainer } from 'recharts';
 import { C, TYPE_COLORS, MONO } from '../styles/theme';
 import PositionConcentration from './PositionConcentration';
+import DriftAnalysis from './DriftAnalysis';
 import GuidePanel from './GuidePanel';
 
-const DarkTooltip = ({ active, payload }) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div style={{ background: '#1e293b', border: `1px solid ${C.border}`, borderRadius: 8, padding: '10px 14px', fontSize: 12 }}>
-      {payload.map((p, i) => (
-        <div key={i} style={{ color: p.color || C.text, marginTop: 2 }}>
-          {p.name}: <span style={{ fontWeight: 700 }}>{p.value}%</span>
-        </div>
-      ))}
-    </div>
-  );
-};
-
 export default function AllocationTab({ holdings, totalValue, showGuides }) {
-  const radarData = useMemo(() => {
-    const top = [...holdings]
-      .filter(h => h.target_allocation > 1.5 || h.actual_allocation > 3)
-      .sort((a, b) => b.market_value - a.market_value)
-      .slice(0, 12);
-    return top.map(h => ({
-      ticker: h.ticker,
-      actual: +(h.actual_allocation || 0).toFixed(1),
-      target: +(h.target_allocation || 0).toFixed(1),
-    }));
-  }, [holdings]);
-
   const sortedByDrift = useMemo(() =>
     [...holdings].sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift)), [holdings]);
 
@@ -42,21 +17,8 @@ export default function AllocationTab({ holdings, totalValue, showGuides }) {
         {/* Position Concentration */}
         <PositionConcentration holdings={holdings} totalValue={totalValue} />
 
-        {/* Radar */}
-        <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
-          <h3 style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>Target vs Actual Allocation</h3>
-          <ResponsiveContainer width="100%" height={340}>
-            <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="72%">
-              <PolarGrid stroke={C.border} />
-              <PolarAngleAxis dataKey="ticker" tick={{ fill: C.text, fontSize: 11, fontWeight: 600 }} />
-              <PolarRadiusAxis tick={{ fill: C.textDim, fontSize: 9 }} domain={[0, 'auto']} />
-              <Radar name="Target" dataKey="target" stroke={C.green} fill={C.green} fillOpacity={0.15} strokeWidth={2} />
-              <Radar name="Actual" dataKey="actual" stroke={C.blue} fill={C.blue} fillOpacity={0.15} strokeWidth={2} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Tooltip content={DarkTooltip} />
-            </RadarChart>
-          </ResponsiveContainer>
-        </div>
+        {/* Drift Analysis */}
+        <DriftAnalysis holdings={holdings} totalValue={totalValue} />
       </div>
 
       {/* Full Holdings Table */}
