@@ -218,6 +218,115 @@ def _find_resistance_levels(df, count=3):
     return levels
 
 
+async def get_portfolio_performance() -> dict:
+    """Compute daily historical portfolio value and S&P 500 benchmark.
+
+    For each date in price_history, portfolio_value = sum(shares * close) for
+    every held ticker that has a price on that date.  Dates where not all
+    tickers have data are still included (partial sums) so we get the longest
+    possible history.
+
+    Benchmark uses ^GSPC (S&P 500 index) fetched via yfinance and cached in
+    price_history under the ticker '__BENCHMARK__'.
+    """
+    async with get_db() as db:
+        # 1. Get current holdings (ticker + shares)
+        cursor = await db.execute("SELECT ticker, shares FROM holdings")
+        holdings = {r["ticker"]: r["shares"] for r in await cursor.fetchall()}
+
+        if not holdings:
+            return {"dates": [], "portfolio_values": [], "benchmark_values": []}
+
+        # 2. Get all price history for held tickers
+        placeholders = ",".join("?" for _ in holdings)
+        cursor = await db.execute(
+            f"SELECT ticker, date, close FROM price_history "
+            f"WHERE ticker IN ({placeholders}) ORDER BY date",
+            list(holdings.keys()),
+        )
+        rows = await cursor.fetchall()
+
+    # Build {date: {ticker: close}} map
+    date_prices: dict[str, dict[str, float]] = {}
+    for r in rows:
+        date_prices.setdefault(r["date"], {})[r["ticker"]] = float(r["close"])
+
+    # Compute daily portfolio values
+    sorted_dates = sorted(date_prices.keys())
+    portfolio_values = []
+    for d in sorted_dates:
+        total = sum(
+            holdings[t] * date_prices[d][t]
+            for t in date_prices[d]
+            if t in holdings
+        )
+        portfolio_values.append(round(total, 2))
+
+    # 3. Benchmark data (S&P 500)
+    benchmark_map = await _get_benchmark_data(sorted_dates[0] if sorted_dates else None)
+    benchmark_values = [benchmark_map.get(d) for d in sorted_dates]
+
+    return {
+        "dates": sorted_dates,
+        "portfolio_values": portfolio_values,
+        "benchmark_values": benchmark_values,
+    }
+
+
+async def _get_benchmark_data(start_date: str | None) -> dict[str, float]:
+    """Return {date: close} for S&P 500, caching in price_history as __BENCHMARK__."""
+    if not start_date:
+        return {}
+
+    benchmark_ticker = "__BENCHMARK__"
+
+    async with get_db() as db:
+        cursor = await db.execute(
+            "SELECT date, close FROM price_history WHERE ticker = ? AND date >= ? ORDER BY date",
+            (benchmark_ticker, start_date),
+        )
+        rows = await cursor.fetchall()
+
+    # If we have recent data (within 3 days), use cache
+    if rows:
+        from datetime import datetime, timedelta
+        last_date = rows[-1]["date"]
+        if datetime.strptime(last_date, "%Y-%m-%d") >= datetime.now() - timedelta(days=3):
+            return {r["date"]: float(r["close"]) for r in rows}
+
+    # Fetch fresh from yfinance
+    def _fetch():
+        try:
+            t = yf.Ticker("^GSPC")
+            df = t.history(period="max", start=start_date)
+            if df is None or df.empty:
+                return None
+            return df
+        except Exception:
+            return None
+
+    df = await asyncio.to_thread(_fetch)
+    if df is None:
+        return {r["date"]: float(r["close"]) for r in rows} if rows else {}
+
+    # Store in DB
+    async with get_db() as db:
+        for idx, row in df.iterrows():
+            d = idx.strftime("%Y-%m-%d")
+            await db.execute(
+                "INSERT OR REPLACE INTO price_history (ticker, date, open, high, low, close, volume) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (benchmark_ticker, d, float(row["Open"]), float(row["High"]),
+                 float(row["Low"]), float(row["Close"]), int(row["Volume"])),
+            )
+        await db.commit()
+
+    result = {}
+    for idx, row in df.iterrows():
+        result[idx.strftime("%Y-%m-%d")] = round(float(row["Close"]), 2)
+    return result
+
+
 def _generate_note(ticker, price, rsi, trend, sma50, sma200):
     """Generate a brief technical note."""
     parts = []

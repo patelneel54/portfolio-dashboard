@@ -1,20 +1,7 @@
 import { useMemo } from 'react';
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { C, TICKER_COLORS, MONO } from '../styles/theme';
-
-const DarkTooltip = ({ active, payload, label }) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div style={{ background: '#1e293b', border: `1px solid ${C.border}`, borderRadius: 8, padding: '10px 14px', fontSize: 13 }}>
-      {label && <div style={{ color: C.textMuted, marginBottom: 4, fontWeight: 600 }}>{label}</div>}
-      {payload.map((p, i) => (
-        <div key={i} style={{ color: p.color || C.text, marginTop: 2 }}>
-          {p.name}: <span style={{ fontWeight: 700 }}>{typeof p.value === 'number' ? (Math.abs(p.value) >= 1000 ? `$${(p.value / 1000).toFixed(1)}k` : `$${p.value}`) : p.value}</span>
-        </div>
-      ))}
-    </div>
-  );
-};
+import PortfolioPerformanceChart from './PortfolioPerformanceChart';
 
 export default function OverviewTab({ holdings, totalValue }) {
   const allocationData = useMemo(() =>
@@ -26,21 +13,18 @@ export default function OverviewTab({ holdings, totalValue }) {
       color: TICKER_COLORS[i % TICKER_COLORS.length],
     })), [holdings, totalValue]);
 
-  const gainLossData = useMemo(() =>
-    holdings.map(h => ({
-      ticker: h.ticker,
-      gain: Math.round(h.gain_loss),
-      pct: h.gain_loss_pct.toFixed(1),
-      color: h.gain_loss >= 0 ? C.green : C.red,
-    })).sort((a, b) => b.gain - a.gain), [holdings]);
-
   const driftData = useMemo(() =>
     [...holdings].sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift)).slice(0, 8), [holdings]);
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-        {/* Allocation Pie */}
+      {/* Portfolio Performance Chart */}
+      <div style={{ marginBottom: 16 }}>
+        <PortfolioPerformanceChart />
+      </div>
+
+      {/* Allocation Pie */}
+      <div style={{ marginBottom: 16 }}>
         <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
           <h3 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>Allocation by Position</h3>
           <ResponsiveContainer width="100%" height={240}>
@@ -68,22 +52,6 @@ export default function OverviewTab({ holdings, totalValue }) {
               </span>
             ))}
           </div>
-        </div>
-
-        {/* Top Movers */}
-        <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
-          <h3 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>Top Movers (Gain/Loss $)</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={gainLossData.slice(0, 10)} layout="vertical" margin={{ left: 40, right: 20 }}>
-              <XAxis type="number" tick={{ fill: C.textDim, fontSize: 10 }} tickFormatter={v => `$${v >= 0 ? '' : '-'}${Math.abs(v) >= 1000 ? (Math.abs(v) / 1000).toFixed(1) + 'k' : Math.abs(v)}`} />
-              <YAxis type="category" dataKey="ticker" tick={{ fill: C.text, fontSize: 11, fontWeight: 600 }} width={45} />
-              <Tooltip content={DarkTooltip} />
-              <ReferenceLine x={0} stroke={C.textDim} />
-              <Bar dataKey="gain" radius={[0, 4, 4, 0]} barSize={16}>
-                {gainLossData.slice(0, 10).map((e, i) => <Cell key={i} fill={e.color} fillOpacity={0.8} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
         </div>
       </div>
 

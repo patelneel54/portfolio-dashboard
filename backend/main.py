@@ -20,6 +20,7 @@ from stock_service import (
     refresh_all_prices,
     fetch_price_history,
     get_technicals,
+    get_portfolio_performance,
     validate_ticker,
 )
 
@@ -265,6 +266,15 @@ async def update_settings(body: SettingsUpdate, _=Depends(require_auth)):
             )
         await db.commit()
     return {"status": "ok"}
+
+
+# ── Performance Route ──
+
+
+@app.get("/api/performance")
+async def performance_endpoint(_=Depends(require_auth)):
+    """Return daily historical portfolio values and S&P 500 benchmark."""
+    return await get_portfolio_performance()
 
 
 # ── Technicals Route ──
