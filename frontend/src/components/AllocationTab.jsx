@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
-import { Treemap, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Legend, Tooltip, ResponsiveContainer } from 'recharts';
+import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Legend, Tooltip, ResponsiveContainer } from 'recharts';
 import { C, TYPE_COLORS, MONO } from '../styles/theme';
+import PositionConcentration from './PositionConcentration';
 import GuidePanel from './GuidePanel';
 
 const DarkTooltip = ({ active, payload }) => {
@@ -17,15 +18,6 @@ const DarkTooltip = ({ active, payload }) => {
 };
 
 export default function AllocationTab({ holdings, totalValue, showGuides }) {
-  const treemapData = useMemo(() =>
-    [...holdings].sort((a, b) => b.market_value - a.market_value).map(h => ({
-      name: h.ticker,
-      value: h.market_value,
-      type: h.type,
-      pct: ((h.market_value / totalValue) * 100).toFixed(1),
-      dayChange: h.day_change_pct || 0,
-    })), [holdings, totalValue]);
-
   const radarData = useMemo(() => {
     const top = [...holdings]
       .filter(h => h.target_allocation > 1.5 || h.actual_allocation > 3)
@@ -47,37 +39,8 @@ export default function AllocationTab({ holdings, totalValue, showGuides }) {
       {showGuides && <GuidePanel guideKey="targetRadar" />}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16, marginBottom: 16 }}>
-        {/* Treemap */}
-        <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
-          <h3 style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>Position Size Treemap</h3>
-          {treemapData.length > 0 && (
-          <ResponsiveContainer width="100%" height={380}>
-            <Treemap data={treemapData} dataKey="value" nameKey="name" stroke={C.bg} strokeWidth={3} animationDuration={300}
-              content={({ x, y, width, height, name, pct, dayChange, depth }) => {
-                if (!width || !height || depth < 1 || !name) return <g />;
-                const change = typeof dayChange === 'number' ? dayChange : 0;
-                const isUp = change >= 0;
-                const fillBg = isUp ? '#0d503d' : '#6b1c1c';
-                const borderColor = isUp ? '#34d399' : '#f87171';
-                if (width < 30 || height < 25) return <g><rect x={x + 1.5} y={y + 1.5} width={Math.max(0, width - 3)} height={Math.max(0, height - 3)} fill={fillBg} stroke={borderColor} strokeWidth={1} rx={6} /></g>;
-                const showChange = width > 55 && height > 50;
-                return (
-                  <g>
-                    <rect x={x + 1.5} y={y + 1.5} width={Math.max(0, width - 3)} height={Math.max(0, height - 3)} fill={fillBg} stroke={borderColor} strokeWidth={1} rx={6} />
-                    <text x={x + width / 2} y={y + height / 2 - (showChange ? 10 : 2)} textAnchor="middle" dominantBaseline="central" fill="#ffffff" fontSize={11} fontWeight={300} fontFamily={MONO}>{name}</text>
-                    <text x={x + width / 2} y={y + height / 2 + (showChange ? 6 : 14)} textAnchor="middle" dominantBaseline="central" fill="#ffffff" fontSize={11} fontWeight={300} fontFamily={MONO}>{pct != null ? pct : ''}%</text>
-                    {showChange && <text x={x + width / 2} y={y + height / 2 + 22} textAnchor="middle" dominantBaseline="central" fill="#ffffff" fontSize={12} fontWeight={10} fontFamily={MONO}>{isUp ? '+' : ''}{change.toFixed(1)}%</text>}
-                  </g>
-                );
-              }}
-            />
-          </ResponsiveContainer>
-          )}
-          <div style={{ display: 'flex', gap: 20, marginTop: 14, fontSize: 11, color: C.textMuted }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 12, height: 12, background: '#0d503d', border: '1px solid #34d399', borderRadius: 3 }} /> Up today</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 12, height: 12, background: '#6b1c1c', border: '1px solid #f87171', borderRadius: 3 }} /> Down today</span>
-          </div>
-        </div>
+        {/* Position Concentration */}
+        <PositionConcentration holdings={holdings} totalValue={totalValue} />
 
         {/* Radar */}
         <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
