@@ -47,7 +47,7 @@ async def validate_ticker(ticker: str) -> dict | None:
 
 
 async def refresh_all_prices():
-    """Fetch current prices for all holdings."""
+    """Fetch current prices for all holdings and update price history."""
     async with get_db() as db:
         cursor = await db.execute("SELECT ticker FROM holdings")
         rows = await cursor.fetchall()
@@ -67,6 +67,13 @@ async def refresh_all_prices():
                 (info["price"], info["previous_close"], ticker),
             )
         await db.commit()
+
+    # Also refresh price history (recent 1 month) so technicals stay current
+    for ticker in tickers:
+        try:
+            await fetch_price_history(ticker, period="1mo")
+        except Exception:
+            continue
 
 
 def _fetch_prices_sync(tickers: list[str]) -> dict:
@@ -158,6 +165,12 @@ async def get_technicals(ticker: str) -> dict | None:
     sma50_val = float(df["sma50"].iloc[-1]) if pd.notna(df["sma50"].iloc[-1]) else None
     sma200_val = float(df["sma200"].iloc[-1]) if pd.notna(df["sma200"].iloc[-1]) else None
 
+    # Volume: current vs 30-day average
+    df["volume"] = df["volume"].astype(float)
+    current_volume = float(df["volume"].iloc[-1])
+    avg_volume_30 = float(df["volume"].tail(30).mean())
+    volume_vs_avg = round(((current_volume - avg_volume_30) / avg_volume_30) * 100, 1) if avg_volume_30 > 0 else 0.0
+
     # Support/Resistance from recent pivot highs/lows
     recent = df.tail(60)
     support_levels = _find_support_levels(recent)
@@ -173,7 +186,42 @@ async def get_technicals(ticker: str) -> dict | None:
         elif current > sma50_val:
             trend = "Bullish (LT)"
 
-    # Beta approximation (not available without market data, return None)
+    # Alert flags: meaningful threshold crossings
+    alerts = []
+    if rsi_val < 35:
+        alerts.append("RSI oversold")
+    if rsi_val > 75:
+        alerts.append("RSI overbought")
+    if support_levels and current <= support_levels[0] * 1.02:
+        alerts.append("Near support")
+    if resistance_levels and current >= resistance_levels[0] * 0.98:
+        alerts.append("Near resistance")
+    if sma50_val and sma200_val:
+        if sma50_val > sma200_val:
+            # Check if golden cross is recent (50d just crossed above 200d)
+            prev_sma50 = float(df["sma50"].iloc[-5]) if pd.notna(df["sma50"].iloc[-5]) else None
+            prev_sma200 = float(df["sma200"].iloc[-5]) if pd.notna(df["sma200"].iloc[-5]) else None
+            if prev_sma50 and prev_sma200 and prev_sma50 <= prev_sma200:
+                alerts.append("Golden cross")
+        elif sma50_val < sma200_val:
+            prev_sma50 = float(df["sma50"].iloc[-5]) if pd.notna(df["sma50"].iloc[-5]) else None
+            prev_sma200 = float(df["sma200"].iloc[-5]) if pd.notna(df["sma200"].iloc[-5]) else None
+            if prev_sma50 and prev_sma200 and prev_sma50 >= prev_sma200:
+                alerts.append("Death cross")
+
+    # Sentiment reasoning factors
+    signal_factors = []
+    if sma50_val:
+        signal_factors.append({"label": "50d SMA", "direction": "above" if current > sma50_val else "below"})
+    if sma200_val:
+        signal_factors.append({"label": "200d SMA", "direction": "above" if current > sma200_val else "below"})
+    if rsi_val < 30:
+        signal_factors.append({"label": "RSI", "direction": "oversold"})
+    elif rsi_val > 70:
+        signal_factors.append({"label": "RSI", "direction": "overbought"})
+    else:
+        signal_factors.append({"label": "RSI", "direction": "neutral"})
+
     return {
         "ticker": ticker,
         "price": round(current, 2),
@@ -185,6 +233,11 @@ async def get_technicals(ticker: str) -> dict | None:
         "resistance": resistance_levels,
         "trend": trend,
         "note": _generate_note(ticker, current, rsi_val, trend, sma50_val, sma200_val),
+        "volume": round(current_volume),
+        "avg_volume_30": round(avg_volume_30),
+        "volume_vs_avg": volume_vs_avg,
+        "alerts": alerts,
+        "signal_factors": signal_factors,
     }
 
 
