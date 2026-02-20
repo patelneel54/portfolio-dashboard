@@ -8,10 +8,12 @@ services:
       - "8000:8000"
     volumes:
       - portfolio_data:/app/data
-    env_file:
-      - .env
     environment:
       - DATABASE_PATH=/app/data/portfolio.db
+      - AUTH_PIN_HASH=${AUTH_PIN_HASH}
+      - JWT_SECRET=${JWT_SECRET}
+      - REFRESH_HOUR=${REFRESH_HOUR:-16}
+      - REFRESH_MINUTE=${REFRESH_MINUTE:-30}
     restart: unless-stopped
 
 volumes:
