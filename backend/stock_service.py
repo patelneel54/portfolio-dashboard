@@ -1,5 +1,6 @@
 import asyncio
 import time
+from datetime import datetime, timedelta
 import yfinance as yf
 import pandas as pd
 from database import get_db
@@ -251,6 +252,29 @@ async def get_technicals(ticker: str) -> dict | None:
             ticker, current, rsi_val, trend, sma50_val, sma200_val, alerts
         ),
     }
+
+
+async def get_price_history(ticker: str, period: str = "3m") -> list[dict]:
+    """Return OHLCV close history for a ticker filtered by period."""
+    period_days = {"1w": 7, "1m": 30, "3m": 90, "6m": 180, "1y": 365}
+    days = period_days.get(period.lower())
+
+    async with get_db() as db:
+        if days is None:
+            # MAX — return everything
+            cursor = await db.execute(
+                "SELECT date, close FROM price_history WHERE ticker = ? ORDER BY date",
+                (ticker,),
+            )
+        else:
+            cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+            cursor = await db.execute(
+                "SELECT date, close FROM price_history WHERE ticker = ? AND date >= ? ORDER BY date",
+                (ticker, cutoff),
+            )
+        rows = await cursor.fetchall()
+
+    return [{"date": row["date"], "close": round(float(row["close"]), 2)} for row in rows]
 
 
 def _find_support_levels(df, count=3):

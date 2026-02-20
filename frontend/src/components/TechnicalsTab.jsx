@@ -73,18 +73,122 @@ const VolumeIndicator = ({ volume, avgVolume, volumeVsAvg }) => {
   );
 };
 
-/* ── Price History Chart (replaces the old S/R strip) ── */
-const PriceHistoryChart = ({ data, support, resistance, sma50, sma200, price }) => {
-  if (!data || data.length === 0) return null;
+const PERIODS = ['1W', '1M', '3M', '6M', '1Y', 'MAX'];
 
-  const allLevels = [
-    ...data.map(d => d.close),
-    ...(support || []).slice(0, 2),
-    ...(resistance || []).slice(0, 2),
-    sma50, sma200,
-  ].filter(Boolean);
-  const minY = Math.min(...allLevels) * 0.97;
-  const maxY = Math.max(...allLevels) * 1.03;
+/* ── Period Selector ── */
+const PeriodSelector = ({ period, onPeriodChange }) => (
+  <div style={{ display: 'flex', gap: 2 }}>
+    {PERIODS.map(p => (
+      <button key={p} onClick={() => onPeriodChange(p)} style={{
+        padding: '3px 8px', borderRadius: 4, border: 'none', cursor: 'pointer',
+        fontSize: 10, fontWeight: 700, fontFamily: MONO,
+        background: period === p ? C.accent + '33' : 'transparent',
+        color: period === p ? C.accent : C.textDim,
+        transition: 'all 0.15s',
+      }}
+        onMouseEnter={e => { if (period !== p) e.currentTarget.style.color = C.text; }}
+        onMouseLeave={e => { if (period !== p) e.currentTarget.style.color = C.textDim; }}
+      >{p}</button>
+    ))}
+  </div>
+);
+
+/* ── Anti-collision nudger for pill labels ── */
+const CHART_INNER_H = 364; // 380 chart height − 12 top margin − 4 bottom margin
+
+const computeNudges = (items, minY, maxY) => {
+  if (items.length === 0) return {};
+  const range = maxY - minY;
+  if (range === 0) return {};
+  const toPixel = v => (1 - (v - minY) / range) * CHART_INNER_H;
+  const pts = items.map(item => ({ key: item.key, px: toPixel(item.value), nudgedPx: toPixel(item.value) }));
+  pts.sort((a, b) => a.nudgedPx - b.nudgedPx);
+  const MIN_GAP = 18;
+  for (let pass = 0; pass < 8; pass++) {
+    for (let i = 1; i < pts.length; i++) {
+      const gap = pts[i].nudgedPx - pts[i - 1].nudgedPx;
+      if (gap < MIN_GAP) {
+        const d = (MIN_GAP - gap) / 2;
+        pts[i - 1].nudgedPx -= d;
+        pts[i].nudgedPx += d;
+      }
+    }
+  }
+  return Object.fromEntries(pts.map(p => [p.key, p.nudgedPx - p.px]));
+};
+
+/* ── Pill Label SVG component for ReferenceLine ── */
+const PillLabel = ({ viewBox, text, color, align, pixelOffset = 0 }) => {
+  if (!viewBox) return null;
+  const { x, y, width } = viewBox;
+  const labelY = y + pixelOffset;
+  const PILL_H = 16, PAD_X = 5;
+  const textW = Math.ceil(text.length * 6.4);
+  const rectW = textW + PAD_X * 2;
+
+  const rectX     = align === 'right' ? x + width - rectW - 4 : x + 4;
+  const textX     = align === 'right' ? x + width - PAD_X - 4 : x + 4 + PAD_X;
+  const anchor    = align === 'right' ? 'end' : 'start';
+  const connX     = align === 'right' ? rectX : rectX + rectW;
+
+  return (
+    <g>
+      {Math.abs(pixelOffset) > 3 && (
+        <line x1={connX} y1={labelY} x2={connX} y2={y}
+          stroke={color} strokeWidth={1} strokeOpacity={0.35} strokeDasharray="2 2" />
+      )}
+      <rect x={rectX} y={labelY - PILL_H / 2} width={rectW} height={PILL_H} rx={3}
+        fill={color} fillOpacity={0.85} />
+      <text x={textX} y={labelY} textAnchor={anchor} dominantBaseline="middle"
+        fill="white" fontSize={10} fontWeight={700}
+        fontFamily="'JetBrains Mono', monospace">{text}</text>
+    </g>
+  );
+};
+
+/* ── Price History Chart (replaces the old S/R strip) ── */
+const PriceHistoryChart = ({ data, support, resistance, sma50, sma200, price, period, onPeriodChange, isLoading }) => {
+  if (!data || data.length === 0) return (
+    <div style={{ marginTop: 24, marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ fontSize: 11, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>
+          Price vs Key Levels
+        </div>
+        <PeriodSelector period={period} onPeriodChange={onPeriodChange} />
+      </div>
+      <div style={{ height: 380, background: '#0d1424', borderRadius: 8, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ fontSize: 11, color: C.textDim }}>{isLoading ? 'Loading…' : 'No data'}</span>
+      </div>
+    </div>
+  );
+
+  // Percentile-based Y-axis: keeps the normal trading zone expanded,
+  // clips outlier spikes that would otherwise compress the readable range.
+  const prices = data.map(d => d.close);
+  const sorted = [...prices].sort((a, b) => a - b);
+  const p5  = sorted[Math.floor(sorted.length * 0.05)];
+  const p95 = sorted[Math.floor(sorted.length * 0.95)];
+  const rangePad = (p95 - p5) * 0.15;
+
+  // Always keep current price + nearest S/R in view, even if outside p5-p95.
+  const anchors = [price, ...(support || []).slice(0, 1), ...(resistance || []).slice(0, 1)].filter(Boolean);
+  const minY = Math.min(p5 - rangePad, ...anchors);
+  const maxY = Math.max(p95 + rangePad, ...anchors);
+
+  // Build label items and compute anti-collision nudges
+  const leftItems = [
+    ...(support || []).slice(0, 2).map((s, i) => ({ key: `s${i}`, value: s, color: C.green, text: `S $${s.toFixed(0)}` })),
+    ...(resistance || []).slice(0, 2).map((r, i) => ({ key: `r${i}`, value: r, color: C.red, text: `R $${r.toFixed(0)}` })),
+  ].filter(l => l.value >= minY && l.value <= maxY);
+
+  const rightItems = [
+    sma50  ? { key: 'sma50',  value: sma50,  color: C.cyan,  text: `50d $${sma50.toFixed(0)}`   } : null,
+    sma200 ? { key: 'sma200', value: sma200, color: C.pink,  text: `200d $${sma200.toFixed(0)}` } : null,
+    { key: 'price', value: price, color: C.amber, text: `$${price.toFixed(2)}` },
+  ].filter(Boolean).filter(l => l.value >= minY && l.value <= maxY);
+
+  const leftNudges  = computeNudges(leftItems,  minY, maxY);
+  const rightNudges = computeNudges(rightItems, minY, maxY);
 
   const fmtDate = (dateStr) => {
     const d = new Date(dateStr + 'T00:00:00');
@@ -92,75 +196,94 @@ const PriceHistoryChart = ({ data, support, resistance, sma50, sma200, price }) 
   };
 
   return (
-    <div style={{ marginTop: 16, marginBottom: 16 }}>
-      <div style={{ fontSize: 10, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10, fontWeight: 600 }}>
-        Price vs Key Levels (60 days)
+    <div style={{ marginTop: 24, marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ fontSize: 11, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>
+          Price vs Key Levels — {period}
+        </div>
+        <PeriodSelector period={period} onPeriodChange={onPeriodChange} />
       </div>
-      <ResponsiveContainer width="100%" height={200}>
-        <AreaChart data={data} margin={{ top: 8, right: 12, left: 8, bottom: 0 }}>
+      <ResponsiveContainer width="100%" height={380}>
+        <AreaChart data={data} margin={{ top: 12, right: 16, left: 8, bottom: 4 }}>
           <defs>
             <linearGradient id="priceGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={C.accent} stopOpacity={0.15} />
+              <stop offset="0%" stopColor={C.accent} stopOpacity={0.22} />
               <stop offset="100%" stopColor={C.accent} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+          <CartesianGrid strokeDasharray="3 3" stroke={C.border} strokeOpacity={0.4} />
           <XAxis
             dataKey="date"
-            tick={{ fill: C.textDim, fontSize: 9 }}
+            tick={{ fill: C.textDim, fontSize: 11 }}
             tickFormatter={fmtDate}
             interval="preserveStartEnd"
           />
           <YAxis
             domain={[minY, maxY]}
-            tick={{ fill: C.textDim, fontSize: 9, fontFamily: MONO }}
+            tick={{ fill: C.textDim, fontSize: 11, fontFamily: MONO }}
             tickFormatter={v => `$${v.toFixed(0)}`}
-            width={52}
+            width={58}
           />
           <Tooltip content={({ active, payload, label }) => {
             if (!active || !payload?.length) return null;
+            const hovered = payload[0].value;
+            const levels = [
+              ...(support || []).slice(0, 2).map((s, i) => ({ label: i === 0 ? 'Support' : 'Support 2', value: s, color: C.green })),
+              ...(resistance || []).slice(0, 2).map((r, i) => ({ label: i === 0 ? 'Resistance' : 'Resistance 2', value: r, color: C.red })),
+              sma50  && { label: '50d SMA',  value: sma50,  color: C.cyan  },
+              sma200 && { label: '200d SMA', value: sma200, color: C.pink  },
+              { label: 'Current Price', value: price, color: C.amber },
+            ].filter(Boolean);
             return (
-              <div style={{ background: '#1e293b', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 10px', fontSize: 11 }}>
-                <div style={{ color: C.textDim, marginBottom: 2 }}>{fmtDate(label)}</div>
-                <div style={{ color: C.text, fontWeight: 700, fontFamily: MONO }}>${payload[0].value.toFixed(2)}</div>
+              <div style={{ background: '#1e293b', border: `1px solid ${C.border}`, borderRadius: 6, padding: '8px 12px', fontSize: 12, minWidth: 160 }}>
+                <div style={{ color: C.textDim, marginBottom: 4 }}>{fmtDate(label)}</div>
+                <div style={{ color: C.text, fontWeight: 800, fontFamily: MONO, marginBottom: 6 }}>${hovered.toFixed(2)}</div>
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  {levels.map(lvl => (
+                    <div key={lvl.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                      <span style={{ fontSize: 10, color: lvl.color, fontWeight: 600 }}>{lvl.label}</span>
+                      <span style={{ fontSize: 10, fontFamily: MONO, color: C.textMuted }}>${lvl.value.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             );
           }} />
 
           {/* Support lines */}
           {(support || []).slice(0, 2).map((s, i) => (
-            <ReferenceLine key={`s${i}`} y={s} stroke={C.green} strokeDasharray={i === 0 ? "0" : "4 4"} strokeWidth={i === 0 ? 1.5 : 1} strokeOpacity={i === 0 ? 0.8 : 0.4}
-              label={{ value: `S $${s.toFixed(0)}`, position: 'insideLeft', fill: C.green, fontSize: 9 }} />
+            <ReferenceLine key={`s${i}`} y={s} stroke={C.green} strokeDasharray={i === 0 ? "0" : "4 4"} strokeWidth={i === 0 ? 2.5 : 1.5} strokeOpacity={i === 0 ? 0.9 : 0.45}
+              label={(props) => <PillLabel {...props} text={`S $${s.toFixed(0)}`} color={C.green} align="left" pixelOffset={leftNudges[`s${i}`] ?? 0} />} />
           ))}
 
           {/* Resistance lines */}
           {(resistance || []).slice(0, 2).map((r, i) => (
-            <ReferenceLine key={`r${i}`} y={r} stroke={C.red} strokeDasharray={i === 0 ? "0" : "4 4"} strokeWidth={i === 0 ? 1.5 : 1} strokeOpacity={i === 0 ? 0.8 : 0.4}
-              label={{ value: `R $${r.toFixed(0)}`, position: 'insideLeft', fill: C.red, fontSize: 9 }} />
+            <ReferenceLine key={`r${i}`} y={r} stroke={C.red} strokeDasharray={i === 0 ? "0" : "4 4"} strokeWidth={i === 0 ? 2.5 : 1.5} strokeOpacity={i === 0 ? 0.9 : 0.45}
+              label={(props) => <PillLabel {...props} text={`R $${r.toFixed(0)}`} color={C.red} align="left" pixelOffset={leftNudges[`r${i}`] ?? 0} />} />
           ))}
 
           {/* SMA50 */}
           {sma50 && (
-            <ReferenceLine y={sma50} stroke={C.cyan} strokeDasharray="5 3" strokeWidth={1.5}
-              label={{ value: `50d $${sma50.toFixed(0)}`, position: 'insideRight', fill: C.cyan, fontSize: 9 }} />
+            <ReferenceLine y={sma50} stroke={C.cyan} strokeDasharray="5 3" strokeWidth={2}
+              label={(props) => <PillLabel {...props} text={`50d $${sma50.toFixed(0)}`} color={C.cyan} align="right" pixelOffset={rightNudges['sma50'] ?? 0} />} />
           )}
 
           {/* SMA200 */}
           {sma200 && (
-            <ReferenceLine y={sma200} stroke={C.pink} strokeDasharray="5 3" strokeWidth={1.5}
-              label={{ value: `200d $${sma200.toFixed(0)}`, position: 'insideRight', fill: C.pink, fontSize: 9 }} />
+            <ReferenceLine y={sma200} stroke={C.pink} strokeDasharray="5 3" strokeWidth={2}
+              label={(props) => <PillLabel {...props} text={`200d $${sma200.toFixed(0)}`} color={C.pink} align="right" pixelOffset={rightNudges['sma200'] ?? 0} />} />
           )}
 
           {/* Current price */}
-          <ReferenceLine y={price} stroke={C.amber} strokeWidth={2}
-            label={{ value: `$${price.toFixed(2)}`, position: 'right', fill: C.amber, fontSize: 10, fontWeight: 700 }} />
+          <ReferenceLine y={price} stroke={C.amber} strokeWidth={2.5}
+            label={(props) => <PillLabel {...props} text={`$${price.toFixed(2)}`} color={C.amber} align="right" pixelOffset={rightNudges['price'] ?? 0} />} />
 
-          <Area type="monotone" dataKey="close" stroke={C.accent} strokeWidth={2} fill="url(#priceGrad)" dot={false} />
+          <Area type="monotone" dataKey="close" stroke={C.accent} strokeWidth={2.5} fill="url(#priceGrad)" dot={false} />
         </AreaChart>
       </ResponsiveContainer>
 
       {/* Legend */}
-      <div style={{ display: 'flex', gap: 14, fontSize: 9, color: C.textMuted, marginTop: 6, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 16, fontSize: 10, color: C.textMuted, marginTop: 10, flexWrap: 'wrap' }}>
         <span><span style={{ display: 'inline-block', width: 12, height: 2, background: C.green, marginRight: 4, verticalAlign: 'middle' }} />Support</span>
         <span><span style={{ display: 'inline-block', width: 12, height: 2, background: C.red, marginRight: 4, verticalAlign: 'middle' }} />Resistance</span>
         <span><span style={{ display: 'inline-block', width: 12, height: 2, background: C.amber, marginRight: 4, verticalAlign: 'middle' }} />Current Price</span>
@@ -258,11 +381,14 @@ const ValuationCard = ({ data, loading: isLoading }) => {
 
 /* ── Alerts Summary Panel ── */
 const AlertsSummary = ({ techData, onSelectStock }) => {
-  const allAlerts = Object.entries(techData)
-    .flatMap(([ticker, t]) => (t.alerts || []).map(a => ({ ticker, alert: a })))
-    .filter(a => a.alert);
+  // Group alerts by ticker
+  const grouped = Object.entries(techData)
+    .filter(([, t]) => t.alerts && t.alerts.length > 0)
+    .map(([ticker, t]) => ({ ticker, alerts: t.alerts }));
 
-  if (allAlerts.length === 0) return null;
+  if (grouped.length === 0) return null;
+
+  const totalAlerts = grouped.reduce((n, g) => n + g.alerts.length, 0);
 
   const alertColor = (alert) => {
     if (alert.includes('oversold') || alert.includes('support')) return C.green;
@@ -271,32 +397,41 @@ const AlertsSummary = ({ techData, onSelectStock }) => {
     return C.amber;
   };
 
+  const shortLabel = (alert) =>
+    alert.replace(/^Near\s+/i, '').replace(/^RSI\s+/i, 'RSI ');
+
   return (
     <div style={{
       background: C.card, borderRadius: 12, border: `1px solid ${C.amber}33`,
-      padding: 16, marginBottom: 16,
+      padding: 12, marginBottom: 16,
     }}>
-      <div style={{ fontSize: 12, fontWeight: 700, color: C.amber, marginBottom: 10 }}>
-        Active Alerts ({allAlerts.length})
+      <div style={{ fontSize: 11, fontWeight: 700, color: C.amber, marginBottom: 8 }}>
+        Active Alerts ({totalAlerts}) — {grouped.length} ticker{grouped.length > 1 ? 's' : ''}
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {allAlerts.map((item, i) => {
-          const col = alertColor(item.alert);
-          return (
-            <div key={i} onClick={() => onSelectStock(item.ticker)} style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              padding: '5px 10px', borderRadius: 6, background: col + '0d',
-              border: `1px solid ${col}22`, cursor: 'pointer',
-              transition: 'background 0.15s',
-            }}
-              onMouseEnter={e => e.currentTarget.style.background = col + '1a'}
-              onMouseLeave={e => e.currentTarget.style.background = col + '0d'}
-            >
-              <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, color: C.text, minWidth: 48 }}>{item.ticker}</span>
-              <span style={{ fontSize: 11, color: col }}>{item.alert}</span>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 6 }}>
+        {grouped.map(({ ticker, alerts }) => (
+          <div key={ticker} onClick={() => onSelectStock(ticker)} style={{
+            padding: '6px 10px', borderRadius: 6, cursor: 'pointer',
+            background: '#0d1424', border: `1px solid ${C.border}`,
+            transition: 'border-color 0.15s',
+          }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = C.accent + '66'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
+          >
+            <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, color: C.text }}>{ticker}</span>
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 3 }}>
+              {alerts.map((a, i) => {
+                const col = alertColor(a);
+                return (
+                  <span key={i} style={{
+                    fontSize: 9, fontWeight: 600, padding: '1px 6px', borderRadius: 4,
+                    background: col + '18', color: col,
+                  }}>{shortLabel(a)}</span>
+                );
+              })}
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -351,17 +486,18 @@ const PositionSummary = ({ holding }) => {
   );
 };
 
-const TechnicalCard = ({ data, holding }) => {
+const TechnicalCard = ({ data, holding, priceHistory, priceHistoryLoading, selectedPeriod, onPeriodChange }) => {
   if (!data) return null;
   const { ticker, price, rsi, sma50, sma200, support, resistance, trend, note,
           volume, avg_volume_30, volume_vs_avg, alerts, signal_factors,
           price_history_60d, actionable_summary } = data;
+  const chartData = priceHistory || price_history_60d;
 
   const trendColor = trend.includes('Bull') ? C.green : trend.includes('Bear') ? C.red : C.amber;
   const rsiColor = rsi > 70 ? C.red : rsi < 30 ? C.green : C.amber;
 
   return (
-    <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 24, marginBottom: 12 }}>
+    <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 28, marginBottom: 12 }}>
       {/* Header: Ticker, Price, Trend + Reasoning */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
         <div>
@@ -397,87 +533,90 @@ const TechnicalCard = ({ data, holding }) => {
 
       {/* ─── Price History Chart ─── */}
       <PriceHistoryChart
-        data={price_history_60d}
+        data={chartData}
         support={support}
         resistance={resistance}
         sma50={sma50}
         sma200={sma200}
         price={price}
+        period={selectedPeriod}
+        onPeriodChange={onPeriodChange}
+        isLoading={priceHistoryLoading}
       />
 
       {/* ─── RSI with zones and interpretation ─── */}
-      <div style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 10, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, fontWeight: 600 }}>RSI (14)</div>
-        <div style={{ position: 'relative', height: 28, background: '#0d1424', borderRadius: 6, overflow: 'hidden', border: `1px solid ${C.border}` }}>
+      <div style={{ marginTop: 24 }}>
+        <div style={{ fontSize: 11, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10, fontWeight: 600 }}>RSI (14)</div>
+        <div style={{ position: 'relative', height: 40, background: '#0d1424', borderRadius: 6, overflow: 'hidden', border: `1px solid ${C.border}` }}>
           <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '30%', background: C.green + '12' }} />
           <div style={{ position: 'absolute', left: '30%', top: 0, bottom: 0, width: '40%', background: C.amber + '08' }} />
           <div style={{ position: 'absolute', left: '70%', top: 0, bottom: 0, width: '30%', background: C.red + '12' }} />
-          <span style={{ position: 'absolute', left: '8%', top: '50%', transform: 'translateY(-50%)', fontSize: 9, color: C.green + 'aa', fontWeight: 600 }}>Oversold</span>
-          <span style={{ position: 'absolute', left: '44%', top: '50%', transform: 'translateY(-50%)', fontSize: 9, color: C.textDim, fontWeight: 600 }}>Neutral</span>
-          <span style={{ position: 'absolute', right: '5%', top: '50%', transform: 'translateY(-50%)', fontSize: 9, color: C.red + 'aa', fontWeight: 600 }}>Overbought</span>
+          <span style={{ position: 'absolute', left: '8%', top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: C.green + 'aa', fontWeight: 600 }}>Oversold</span>
+          <span style={{ position: 'absolute', left: '44%', top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: C.textDim, fontWeight: 600 }}>Neutral</span>
+          <span style={{ position: 'absolute', right: '5%', top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: C.red + 'aa', fontWeight: 600 }}>Overbought</span>
           <div style={{ position: 'absolute', left: '30%', top: 0, bottom: 0, width: 1, background: C.textDim + '33' }} />
           <div style={{ position: 'absolute', left: '70%', top: 0, bottom: 0, width: 1, background: C.textDim + '33' }} />
           <div style={{
             position: 'absolute', left: `${Math.min(Math.max(rsi, 2), 98)}%`,
-            top: 2, bottom: 2, width: 3, background: rsiColor, borderRadius: 2, zIndex: 5,
-            boxShadow: `0 0 6px ${rsiColor}66`,
+            top: 3, bottom: 3, width: 4, background: rsiColor, borderRadius: 2, zIndex: 5,
+            boxShadow: `0 0 8px ${rsiColor}88`,
             transform: 'translateX(-50%)',
           }} />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
-          <span style={{ fontSize: 9, color: C.textDim, fontFamily: MONO }}>0</span>
-          <span style={{ fontSize: 9, color: C.textDim, fontFamily: MONO }}>30</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+          <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>0</span>
+          <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>30</span>
           <span style={{
-            fontSize: 13, fontWeight: 800, color: rsiColor, fontFamily: MONO,
-            background: rsiColor + '15', padding: '2px 10px', borderRadius: 4,
+            fontSize: 14, fontWeight: 800, color: rsiColor, fontFamily: MONO,
+            background: rsiColor + '15', padding: '3px 12px', borderRadius: 4,
           }}>RSI {rsi.toFixed(0)}</span>
-          <span style={{ fontSize: 9, color: C.textDim, fontFamily: MONO }}>70</span>
-          <span style={{ fontSize: 9, color: C.textDim, fontFamily: MONO }}>100</span>
+          <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>70</span>
+          <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>100</span>
         </div>
         <div style={{
-          marginTop: 6, fontSize: 11, color: C.textMuted, fontStyle: 'italic',
-          padding: '4px 8px', background: rsiColor + '08', borderRadius: 4, borderLeft: `3px solid ${rsiColor}44`,
+          marginTop: 10, fontSize: 12, color: C.textMuted, fontStyle: 'italic',
+          padding: '8px 12px', background: rsiColor + '08', borderRadius: 4, borderLeft: `3px solid ${rsiColor}44`,
         }}>
           RSI at {rsi.toFixed(0)} — {rsiInterpretation(rsi)}
         </div>
       </div>
 
       {/* ─── Key Levels ─── */}
-      <div style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 10, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, fontWeight: 600 }}>Key Levels</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
+      <div style={{ marginTop: 24 }}>
+        <div style={{ fontSize: 11, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10, fontWeight: 600 }}>Key Levels</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
           {sma50 && (
-            <div style={{ background: '#0d1424', padding: '8px 12px', borderRadius: 6, border: `1px solid ${C.border}` }}>
-              <div style={{ fontSize: 9, color: C.cyan, fontWeight: 600, marginBottom: 2 }}>50d SMA</div>
-              <div style={{ fontSize: 14, fontWeight: 700, fontFamily: MONO, color: C.text }}>${sma50.toFixed(2)}</div>
-              <div style={{ fontSize: 10, color: price > sma50 ? C.green : C.red, marginTop: 2 }}>
+            <div style={{ background: '#0d1424', padding: '12px 14px', borderRadius: 6, border: `1px solid ${C.border}` }}>
+              <div style={{ fontSize: 10, color: C.cyan, fontWeight: 600, marginBottom: 4 }}>50d SMA</div>
+              <div style={{ fontSize: 16, fontWeight: 700, fontFamily: MONO, color: C.text }}>${sma50.toFixed(2)}</div>
+              <div style={{ fontSize: 11, color: price > sma50 ? C.green : C.red, marginTop: 4 }}>
                 Price is {price > sma50 ? 'above' : 'below'} ({((price - sma50) / sma50 * 100).toFixed(1)}%)
               </div>
             </div>
           )}
           {sma200 && (
-            <div style={{ background: '#0d1424', padding: '8px 12px', borderRadius: 6, border: `1px solid ${C.border}` }}>
-              <div style={{ fontSize: 9, color: C.pink, fontWeight: 600, marginBottom: 2 }}>200d SMA</div>
-              <div style={{ fontSize: 14, fontWeight: 700, fontFamily: MONO, color: C.text }}>${sma200.toFixed(2)}</div>
-              <div style={{ fontSize: 10, color: price > sma200 ? C.green : C.red, marginTop: 2 }}>
+            <div style={{ background: '#0d1424', padding: '12px 14px', borderRadius: 6, border: `1px solid ${C.border}` }}>
+              <div style={{ fontSize: 10, color: C.pink, fontWeight: 600, marginBottom: 4 }}>200d SMA</div>
+              <div style={{ fontSize: 16, fontWeight: 700, fontFamily: MONO, color: C.text }}>${sma200.toFixed(2)}</div>
+              <div style={{ fontSize: 11, color: price > sma200 ? C.green : C.red, marginTop: 4 }}>
                 Price is {price > sma200 ? 'above' : 'below'} ({((price - sma200) / sma200 * 100).toFixed(1)}%)
               </div>
             </div>
           )}
           {support?.[0] && (
-            <div style={{ background: '#0d1424', padding: '8px 12px', borderRadius: 6, border: `1px solid ${C.border}` }}>
-              <div style={{ fontSize: 9, color: C.green, fontWeight: 600, marginBottom: 2 }}>Nearest Support</div>
-              <div style={{ fontSize: 14, fontWeight: 700, fontFamily: MONO, color: C.text }}>${support[0].toFixed(2)}</div>
-              <div style={{ fontSize: 10, color: C.textDim, marginTop: 2 }}>
+            <div style={{ background: '#0d1424', padding: '12px 14px', borderRadius: 6, border: `1px solid ${C.border}` }}>
+              <div style={{ fontSize: 10, color: C.green, fontWeight: 600, marginBottom: 4 }}>Nearest Support</div>
+              <div style={{ fontSize: 16, fontWeight: 700, fontFamily: MONO, color: C.text }}>${support[0].toFixed(2)}</div>
+              <div style={{ fontSize: 11, color: C.textDim, marginTop: 4 }}>
                 {((price - support[0]) / support[0] * 100).toFixed(1)}% above
               </div>
             </div>
           )}
           {resistance?.[0] && (
-            <div style={{ background: '#0d1424', padding: '8px 12px', borderRadius: 6, border: `1px solid ${C.border}` }}>
-              <div style={{ fontSize: 9, color: C.red, fontWeight: 600, marginBottom: 2 }}>Nearest Resistance</div>
-              <div style={{ fontSize: 14, fontWeight: 700, fontFamily: MONO, color: C.text }}>${resistance[0].toFixed(2)}</div>
-              <div style={{ fontSize: 10, color: C.textDim, marginTop: 2 }}>
+            <div style={{ background: '#0d1424', padding: '12px 14px', borderRadius: 6, border: `1px solid ${C.border}` }}>
+              <div style={{ fontSize: 10, color: C.red, fontWeight: 600, marginBottom: 4 }}>Nearest Resistance</div>
+              <div style={{ fontSize: 16, fontWeight: 700, fontFamily: MONO, color: C.text }}>${resistance[0].toFixed(2)}</div>
+              <div style={{ fontSize: 11, color: C.textDim, marginTop: 4 }}>
                 {((resistance[0] - price) / price * 100).toFixed(1)}% above
               </div>
             </div>
@@ -595,6 +734,9 @@ export default function TechnicalsTab({ holdings, showGuides }) {
   const [newsLoading, setNewsLoading] = useState({});
   const [fundamentals, setFundamentals] = useState({});
   const [fundLoading, setFundLoading] = useState({});
+  const [selectedPeriod, setSelectedPeriod] = useState('3M');
+  const [priceHistoryData, setPriceHistoryData] = useState({});
+  const [priceHistoryLoading, setPriceHistoryLoading] = useState({});
 
   const tickers = holdings.filter(h => h.type === 'Stock').map(h => h.ticker);
 
@@ -629,6 +771,18 @@ export default function TechnicalsTab({ holdings, showGuides }) {
       .catch(() => {})
       .finally(() => setNewsLoading(prev => ({ ...prev, [selectedStock]: false })));
   }, [selectedStock]);
+
+  // Load price history when selectedStock or selectedPeriod changes
+  useEffect(() => {
+    if (!selectedStock) return;
+    const key = `${selectedStock}-${selectedPeriod}`;
+    if (priceHistoryData[key] || priceHistoryLoading[key]) return;
+    setPriceHistoryLoading(prev => ({ ...prev, [key]: true }));
+    api.getPriceHistory(selectedStock, selectedPeriod.toLowerCase())
+      .then(data => setPriceHistoryData(prev => ({ ...prev, [key]: data })))
+      .catch(() => {})
+      .finally(() => setPriceHistoryLoading(prev => ({ ...prev, [key]: false })));
+  }, [selectedStock, selectedPeriod]);
 
   // Load fundamentals when selectedStock changes (Stocks only)
   useEffect(() => {
@@ -690,7 +844,14 @@ export default function TechnicalsTab({ holdings, showGuides }) {
       {/* Selected Stock Detail */}
       {selectedStock && techData[selectedStock] ? (
         <>
-          <TechnicalCard data={techData[selectedStock]} holding={holdings.find(h => h.ticker === selectedStock)} />
+          <TechnicalCard
+            data={techData[selectedStock]}
+            holding={holdings.find(h => h.ticker === selectedStock)}
+            priceHistory={priceHistoryData[`${selectedStock}-${selectedPeriod}`]}
+            priceHistoryLoading={priceHistoryLoading[`${selectedStock}-${selectedPeriod}`]}
+            selectedPeriod={selectedPeriod}
+            onPeriodChange={setSelectedPeriod}
+          />
           <NewsFeed
             articles={newsData[selectedStock]?.articles}
             ticker={selectedStock}

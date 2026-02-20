@@ -20,6 +20,7 @@ from stock_service import (
     refresh_all_prices,
     fetch_price_history,
     get_technicals,
+    get_price_history,
     get_portfolio_performance,
     validate_ticker,
     get_news,
@@ -296,6 +297,13 @@ async def technicals_endpoint(ticker: str, _=Depends(require_auth)):
             status_code=404,
             detail=f"No technical data for {ticker}. Price history may still be loading.",
         )
+    return data
+
+
+@app.get("/api/price-history/{ticker}")
+async def price_history_endpoint(ticker: str, period: str = "3m", _=Depends(require_auth)):
+    ticker = ticker.upper().strip()
+    data = await get_price_history(ticker, period)
     return data
 
 
