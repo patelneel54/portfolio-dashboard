@@ -23,7 +23,7 @@ Tap the Share button → "Add to Home Screen"
 It'll run as a standalone app with the portfolio icon
 First — one-time setup on your Windows machine
 
-Open Windows Terminal and generate your PIN hash (replace 1234 with whatever PIN you want):
+#Open Windows Terminal and generate your PIN hash (replace 1234 with whatever PIN you want):
 
 
 docker run --rm python:3.12-slim sh -c "pip install bcrypt -q 2>/dev/null && python -c \"import bcrypt; print(bcrypt.hashpw(b'1234', bcrypt.gensalt()).decode())\""
@@ -52,3 +52,27 @@ REFRESH_MINUTE	30
 Click Deploy the stack — wait 3–5 min for first build
 Open http://NAS_IP:8000
 Future updates: Portainer → Stacks → portfolio → Pull and redeploy
+
+
+
+Step 1 — Deploy the Stack Without a PIN
+In Portainer, when you add your environment variables, leave AUTH_PIN_HASH blank (still add the key, just empty value). The app is coded to skip authentication entirely if no hash is set — so it'll open without a login for now.
+
+Step 2 — Generate the Hash Inside Portainer
+Once the container is running:
+
+In Portainer, click Containers → portfolio-dashboard
+Click Exec Console (or "Console" button)
+Select /bin/sh and click Connect
+You now have a terminal inside the container. Run:
+
+python backend/auth.py 1234
+(replace 1234 with your PIN)
+
+It prints your hash — copy it
+Step 3 — Add the Hash to Your Stack
+Go back to Stacks → portfolio
+Click Editor
+Find the AUTH_PIN_HASH environment variable and paste in your hash
+Click Update the stack
+The container restarts with your PIN active — done, all from Portainer.
