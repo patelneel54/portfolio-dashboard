@@ -22,6 +22,8 @@ from stock_service import (
     get_technicals,
     get_portfolio_performance,
     validate_ticker,
+    get_news,
+    get_fundamentals,
 )
 
 scheduler = AsyncIOScheduler()
@@ -70,12 +72,14 @@ class HoldingCreate(BaseModel):
     shares: float
     avg_cost: float
     target_allocation: float = 0
+    purchase_date: str | None = None
 
 
 class HoldingUpdate(BaseModel):
     shares: float | None = None
     avg_cost: float | None = None
     target_allocation: float | None = None
+    purchase_date: str | None = None
 
 
 class SettingsUpdate(BaseModel):
@@ -173,14 +177,15 @@ async def add_holding(
             raise HTTPException(status_code=409, detail=f"{ticker} already exists")
 
         await db.execute(
-            """INSERT INTO holdings (ticker, type, shares, avg_cost, target_allocation, current_price, previous_close, last_updated)
-               VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))""",
+            """INSERT INTO holdings (ticker, type, shares, avg_cost, target_allocation, purchase_date, current_price, previous_close, last_updated)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))""",
             (
                 ticker,
                 info["type"],
                 holding.shares,
                 holding.avg_cost,
                 holding.target_allocation,
+                holding.purchase_date,
                 info["price"],
                 info["previous_close"],
             ),
@@ -209,6 +214,8 @@ async def update_holding(
             updates["avg_cost"] = update.avg_cost
         if update.target_allocation is not None:
             updates["target_allocation"] = update.target_allocation
+        if update.purchase_date is not None:
+            updates["purchase_date"] = update.purchase_date
 
         if updates:
             set_clause = ", ".join(f"{k} = ?" for k in updates)
@@ -290,6 +297,24 @@ async def technicals_endpoint(ticker: str, _=Depends(require_auth)):
             detail=f"No technical data for {ticker}. Price history may still be loading.",
         )
     return data
+
+
+# ── News Route ──
+
+
+@app.get("/api/news/{ticker}")
+async def news_endpoint(ticker: str, _=Depends(require_auth)):
+    ticker = ticker.upper().strip()
+    return await get_news(ticker)
+
+
+# ── Fundamentals Route ──
+
+
+@app.get("/api/fundamentals/{ticker}")
+async def fundamentals_endpoint(ticker: str, _=Depends(require_auth)):
+    ticker = ticker.upper().strip()
+    return await get_fundamentals(ticker)
 
 
 # ── Static File Serving (production) ──

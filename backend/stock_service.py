@@ -1,4 +1,5 @@
 import asyncio
+import time
 import yfinance as yf
 import pandas as pd
 from database import get_db
@@ -222,6 +223,13 @@ async def get_technicals(ticker: str) -> dict | None:
     else:
         signal_factors.append({"label": "RSI", "direction": "neutral"})
 
+    # Price history for mini chart (last 60 trading days)
+    history_tail = df.tail(60)[["date", "close"]].copy()
+    price_history_60d = [
+        {"date": row["date"], "close": round(float(row["close"]), 2)}
+        for _, row in history_tail.iterrows()
+    ]
+
     return {
         "ticker": ticker,
         "price": round(current, 2),
@@ -238,6 +246,10 @@ async def get_technicals(ticker: str) -> dict | None:
         "volume_vs_avg": volume_vs_avg,
         "alerts": alerts,
         "signal_factors": signal_factors,
+        "price_history_60d": price_history_60d,
+        "actionable_summary": _generate_actionable_summary(
+            ticker, current, rsi_val, trend, sma50_val, sma200_val, alerts
+        ),
     }
 
 
@@ -402,3 +414,132 @@ def _generate_note(ticker, price, rsi, trend, sma50, sma200):
         parts.append(f"{trend} trend based on moving averages.")
 
     return " ".join(parts)
+
+
+def _generate_actionable_summary(ticker, price, rsi, trend, sma50, sma200, alerts):
+    """Generate a one-line actionable decision nudge."""
+    # Long-term stance
+    if sma200 and price > sma200:
+        lt_stance = "bullish long-term"
+    elif sma200 and price < sma200:
+        lt_stance = "bearish long-term"
+    else:
+        lt_stance = "no clear long-term signal"
+
+    # Short-term context
+    st_context = ""
+    if sma50 and price > sma50:
+        st_context = ", above 50d SMA"
+    elif sma50 and price < sma50:
+        st_context = ", below 50d SMA"
+
+    # Action recommendation
+    if rsi < 30:
+        action = "oversold — consider adding on this dip"
+    elif rsi > 75:
+        action = "overbought — consider trimming or waiting for a pullback"
+    elif "Near resistance" in alerts:
+        action = "watch for breakout or rejection near resistance"
+    elif "Near support" in alerts:
+        action = "support may provide a floor — watch for bounce"
+    elif "Golden cross" in alerts:
+        action = "golden cross detected — bullish momentum building"
+    elif "Death cross" in alerts:
+        action = "death cross detected — bearish momentum building"
+    elif trend == "Bullish":
+        action = "consider holding or adding on dips"
+    elif trend == "Bearish":
+        action = "consider reducing or avoiding new adds"
+    else:
+        action = "no strong signal — hold and monitor"
+
+    return f"{ticker} is {lt_stance}{st_context} — {action}."
+
+
+# --- News ---
+
+_news_cache: dict[str, dict] = {}
+NEWS_CACHE_TTL = 1800  # 30 minutes
+
+
+def _fetch_news_sync(ticker: str) -> list[dict]:
+    """Fetch recent news articles for a ticker via yfinance."""
+    try:
+        from datetime import datetime
+        t = yf.Ticker(ticker)
+        raw = t.news or []
+        articles = []
+        for item in raw[:5]:
+            # New yfinance format (>=0.2.44): content nested under "content" key
+            content = item.get("content") or {}
+            if content:
+                title = content.get("title", "")
+                link = (content.get("canonicalUrl") or {}).get("url", "")
+                publisher = (content.get("provider") or {}).get("displayName", "")
+                pub_date_str = content.get("pubDate", "")
+                try:
+                    published_at = int(datetime.fromisoformat(pub_date_str.replace("Z", "+00:00")).timestamp()) if pub_date_str else 0
+                except Exception:
+                    published_at = 0
+            else:
+                # Old format: flat keys
+                title = item.get("title", "")
+                link = item.get("link", "")
+                publisher = item.get("publisher", "")
+                published_at = item.get("providerPublishTime", 0)
+
+            if title:
+                articles.append({"title": title, "link": link, "publisher": publisher, "published_at": published_at})
+        return articles
+    except Exception:
+        return []
+
+
+async def get_news(ticker: str) -> dict:
+    """Get cached news for a ticker."""
+    now = time.time()
+    cached = _news_cache.get(ticker)
+    if cached and (now - cached["timestamp"]) < NEWS_CACHE_TTL:
+        return {"ticker": ticker, "articles": cached["articles"]}
+
+    articles = await asyncio.to_thread(_fetch_news_sync, ticker)
+    _news_cache[ticker] = {"timestamp": now, "articles": articles}
+    return {"ticker": ticker, "articles": articles}
+
+
+# --- Fundamentals ---
+
+_fundamentals_cache: dict[str, dict] = {}
+FUNDAMENTALS_CACHE_TTL = 86400  # 24 hours
+
+
+def _fetch_fundamentals_sync(ticker: str) -> dict:
+    """Fetch fundamental valuation data via yfinance."""
+    try:
+        t = yf.Ticker(ticker)
+        info = t.info
+        return {
+            "trailing_pe": info.get("trailingPE"),
+            "forward_pe": info.get("forwardPE"),
+            "earnings_growth": info.get("earningsGrowth"),
+            "dividend_yield": info.get("dividendYield"),
+            "trailing_eps": info.get("trailingEps"),
+            "market_cap": info.get("marketCap"),
+            "sector": info.get("sector"),
+            "earnings_date": info.get("earningsDate"),
+            "ex_dividend_date": info.get("exDividendDate"),
+        }
+    except Exception:
+        return {}
+
+
+async def get_fundamentals(ticker: str) -> dict:
+    """Get cached fundamentals for a ticker."""
+    now = time.time()
+    cached = _fundamentals_cache.get(ticker)
+    if cached and (now - cached["timestamp"]) < FUNDAMENTALS_CACHE_TTL:
+        return {"ticker": ticker, **cached["data"]}
+
+    data = await asyncio.to_thread(_fetch_fundamentals_sync, ticker)
+    _fundamentals_cache[ticker] = {"timestamp": now, "data": data}
+    return {"ticker": ticker, **data}

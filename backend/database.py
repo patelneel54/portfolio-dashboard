@@ -43,6 +43,7 @@ DEFAULT_SETTINGS = {
     "moderate_rate": "0.085",
     "aggressive_rate": "0.11",
     "projection_years": "30",
+    "monthly_401k_contribution": "0",
 }
 
 
@@ -56,6 +57,15 @@ async def init_db():
                 "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)",
                 (key, value),
             )
+        # Migrations for existing databases
+        migrations = [
+            "ALTER TABLE holdings ADD COLUMN purchase_date TEXT DEFAULT NULL",
+        ]
+        for migration in migrations:
+            try:
+                await db.execute(migration)
+            except Exception:
+                pass  # Column already exists
         await db.commit()
 
 

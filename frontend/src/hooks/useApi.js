@@ -36,4 +36,6 @@ export const api = {
   updateSettings: (settings) => apiFetch('/settings', { method: 'PUT', body: JSON.stringify({ settings }) }),
   getTechnicals: (ticker) => apiFetch(`/technicals/${ticker}`),
   getPerformance: () => apiFetch('/performance'),
+  getNews: (ticker) => apiFetch(`/news/${ticker}`),
+  getFundamentals: (ticker) => apiFetch(`/fundamentals/${ticker}`),
 };

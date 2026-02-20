@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, ReferenceLine } from 'recharts';
 import { C, MONO } from '../styles/theme';
 import { projectGrowth } from '../utils/projections';
@@ -6,23 +6,28 @@ import GuidePanel from './GuidePanel';
 
 export default function ProjectionTab({ totalValue, settings, showGuides }) {
   const monthly = parseFloat(settings?.monthly_contribution || '500');
+  const monthly401k = parseFloat(settings?.monthly_401k_contribution || '0');
+  const has401k = monthly401k > 0;
+  const [show401k, setShow401k] = useState(false);
   const age = parseInt(settings?.age || '26', 10);
   const conRate = parseFloat(settings?.conservative_rate || '0.06');
   const modRate = parseFloat(settings?.moderate_rate || '0.085');
   const aggRate = parseFloat(settings?.aggressive_rate || '0.11');
   const years = parseInt(settings?.projection_years || '30', 10);
 
+  const effectiveMonthly = show401k ? monthly + monthly401k : monthly;
+
   const projectionData = useMemo(() => {
-    const conservative = projectGrowth(totalValue, monthly, years, conRate);
-    const moderate = projectGrowth(totalValue, monthly, years, modRate);
-    const aggressive = projectGrowth(totalValue, monthly, years, aggRate);
+    const conservative = projectGrowth(totalValue, effectiveMonthly, years, conRate);
+    const moderate = projectGrowth(totalValue, effectiveMonthly, years, modRate);
+    const aggressive = projectGrowth(totalValue, effectiveMonthly, years, aggRate);
     return conservative.map((c, i) => ({
       year: c.year,
       conservative: c.value,
       moderate: moderate[i].value,
       aggressive: aggressive[i].value,
     }));
-  }, [totalValue, monthly, years, conRate, modRate, aggRate]);
+  }, [totalValue, effectiveMonthly, years, conRate, modRate, aggRate]);
 
   const fmtVal = (v) => v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${(v / 1000).toFixed(0)}k`;
 
@@ -40,9 +45,27 @@ export default function ProjectionTab({ totalValue, settings, showGuides }) {
       {showGuides && <GuidePanel guideKey="projection" />}
 
       <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 16 }}>
-        <h3 style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>Portfolio Growth Projection ({years} Years)</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.textMuted }}>Portfolio Growth Projection ({years} Years)</h3>
+          {has401k && (
+            <button
+              onClick={() => setShow401k(v => !v)}
+              style={{
+                padding: '5px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                border: `1px solid ${show401k ? C.purple : C.border}`,
+                background: show401k ? C.purple + '22' : 'transparent',
+                color: show401k ? C.purple : C.textMuted,
+                borderRadius: 6,
+              }}
+            >
+              {show401k ? '401k Included' : 'Include 401k'} (+${monthly401k.toLocaleString()}/mo)
+            </button>
+          )}
+        </div>
         <p style={{ margin: '0 0 16px', fontSize: 11, color: C.textDim }}>
-          Starting: {fmtVal(totalValue)} + ${monthly.toLocaleString()}/mo contributions &bull; {(conRate * 100).toFixed(0)}% / {(modRate * 100).toFixed(1)}% / {(aggRate * 100).toFixed(0)}% annual return scenarios
+          Starting: {fmtVal(totalValue)} + ${effectiveMonthly.toLocaleString()}/mo
+          {show401k ? ` (brokerage $${monthly.toLocaleString()} + 401k $${monthly401k.toLocaleString()})` : ' contributions'}
+          {' '}&bull; {(conRate * 100).toFixed(0)}% / {(modRate * 100).toFixed(1)}% / {(aggRate * 100).toFixed(0)}% annual return scenarios
         </p>
         <ResponsiveContainer width="100%" height={400}>
           <AreaChart data={projectionData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>

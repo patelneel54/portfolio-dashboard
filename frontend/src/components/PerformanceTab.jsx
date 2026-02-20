@@ -4,11 +4,24 @@ import { C, MONO } from '../styles/theme';
 import GuidePanel from './GuidePanel';
 
 export default function PerformanceTab({ holdings, showGuides }) {
+  const computeCagr = (gainLossPct, purchaseDate) => {
+    if (!purchaseDate) return null;
+    const start = new Date(purchaseDate);
+    const now = new Date();
+    const years = (now - start) / (365.25 * 24 * 60 * 60 * 1000);
+    if (years < 0.05) return null; // Less than ~18 days
+    const totalReturn = gainLossPct / 100;
+    const cagr = (Math.pow(1 + totalReturn, 1 / years) - 1) * 100;
+    return cagr;
+  };
+
   const gainLossData = useMemo(() =>
     holdings.map(h => ({
       ticker: h.ticker,
       gain: Math.round(h.gain_loss),
       pct: h.gain_loss_pct.toFixed(1),
+      gain_loss_pct: h.gain_loss_pct,
+      purchase_date: h.purchase_date,
       color: h.gain_loss >= 0 ? C.green : C.red,
     })).sort((a, b) => b.gain - a.gain), [holdings]);
 
@@ -31,10 +44,19 @@ export default function PerformanceTab({ holdings, showGuides }) {
             <Tooltip content={({ active, payload }) => {
               if (!active || !payload?.length) return null;
               const d = payload[0].payload;
+              const cagr = computeCagr(d.gain_loss_pct, d.purchase_date);
               return (
                 <div style={{ background: '#1e293b', border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px', fontSize: 12 }}>
                   <div style={{ fontWeight: 700, color: C.text }}>{d.ticker}</div>
                   <div style={{ color: d.gain >= 0 ? C.green : C.red }}>${d.gain.toLocaleString()} ({d.pct}%)</div>
+                  {cagr !== null && (
+                    <div style={{ color: C.textDim, fontSize: 11, marginTop: 2 }}>
+                      {cagr >= 0 ? '+' : ''}{cagr.toFixed(1)}% annualized
+                    </div>
+                  )}
+                  {!d.purchase_date && (
+                    <div style={{ color: C.textDim, fontSize: 10, marginTop: 2, fontStyle: 'italic' }}>Set purchase date for CAGR</div>
+                  )}
                 </div>
               );
             }} />

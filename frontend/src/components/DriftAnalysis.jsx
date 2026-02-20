@@ -23,7 +23,7 @@ function StatCell({ label, value }) {
   );
 }
 
-export default function DriftAnalysis({ holdings = [], totalValue = 0 }) {
+export default function DriftAnalysis({ holdings = [], totalValue = 0, settings = {} }) {
   const [hoveredIdx, setHoveredIdx] = useState(null);
 
   const sorted = useMemo(() => {
@@ -177,6 +177,14 @@ export default function DriftAnalysis({ holdings = [], totalValue = 0 }) {
                     <span>
                       Target <span style={{ fontWeight: 600 }}>{(h.target_allocation || 0).toFixed(1)}%</span>
                     </span>
+                    {isMaterial && totalValue > 0 && (
+                      <>
+                        <span style={{ color: C.textDim }}>·</span>
+                        <span style={{ color: isOverweight ? C.red : C.green, fontWeight: 600 }}>
+                          {isOverweight ? 'Sell' : 'Buy'} ${Math.abs(drift * totalValue / 100).toFixed(0)}
+                        </span>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -195,6 +203,33 @@ export default function DriftAnalysis({ holdings = [], totalValue = 0 }) {
           );
         })}
       </div>
+
+      {/* Rebalance Actions */}
+      {materialCount > 0 && totalValue > 0 && (() => {
+        const monthly = parseFloat(settings?.monthly_contribution || '0');
+        return (
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
+            <div style={{ fontSize: 10, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, fontWeight: 600 }}>Rebalance Actions</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {driftSorted.filter(h => Math.abs(h.drift) >= MATERIAL_THRESHOLD).map(h => {
+                const dollarAmt = Math.abs(h.drift * totalValue / 100);
+                const isOver = h.drift > 0;
+                const monthsLabel = monthly > 0 ? ` (${(dollarAmt / monthly).toFixed(1)} mo of contributions)` : '';
+                return (
+                  <div key={h.ticker} style={{ fontSize: 11, color: isOver ? C.red : C.green, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontFamily: MONO, fontWeight: 700, minWidth: 48, color: C.text }}>{h.ticker}</span>
+                    <span>
+                      {isOver ? 'Sell' : 'Buy'}{' '}
+                      <span style={{ fontWeight: 700, fontFamily: MONO }}>${dollarAmt.toFixed(0)}</span>
+                      <span style={{ color: C.textDim }}>{monthsLabel}</span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

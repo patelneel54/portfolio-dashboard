@@ -32,7 +32,8 @@ export default function Settings() {
   const update = (key, val) => setSettings(prev => ({ ...prev, [key]: val }));
 
   const fields = [
-    { key: 'monthly_contribution', label: 'Monthly Contribution ($)', type: 'number', step: '50' },
+    { key: 'monthly_contribution', label: 'Monthly Brokerage Contribution ($)', type: 'number', step: '50' },
+    { key: 'monthly_401k_contribution', label: 'Monthly 401k Contribution ($)', type: 'number', step: '50', hint: 'Total employee + employer monthly 401k contribution. Set to 0 to disable.' },
     { key: 'age', label: 'Current Age', type: 'number', step: '1' },
     { key: 'conservative_rate', label: 'Conservative Return Rate', type: 'number', step: '0.01', hint: 'e.g. 0.06 for 6%' },
     { key: 'moderate_rate', label: 'Moderate Return Rate', type: 'number', step: '0.005', hint: 'e.g. 0.085 for 8.5%' },

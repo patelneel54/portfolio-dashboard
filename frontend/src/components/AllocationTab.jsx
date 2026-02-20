@@ -4,7 +4,7 @@ import PositionConcentration from './PositionConcentration';
 import DriftAnalysis from './DriftAnalysis';
 import GuidePanel from './GuidePanel';
 
-export default function AllocationTab({ holdings, totalValue, showGuides }) {
+export default function AllocationTab({ holdings, totalValue, showGuides, settings }) {
   const sortedByDrift = useMemo(() =>
     [...holdings].sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift)), [holdings]);
 
@@ -18,7 +18,7 @@ export default function AllocationTab({ holdings, totalValue, showGuides }) {
         <PositionConcentration holdings={holdings} totalValue={totalValue} />
 
         {/* Drift Analysis */}
-        <DriftAnalysis holdings={holdings} totalValue={totalValue} />
+        <DriftAnalysis holdings={holdings} totalValue={totalValue} settings={settings} />
       </div>
 
       {/* Full Holdings Table */}

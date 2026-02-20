@@ -150,7 +150,7 @@ export default function Dashboard() {
       ) : (
         <>
           {activeTab === 'overview' && <OverviewTab holdings={holdings} totalValue={totalValue} showGuides={showGuides} />}
-          {activeTab === 'allocation' && <AllocationTab holdings={holdings} totalValue={totalValue} showGuides={showGuides} />}
+          {activeTab === 'allocation' && <AllocationTab holdings={holdings} totalValue={totalValue} showGuides={showGuides} settings={settings} />}
           {activeTab === 'performance' && <PerformanceTab holdings={holdings} showGuides={showGuides} />}
           {activeTab === 'projection' && <ProjectionTab totalValue={totalValue} settings={settings} showGuides={showGuides} />}
           {activeTab === 'technicals' && <TechnicalsTab holdings={holdings} showGuides={showGuides} />}
