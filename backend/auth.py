@@ -8,7 +8,14 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
-PIN_HASH = os.getenv("AUTH_PIN_HASH", "").encode()
+_pin_hash_str = os.getenv("AUTH_PIN_HASH", "")
+_plain_pin = os.getenv("AUTH_PIN", "")
+if _pin_hash_str:
+    PIN_HASH = _pin_hash_str.encode()
+elif _plain_pin:
+    PIN_HASH = bcrypt.hashpw(_plain_pin.encode(), bcrypt.gensalt())
+else:
+    PIN_HASH = b""
 JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-change-me")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_HOURS = 72

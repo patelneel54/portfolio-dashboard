@@ -11,6 +11,7 @@ services:
     environment:
       - DATABASE_PATH=/app/data/portfolio.db
       - AUTH_PIN_HASH=${AUTH_PIN_HASH}
+      - AUTH_PIN=${AUTH_PIN}
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_HOUR=${REFRESH_HOUR:-16}
       - REFRESH_MINUTE=${REFRESH_MINUTE:-30}
