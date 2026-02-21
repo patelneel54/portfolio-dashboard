@@ -282,7 +282,10 @@ async def update_settings(body: SettingsUpdate, _=Depends(require_auth)):
 @app.get("/api/performance")
 async def performance_endpoint(_=Depends(require_auth)):
     """Return daily historical portfolio values and S&P 500 benchmark."""
-    return await get_portfolio_performance()
+    try:
+        return await get_portfolio_performance()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Performance data unavailable: {e}")
 
 
 # ── Technicals Route ──

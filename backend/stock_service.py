@@ -338,7 +338,8 @@ async def get_portfolio_performance() -> dict:
     # Build {date: {ticker: close}} map
     date_prices: dict[str, dict[str, float]] = {}
     for r in rows:
-        date_prices.setdefault(r["date"], {})[r["ticker"]] = float(r["close"])
+        if r["close"] is not None:
+            date_prices.setdefault(r["date"], {})[r["ticker"]] = float(r["close"])
 
     # Compute daily portfolio values
     sorted_dates = sorted(date_prices.keys())
@@ -399,16 +400,20 @@ async def _get_benchmark_data(start_date: str | None) -> dict[str, float]:
         return {r["date"]: float(r["close"]) for r in rows} if rows else {}
 
     # Store in DB
-    async with get_db() as db:
-        for idx, row in df.iterrows():
-            d = idx.strftime("%Y-%m-%d")
-            await db.execute(
-                "INSERT OR REPLACE INTO price_history (ticker, date, open, high, low, close, volume) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (benchmark_ticker, d, float(row["Open"]), float(row["High"]),
-                 float(row["Low"]), float(row["Close"]), int(row["Volume"])),
-            )
-        await db.commit()
+    try:
+        async with get_db() as db:
+            for idx, row in df.iterrows():
+                d = idx.strftime("%Y-%m-%d")
+                vol = int(row["Volume"]) if pd.notna(row.get("Volume", float("nan"))) else 0
+                await db.execute(
+                    "INSERT OR REPLACE INTO price_history (ticker, date, open, high, low, close, volume) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (benchmark_ticker, d, float(row["Open"]), float(row["High"]),
+                     float(row["Low"]), float(row["Close"]), vol),
+                )
+            await db.commit()
+    except Exception:
+        pass  # DB store failed; return in-memory result below
 
     result = {}
     for idx, row in df.iterrows():
