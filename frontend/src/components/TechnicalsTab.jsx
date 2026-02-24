@@ -341,7 +341,7 @@ const ValuationCard = ({ data, loading: isLoading }) => {
     { label: 'Trailing P/E', value: data.trailing_pe != null ? data.trailing_pe.toFixed(1) : '—' },
     { label: 'Forward P/E', value: data.forward_pe != null ? data.forward_pe.toFixed(1) : '—' },
     { label: 'EPS Growth', value: data.earnings_growth != null ? `${(data.earnings_growth * 100).toFixed(1)}%` : '—' },
-    { label: 'Div Yield', value: data.dividend_yield != null ? `${(data.dividend_yield * 100).toFixed(2)}%` : '—' },
+    { label: 'Div Yield', value: data.dividend_yield != null ? `${data.dividend_yield.toFixed(2)}%` : '—' },
   ];
 
   const fmtCalDate = (val) => {

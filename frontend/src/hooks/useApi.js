@@ -39,4 +39,5 @@ export const api = {
   getPerformance: () => apiFetch('/performance'),
   getNews: (ticker) => apiFetch(`/news/${ticker}`),
   getFundamentals: (ticker) => apiFetch(`/fundamentals/${ticker}`),
+  getPortfolioIntelligence: () => apiFetch('/portfolio-intelligence'),
 };

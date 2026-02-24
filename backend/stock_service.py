@@ -557,6 +557,9 @@ def _fetch_fundamentals_sync(ticker: str) -> dict:
             "sector": info.get("sector"),
             "earnings_date": info.get("earningsDate"),
             "ex_dividend_date": info.get("exDividendDate"),
+            "annual_dividend_per_share": info.get("trailingAnnualDividendRate"),
+            "industry": info.get("industry"),
+            "category": info.get("category"),
         }
     except Exception:
         return {}
@@ -572,3 +575,170 @@ async def get_fundamentals(ticker: str) -> dict:
     data = await asyncio.to_thread(_fetch_fundamentals_sync, ticker)
     _fundamentals_cache[ticker] = {"timestamp": now, "data": data}
     return {"ticker": ticker, **data}
+
+
+# --- Portfolio Intelligence (sector + dividend aggregation) ---
+
+SECTOR_COLORS = {
+    "Technology": "#6366f1",
+    "Financial Services": "#3b82f6",
+    "Healthcare": "#10b981",
+    "Consumer Cyclical": "#f59e0b",
+    "Communication Services": "#ec4899",
+    "Industrials": "#06b6d4",
+    "Consumer Defensive": "#84cc16",
+    "Energy": "#ef4444",
+    "Real Estate": "#8b5cf6",
+    "Utilities": "#14b8a6",
+    "Basic Materials": "#f97316",
+    "Diversified ETF": "#60a5fa",
+    "Unknown": "#475569",
+}
+
+_FALLBACK_COLOR = "#475569"
+
+
+def _resolve_sector(fund: dict, holding_type: str) -> str:
+    """Resolve sector from fundamentals, falling back for ETFs."""
+    sector = fund.get("sector")
+    if sector:
+        return sector
+    category = fund.get("category")
+    if category:
+        return category
+    return "Diversified ETF" if holding_type == "ETF" else "Unknown"
+
+
+async def get_portfolio_intelligence() -> dict:
+    """Compute sector exposure and dividend profile for the entire portfolio."""
+    async with get_db() as db:
+        cursor = await db.execute(
+            "SELECT ticker, type, shares, avg_cost, current_price FROM holdings"
+        )
+        rows = await cursor.fetchall()
+
+    if not rows:
+        return {
+            "sectors": [],
+            "sector_hhi": 0,
+            "sector_hhi_label": "N/A",
+            "total_value": 0,
+            "dividends": {"holdings": [], "summary": {}},
+        }
+
+    holdings = [dict(r) for r in rows]
+
+    # Fetch fundamentals for each ticker (uses 24hr cache)
+    fundamentals = {}
+    for h in holdings:
+        fundamentals[h["ticker"]] = await get_fundamentals(h["ticker"])
+
+    total_value = sum(
+        h["shares"] * (h["current_price"] or h["avg_cost"]) for h in holdings
+    )
+    total_cost = sum(h["shares"] * h["avg_cost"] for h in holdings)
+
+    # ── Sector aggregation ──
+    sector_map: dict[str, dict] = {}
+    for h in holdings:
+        ticker = h["ticker"]
+        price = h["current_price"] or h["avg_cost"]
+        mv = h["shares"] * price
+        fund = fundamentals.get(ticker, {})
+        sector = _resolve_sector(fund, h["type"])
+
+        if sector not in sector_map:
+            sector_map[sector] = {"value": 0, "tickers": []}
+        sector_map[sector]["value"] += mv
+        sector_map[sector]["tickers"].append(
+            {"ticker": ticker, "market_value": round(mv, 2)}
+        )
+
+    sectors = []
+    for name, data in sector_map.items():
+        pct = (data["value"] / total_value * 100) if total_value else 0
+        risk = "high" if pct > 35 else "elevated" if pct > 25 else "normal"
+        sectors.append({
+            "sector": name,
+            "value": round(data["value"], 2),
+            "percentage": round(pct, 2),
+            "risk": risk,
+            "color": SECTOR_COLORS.get(name, _FALLBACK_COLOR),
+            "tickers": data["tickers"],
+        })
+    sectors.sort(key=lambda s: s["value"], reverse=True)
+
+    sector_hhi = sum(s["percentage"] ** 2 for s in sectors)
+    if sector_hhi > 2500:
+        hhi_label = "High concentration"
+    elif sector_hhi > 1500:
+        hhi_label = "Moderate concentration"
+    else:
+        hhi_label = "Diversified"
+
+    # ── Dividend aggregation ──
+    dividend_holdings = []
+    total_annual_income = 0.0
+
+    for h in holdings:
+        ticker = h["ticker"]
+        price = h["current_price"] or h["avg_cost"]
+        mv = h["shares"] * price
+        fund = fundamentals.get(ticker, {})
+
+        annual_div_ps = fund.get("annual_dividend_per_share") or 0
+        div_yield = fund.get("dividend_yield") or 0
+        annual_income = h["shares"] * annual_div_ps
+        total_annual_income += annual_income
+
+        yoc = (
+            (annual_div_ps / h["avg_cost"] * 100)
+            if h["avg_cost"] and annual_div_ps
+            else 0
+        )
+
+        sector = _resolve_sector(fund, h["type"])
+
+        dividend_holdings.append({
+            "ticker": ticker,
+            "shares": h["shares"],
+            "annual_dividend_per_share": round(annual_div_ps, 4),
+            "annual_income": round(annual_income, 2),
+            "dividend_yield": round(div_yield, 2) if div_yield else 0,
+            "yield_on_cost": round(yoc, 2),
+            "market_value": round(mv, 2),
+            "sector": sector,
+        })
+
+    dividend_holdings.sort(key=lambda d: d["annual_income"], reverse=True)
+
+    weighted_yield = (total_annual_income / total_value * 100) if total_value else 0
+    weighted_yoc = (total_annual_income / total_cost * 100) if total_cost else 0
+
+    income_by_sector: dict[str, float] = {}
+    for dh in dividend_holdings:
+        s = dh["sector"]
+        income_by_sector[s] = income_by_sector.get(s, 0) + dh["annual_income"]
+
+    income_by_sector_list = [
+        {"sector": k, "income": round(v, 2)}
+        for k, v in sorted(income_by_sector.items(), key=lambda x: x[1], reverse=True)
+        if v > 0
+    ]
+
+    return {
+        "sectors": sectors,
+        "sector_hhi": round(sector_hhi, 0),
+        "sector_hhi_label": hhi_label,
+        "total_value": round(total_value, 2),
+        "dividends": {
+            "holdings": dividend_holdings,
+            "summary": {
+                "total_annual_income": round(total_annual_income, 2),
+                "monthly_income": round(total_annual_income / 12, 2),
+                "weighted_yield": round(weighted_yield, 2),
+                "weighted_yield_on_cost": round(weighted_yoc, 2),
+                "income_by_sector": income_by_sector_list,
+            },
+        },
+    }

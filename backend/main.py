@@ -25,6 +25,7 @@ from stock_service import (
     validate_ticker,
     get_news,
     get_fundamentals,
+    get_portfolio_intelligence,
 )
 
 scheduler = AsyncIOScheduler()
@@ -326,6 +327,21 @@ async def news_endpoint(ticker: str, _=Depends(require_auth)):
 async def fundamentals_endpoint(ticker: str, _=Depends(require_auth)):
     ticker = ticker.upper().strip()
     return await get_fundamentals(ticker)
+
+
+# ── Portfolio Intelligence Route ──
+
+
+@app.get("/api/portfolio-intelligence")
+async def portfolio_intelligence_endpoint(_=Depends(require_auth)):
+    """Return sector exposure and dividend profile for the portfolio."""
+    try:
+        return await get_portfolio_intelligence()
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Portfolio intelligence unavailable: {e}",
+        )
 
 
 # ── Static File Serving (production) ──
