@@ -4,10 +4,9 @@ import { C, MONO } from '../styles/theme';
 import { projectGrowth } from '../utils/projections';
 import GuidePanel from './GuidePanel';
 
-export default function ProjectionTab({ totalValue, settings, showGuides }) {
+export default function ProjectionTab({ totalValue, settings, showGuides, accountFilter }) {
   const monthly = parseFloat(settings?.monthly_contribution || '500');
   const monthly401k = parseFloat(settings?.monthly_401k_contribution || '0');
-  const has401k = monthly401k > 0;
   const [show401k, setShow401k] = useState(false);
   const age = parseInt(settings?.age || '26', 10);
   const conRate = parseFloat(settings?.conservative_rate || '0.06');
@@ -15,7 +14,18 @@ export default function ProjectionTab({ totalValue, settings, showGuides }) {
   const aggRate = parseFloat(settings?.aggressive_rate || '0.11');
   const years = parseInt(settings?.projection_years || '30', 10);
 
-  const effectiveMonthly = show401k ? monthly + monthly401k : monthly;
+  // Determine effective monthly contribution based on account filter
+  let effectiveMonthly;
+  let showToggle = false;
+  if (accountFilter === 'brokerage') {
+    effectiveMonthly = monthly;
+  } else if (accountFilter === '401k') {
+    effectiveMonthly = monthly401k;
+  } else {
+    // "all" mode - keep existing toggle behavior
+    showToggle = monthly401k > 0;
+    effectiveMonthly = show401k ? monthly + monthly401k : monthly;
+  }
 
   const projectionData = useMemo(() => {
     const conservative = projectGrowth(totalValue, effectiveMonthly, years, conRate);
@@ -47,7 +57,7 @@ export default function ProjectionTab({ totalValue, settings, showGuides }) {
       <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
           <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.textMuted }}>Portfolio Growth Projection ({years} Years)</h3>
-          {has401k && (
+          {showToggle && (
             <button
               onClick={() => setShow401k(v => !v)}
               style={{

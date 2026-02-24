@@ -1,31 +1,28 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { C, MONO } from '../styles/theme';
 import { api } from '../hooks/useApi';
 import PortfolioPerformanceChart from './PortfolioPerformanceChart';
 import SectorAllocation from './SectorAllocation';
 import DividendIntelligence from './DividendIntelligence';
 
-export default function OverviewTab({ holdings, totalValue }) {
+export default function OverviewTab({ holdings, totalValue, accountFilter }) {
   const [intelligence, setIntelligence] = useState(null);
   const [loading, setLoading] = useState(true);
-  const fetchedRef = useRef(false);
 
   const fetchIntelligence = useCallback(async () => {
+    setLoading(true);
     try {
-      const data = await api.getPortfolioIntelligence();
+      const data = await api.getPortfolioIntelligence(accountFilter);
       setIntelligence(data);
     } catch (err) {
       console.error('Failed to fetch portfolio intelligence:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [accountFilter]);
 
   useEffect(() => {
-    if (!fetchedRef.current) {
-      fetchedRef.current = true;
-      fetchIntelligence();
-    }
+    fetchIntelligence();
   }, [fetchIntelligence]);
 
   const driftData = useMemo(() =>
@@ -35,7 +32,7 @@ export default function OverviewTab({ holdings, totalValue }) {
     <div>
       {/* Portfolio Performance Chart */}
       <div style={{ marginBottom: 16 }}>
-        <PortfolioPerformanceChart />
+        <PortfolioPerformanceChart accountFilter={accountFilter} />
       </div>
 
       {/* Sector Allocation + Dividend Intelligence */}

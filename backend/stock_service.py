@@ -51,7 +51,7 @@ async def validate_ticker(ticker: str) -> dict | None:
 async def refresh_all_prices():
     """Fetch current prices for all holdings and update price history."""
     async with get_db() as db:
-        cursor = await db.execute("SELECT ticker FROM holdings")
+        cursor = await db.execute("SELECT DISTINCT ticker FROM holdings")
         rows = await cursor.fetchall()
         tickers = [r["ticker"] for r in rows]
 
@@ -307,7 +307,7 @@ def _find_resistance_levels(df, count=3):
     return levels
 
 
-async def get_portfolio_performance() -> dict:
+async def get_portfolio_performance(account_type: str | None = None) -> dict:
     """Compute daily historical portfolio value and S&P 500 benchmark.
 
     For each date in price_history, portfolio_value = sum(shares * close) for
@@ -320,8 +320,17 @@ async def get_portfolio_performance() -> dict:
     """
     async with get_db() as db:
         # 1. Get current holdings (ticker + shares)
-        cursor = await db.execute("SELECT ticker, shares FROM holdings")
-        holdings = {r["ticker"]: r["shares"] for r in await cursor.fetchall()}
+        if account_type:
+            cursor = await db.execute(
+                "SELECT ticker, shares FROM holdings WHERE account_type = ?",
+                (account_type,),
+            )
+        else:
+            cursor = await db.execute("SELECT ticker, shares FROM holdings")
+        # Aggregate shares per ticker (same ticker may appear in multiple accounts)
+        holdings: dict[str, float] = {}
+        for r in await cursor.fetchall():
+            holdings[r["ticker"]] = holdings.get(r["ticker"], 0) + r["shares"]
 
         if not holdings:
             return {"dates": [], "portfolio_values": [], "benchmark_values": []}
@@ -609,12 +618,18 @@ def _resolve_sector(fund: dict, holding_type: str) -> str:
     return "Diversified ETF" if holding_type == "ETF" else "Unknown"
 
 
-async def get_portfolio_intelligence() -> dict:
-    """Compute sector exposure and dividend profile for the entire portfolio."""
+async def get_portfolio_intelligence(account_type: str | None = None) -> dict:
+    """Compute sector exposure and dividend profile for the portfolio."""
     async with get_db() as db:
-        cursor = await db.execute(
-            "SELECT ticker, type, shares, avg_cost, current_price FROM holdings"
-        )
+        if account_type:
+            cursor = await db.execute(
+                "SELECT ticker, type, shares, avg_cost, current_price FROM holdings WHERE account_type = ?",
+                (account_type,),
+            )
+        else:
+            cursor = await db.execute(
+                "SELECT ticker, type, shares, avg_cost, current_price FROM holdings"
+            )
         rows = await cursor.fetchall()
 
     if not rows:

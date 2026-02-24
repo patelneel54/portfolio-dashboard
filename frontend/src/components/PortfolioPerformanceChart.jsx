@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { api } from '../hooks/useApi';
 import { C, MONO } from '../styles/theme';
@@ -88,30 +88,27 @@ const ChartTooltip = ({ active, payload, label, showBenchmark, timeframe, startV
   );
 };
 
-export default function PortfolioPerformanceChart({ compact = false }) {
+export default function PortfolioPerformanceChart({ compact = false, accountFilter }) {
   const [rawData, setRawData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [timeframe, setTimeframe] = useState('3M');
   const [showBenchmark, setShowBenchmark] = useState(false);
-  const fetchedRef = useRef(false);
 
   const fetchPerformance = useCallback(async () => {
+    setLoading(true);
     try {
-      const data = await api.getPerformance();
+      const data = await api.getPerformance(accountFilter);
       setRawData(data);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [accountFilter]);
 
   useEffect(() => {
-    if (!fetchedRef.current) {
-      fetchedRef.current = true;
-      fetchPerformance();
-    }
+    fetchPerformance();
   }, [fetchPerformance]);
 
   // Filter data by timeframe

@@ -7,7 +7,7 @@ DATABASE_PATH = os.getenv("DATABASE_PATH", os.path.join(os.path.dirname(__file__
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS holdings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ticker TEXT NOT NULL UNIQUE,
+    ticker TEXT NOT NULL,
     type TEXT NOT NULL DEFAULT 'Stock',
     shares REAL NOT NULL DEFAULT 0,
     avg_cost REAL NOT NULL DEFAULT 0,
@@ -15,7 +15,10 @@ CREATE TABLE IF NOT EXISTS holdings (
     current_price REAL DEFAULT NULL,
     previous_close REAL DEFAULT NULL,
     last_updated TEXT DEFAULT NULL,
-    created_at TEXT DEFAULT (datetime('now'))
+    purchase_date TEXT DEFAULT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    account_type TEXT NOT NULL DEFAULT 'brokerage',
+    UNIQUE(ticker, account_type)
 );
 
 CREATE TABLE IF NOT EXISTS price_history (
@@ -60,6 +63,9 @@ async def init_db():
         # Migrations for existing databases
         migrations = [
             "ALTER TABLE holdings ADD COLUMN purchase_date TEXT DEFAULT NULL",
+            "ALTER TABLE holdings ADD COLUMN account_type TEXT NOT NULL DEFAULT 'brokerage'",
+            "DROP INDEX IF EXISTS sqlite_autoindex_holdings_1",
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_holdings_ticker_account ON holdings(ticker, account_type)",
         ]
         for migration in migrations:
             try:

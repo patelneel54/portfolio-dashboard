@@ -33,6 +33,7 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [showManage, setShowManage] = useState(false);
   const [showGuides, setShowGuides] = useState(true);
+  const [accountFilter, setAccountFilter] = useState('all');
   const navigate = useNavigate();
 
   const fetchData = useCallback(async () => {
@@ -73,11 +74,26 @@ export default function Dashboard() {
     );
   }
 
-  const holdings = data?.holdings || [];
-  const totalValue = data?.total_value || 0;
-  const totalCost = data?.total_cost || 0;
-  const totalGL = data?.total_gain_loss || 0;
-  const totalGLPct = data?.total_gain_loss_pct || 0;
+  const allHoldings = data?.holdings || [];
+  const filteredHoldings = accountFilter === 'all'
+    ? allHoldings
+    : allHoldings.filter(h => (h.account_type || 'brokerage') === accountFilter);
+
+  // Recompute aggregates from filtered holdings
+  const totalValue = filteredHoldings.reduce((s, h) => s + h.market_value, 0);
+  const totalCost = filteredHoldings.reduce((s, h) => s + h.cost_basis, 0);
+  const totalGL = totalValue - totalCost;
+  const totalGLPct = totalCost ? ((totalValue - totalCost) / totalCost) * 100 : 0;
+
+  // Recompute actual_allocation and drift relative to filtered total
+  const holdings = filteredHoldings.map(h => {
+    const actualAllocation = totalValue ? (h.market_value / totalValue) * 100 : 0;
+    return {
+      ...h,
+      actual_allocation: Math.round(actualAllocation * 100) / 100,
+      drift: Math.round((actualAllocation - h.target_allocation) * 100) / 100,
+    };
+  });
   const etfTotal = holdings.filter(h => h.type === 'ETF').reduce((s, h) => s + h.market_value, 0);
   const stockTotal = holdings.filter(h => h.type === 'Stock').reduce((s, h) => s + h.market_value, 0);
 
@@ -109,6 +125,29 @@ export default function Dashboard() {
             Settings
           </button>
         </div>
+      </div>
+
+      {/* Account Filter */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: C.card, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, width: 'fit-content' }}>
+        {[
+          { id: 'all', label: 'All Accounts' },
+          { id: 'brokerage', label: 'Brokerage' },
+          { id: '401k', label: '401k' },
+        ].map(opt => (
+          <button
+            key={opt.id}
+            onClick={() => setAccountFilter(opt.id)}
+            style={{
+              padding: '8px 16px', borderRadius: 8, border: 'none',
+              fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+              background: accountFilter === opt.id ? C.accent : 'transparent',
+              color: accountFilter === opt.id ? '#fff' : C.textMuted,
+              transition: 'all 0.2s',
+            }}
+          >
+            {opt.label}
+          </button>
+        ))}
       </div>
 
       {/* Stats Row */}
@@ -149,10 +188,10 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
-          {activeTab === 'overview' && <OverviewTab holdings={holdings} totalValue={totalValue} showGuides={showGuides} />}
+          {activeTab === 'overview' && <OverviewTab holdings={holdings} totalValue={totalValue} showGuides={showGuides} accountFilter={accountFilter} />}
           {activeTab === 'allocation' && <AllocationTab holdings={holdings} totalValue={totalValue} showGuides={showGuides} settings={settings} />}
           {activeTab === 'performance' && <PerformanceTab holdings={holdings} showGuides={showGuides} />}
-          {activeTab === 'projection' && <ProjectionTab totalValue={totalValue} settings={settings} showGuides={showGuides} />}
+          {activeTab === 'projection' && <ProjectionTab totalValue={totalValue} settings={settings} showGuides={showGuides} accountFilter={accountFilter} />}
           {activeTab === 'technicals' && <TechnicalsTab holdings={holdings} showGuides={showGuides} />}
         </>
       )}
@@ -163,7 +202,7 @@ export default function Dashboard() {
       </div>
 
       {/* Manage Holdings Modal */}
-      {showManage && <ManageHoldings holdings={holdings} onClose={() => setShowManage(false)} onUpdate={fetchData} />}
+      {showManage && <ManageHoldings holdings={allHoldings} onClose={() => setShowManage(false)} onUpdate={fetchData} />}
     </div>
   );
 }

@@ -75,6 +75,7 @@ class HoldingCreate(BaseModel):
     avg_cost: float
     target_allocation: float = 0
     purchase_date: str | None = None
+    account_type: str = "brokerage"
 
 
 class HoldingUpdate(BaseModel):
@@ -82,6 +83,7 @@ class HoldingUpdate(BaseModel):
     avg_cost: float | None = None
     target_allocation: float | None = None
     purchase_date: str | None = None
+    account_type: str | None = None
 
 
 class SettingsUpdate(BaseModel):
@@ -165,22 +167,30 @@ async def add_holding(
 ):
     ticker = holding.ticker.upper().strip()
 
+    # Validate account_type
+    if holding.account_type not in ("brokerage", "401k"):
+        raise HTTPException(status_code=400, detail="account_type must be 'brokerage' or '401k'")
+
     # Validate ticker
     info = await validate_ticker(ticker)
     if info is None:
         raise HTTPException(status_code=400, detail=f"Invalid ticker: {ticker}")
 
     async with get_db() as db:
-        # Check for duplicate
+        # Check for duplicate (same ticker + same account)
         cursor = await db.execute(
-            "SELECT id FROM holdings WHERE ticker = ?", (ticker,)
+            "SELECT id FROM holdings WHERE ticker = ? AND account_type = ?",
+            (ticker, holding.account_type),
         )
         if await cursor.fetchone():
-            raise HTTPException(status_code=409, detail=f"{ticker} already exists")
+            raise HTTPException(
+                status_code=409,
+                detail=f"{ticker} already exists in {holding.account_type}",
+            )
 
         await db.execute(
-            """INSERT INTO holdings (ticker, type, shares, avg_cost, target_allocation, purchase_date, current_price, previous_close, last_updated)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))""",
+            """INSERT INTO holdings (ticker, type, shares, avg_cost, target_allocation, purchase_date, account_type, current_price, previous_close, last_updated)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))""",
             (
                 ticker,
                 info["type"],
@@ -188,6 +198,7 @@ async def add_holding(
                 holding.avg_cost,
                 holding.target_allocation,
                 holding.purchase_date,
+                holding.account_type,
                 info["price"],
                 info["previous_close"],
             ),
@@ -218,6 +229,13 @@ async def update_holding(
             updates["target_allocation"] = update.target_allocation
         if update.purchase_date is not None:
             updates["purchase_date"] = update.purchase_date
+        if update.account_type is not None:
+            if update.account_type not in ("brokerage", "401k"):
+                raise HTTPException(
+                    status_code=400,
+                    detail="account_type must be 'brokerage' or '401k'",
+                )
+            updates["account_type"] = update.account_type
 
         if updates:
             set_clause = ", ".join(f"{k} = ?" for k in updates)
@@ -281,10 +299,10 @@ async def update_settings(body: SettingsUpdate, _=Depends(require_auth)):
 
 
 @app.get("/api/performance")
-async def performance_endpoint(_=Depends(require_auth)):
+async def performance_endpoint(account_type: str | None = None, _=Depends(require_auth)):
     """Return daily historical portfolio values and S&P 500 benchmark."""
     try:
-        return await get_portfolio_performance()
+        return await get_portfolio_performance(account_type=account_type)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Performance data unavailable: {e}")
 
@@ -333,10 +351,10 @@ async def fundamentals_endpoint(ticker: str, _=Depends(require_auth)):
 
 
 @app.get("/api/portfolio-intelligence")
-async def portfolio_intelligence_endpoint(_=Depends(require_auth)):
+async def portfolio_intelligence_endpoint(account_type: str | None = None, _=Depends(require_auth)):
     """Return sector exposure and dividend profile for the portfolio."""
     try:
-        return await get_portfolio_intelligence()
+        return await get_portfolio_intelligence(account_type=account_type)
     except Exception as e:
         raise HTTPException(
             status_code=500,

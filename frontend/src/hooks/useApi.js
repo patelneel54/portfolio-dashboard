@@ -36,8 +36,14 @@ export const api = {
   updateSettings: (settings) => apiFetch('/settings', { method: 'PUT', body: JSON.stringify({ settings }) }),
   getTechnicals: (ticker) => apiFetch(`/technicals/${ticker}`),
   getPriceHistory: (ticker, period) => apiFetch(`/price-history/${ticker}?period=${period}`),
-  getPerformance: () => apiFetch('/performance'),
+  getPerformance: (accountType) => {
+    const params = accountType && accountType !== 'all' ? `?account_type=${accountType}` : '';
+    return apiFetch(`/performance${params}`);
+  },
   getNews: (ticker) => apiFetch(`/news/${ticker}`),
   getFundamentals: (ticker) => apiFetch(`/fundamentals/${ticker}`),
-  getPortfolioIntelligence: () => apiFetch('/portfolio-intelligence'),
+  getPortfolioIntelligence: (accountType) => {
+    const params = accountType && accountType !== 'all' ? `?account_type=${accountType}` : '';
+    return apiFetch(`/portfolio-intelligence${params}`);
+  },
 };

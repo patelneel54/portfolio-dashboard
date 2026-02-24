@@ -8,6 +8,7 @@ export default function ManageHoldings({ holdings, onClose, onUpdate }) {
   const [avgCost, setAvgCost] = useState('');
   const [target, setTarget] = useState('');
   const [purchaseDate, setPurchaseDate] = useState('');
+  const [accountType, setAccountType] = useState('brokerage');
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState('');
   const [editingId, setEditingId] = useState(null);
@@ -27,12 +28,14 @@ export default function ManageHoldings({ holdings, onClose, onUpdate }) {
         avg_cost: parseFloat(avgCost),
         target_allocation: parseFloat(target) || 0,
         purchase_date: purchaseDate || null,
+        account_type: accountType,
       });
       setTicker('');
       setShares('');
       setAvgCost('');
       setTarget('');
       setPurchaseDate('');
+      setAccountType('brokerage');
       await onUpdate();
     } catch (err) {
       setError(err.message);
@@ -58,6 +61,7 @@ export default function ManageHoldings({ holdings, onClose, onUpdate }) {
         avg_cost: parseFloat(editData.avg_cost),
         target_allocation: parseFloat(editData.target_allocation) || 0,
         purchase_date: editData.purchase_date || null,
+        account_type: editData.account_type || 'brokerage',
       });
       setEditingId(null);
       await onUpdate();
@@ -83,7 +87,7 @@ export default function ManageHoldings({ holdings, onClose, onUpdate }) {
         {/* Add Form */}
         <form onSubmit={handleAdd} style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 12, color: C.textMuted, fontWeight: 600, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>Add New Holding</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', gap: 8, marginBottom: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr', gap: 8, marginBottom: 8 }}>
             <div>
               <label style={{ fontSize: 10, color: C.textDim }}>Ticker</label>
               <input value={ticker} onChange={e => setTicker(e.target.value)} placeholder="AAPL" required style={inputStyle} />
@@ -104,6 +108,13 @@ export default function ManageHoldings({ holdings, onClose, onUpdate }) {
               <label style={{ fontSize: 10, color: C.textDim }}>Purchase Date</label>
               <input type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)} style={inputStyle} />
             </div>
+            <div>
+              <label style={{ fontSize: 10, color: C.textDim }}>Account</label>
+              <select value={accountType} onChange={e => setAccountType(e.target.value)} style={inputStyle}>
+                <option value="brokerage">Brokerage</option>
+                <option value="401k">401k</option>
+              </select>
+            </div>
           </div>
           {error && <div style={{ color: C.red, fontSize: 12, marginBottom: 8 }}>{error}</div>}
           <button type="submit" disabled={adding} style={{ padding: '8px 20px', background: C.accent, color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: adding ? 0.6 : 1 }}>
@@ -122,12 +133,16 @@ export default function ManageHoldings({ holdings, onClose, onUpdate }) {
           {holdings.map(h => (
             <div key={h.id} style={{ padding: '10px 14px', background: '#0d1424', borderRadius: 8, border: `1px solid ${C.border}` }}>
               {editingId === h.id ? (
-                <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr 1fr 1fr 1fr auto', gap: 8, alignItems: 'center' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr 1fr 1fr 1fr 1fr auto', gap: 8, alignItems: 'center' }}>
                   <span style={{ fontWeight: 700, fontFamily: MONO }}>{h.ticker}</span>
                   <input type="number" step="any" value={editData.shares} onChange={e => setEditData({ ...editData, shares: e.target.value })} style={{ ...inputStyle, padding: '4px 8px' }} />
                   <input type="number" step="any" value={editData.avg_cost} onChange={e => setEditData({ ...editData, avg_cost: e.target.value })} style={{ ...inputStyle, padding: '4px 8px' }} />
                   <input type="number" step="any" value={editData.target_allocation} onChange={e => setEditData({ ...editData, target_allocation: e.target.value })} style={{ ...inputStyle, padding: '4px 8px' }} />
                   <input type="date" value={editData.purchase_date || ''} onChange={e => setEditData({ ...editData, purchase_date: e.target.value })} style={{ ...inputStyle, padding: '4px 8px' }} />
+                  <select value={editData.account_type || 'brokerage'} onChange={e => setEditData({ ...editData, account_type: e.target.value })} style={{ ...inputStyle, padding: '4px 8px' }}>
+                    <option value="brokerage">Brokerage</option>
+                    <option value="401k">401k</option>
+                  </select>
                   <div style={{ display: 'flex', gap: 4 }}>
                     <button onClick={() => handleEdit(h.id)} style={{ padding: '4px 8px', background: C.green, color: '#fff', border: 'none', borderRadius: 4, fontSize: 11, cursor: 'pointer' }}>Save</button>
                     <button onClick={() => setEditingId(null)} style={{ padding: '4px 8px', background: C.border, color: C.textMuted, border: 'none', borderRadius: 4, fontSize: 11, cursor: 'pointer' }}>Cancel</button>
@@ -137,11 +152,14 @@ export default function ManageHoldings({ holdings, onClose, onUpdate }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
                     <span style={{ fontWeight: 700, fontFamily: MONO, minWidth: 50 }}>{h.ticker}</span>
+                    <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 4, background: (h.account_type || 'brokerage') === '401k' ? C.purple + '22' : C.blue + '22', color: (h.account_type || 'brokerage') === '401k' ? C.purple : C.blue, fontWeight: 700, textTransform: 'uppercase' }}>
+                      {h.account_type || 'brokerage'}
+                    </span>
                     <span style={{ fontSize: 11, color: C.textMuted }}>{h.shares} shares @ ${h.avg_cost.toFixed(2)}</span>
                     <span style={{ fontSize: 11, color: C.textDim }}>Target: {h.target_allocation.toFixed(1)}%</span>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={() => { setEditingId(h.id); setEditData({ shares: h.shares, avg_cost: h.avg_cost, target_allocation: h.target_allocation, purchase_date: h.purchase_date || '' }); }} style={{ padding: '4px 10px', background: 'transparent', border: `1px solid ${C.border}`, color: C.textMuted, borderRadius: 4, fontSize: 11, cursor: 'pointer' }}>Edit</button>
+                    <button onClick={() => { setEditingId(h.id); setEditData({ shares: h.shares, avg_cost: h.avg_cost, target_allocation: h.target_allocation, purchase_date: h.purchase_date || '', account_type: h.account_type || 'brokerage' }); }} style={{ padding: '4px 10px', background: 'transparent', border: `1px solid ${C.border}`, color: C.textMuted, borderRadius: 4, fontSize: 11, cursor: 'pointer' }}>Edit</button>
                     <button onClick={() => handleDelete(h.id)} disabled={deleting === h.id} style={{ padding: '4px 10px', background: 'transparent', border: `1px solid ${C.red}44`, color: C.red, borderRadius: 4, fontSize: 11, cursor: 'pointer', opacity: deleting === h.id ? 0.5 : 1 }}>
                       {deleting === h.id ? '...' : 'Delete'}
                     </button>
