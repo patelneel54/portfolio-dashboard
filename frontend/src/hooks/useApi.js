@@ -46,4 +46,8 @@ export const api = {
     const params = accountType && accountType !== 'all' ? `?account_type=${accountType}` : '';
     return apiFetch(`/portfolio-intelligence${params}`);
   },
+  getPortfolioAnalytics: (accountType) => {
+    const params = accountType && accountType !== 'all' ? `?account_type=${accountType}` : '';
+    return apiFetch(`/portfolio-analytics${params}`);
+  },
 };

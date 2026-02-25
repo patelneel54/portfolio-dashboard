@@ -556,6 +556,7 @@ def _fetch_fundamentals_sync(ticker: str) -> dict:
     try:
         t = yf.Ticker(ticker)
         info = t.info
+
         return {
             "trailing_pe": info.get("trailingPE"),
             "forward_pe": info.get("forwardPE"),
@@ -569,6 +570,8 @@ def _fetch_fundamentals_sync(ticker: str) -> dict:
             "annual_dividend_per_share": info.get("trailingAnnualDividendRate"),
             "industry": info.get("industry"),
             "category": info.get("category"),
+            "beta": info.get("beta"),
+            "revenue_growth": info.get("revenueGrowth"),
         }
     except Exception:
         return {}
@@ -756,4 +759,256 @@ async def get_portfolio_intelligence(account_type: str | None = None) -> dict:
                 "income_by_sector": income_by_sector_list,
             },
         },
+    }
+
+
+# --- Portfolio Analytics (enriched 3-level drill-down data) ---
+
+
+async def get_portfolio_analytics(account_type: str | None = None) -> dict:
+    """Compute enriched analytics for 3-level drill-down views."""
+    async with get_db() as db:
+        if account_type:
+            cursor = await db.execute(
+                "SELECT ticker, type, shares, avg_cost, current_price, previous_close "
+                "FROM holdings WHERE account_type = ?",
+                (account_type,),
+            )
+        else:
+            cursor = await db.execute(
+                "SELECT ticker, type, shares, avg_cost, current_price, previous_close "
+                "FROM holdings"
+            )
+        rows = await cursor.fetchall()
+
+    if not rows:
+        return {
+            "holdings_detail": [],
+            "sectors_detail": [],
+            "portfolio_risk": {},
+            "factors": {},
+            "total_value": 0,
+            "total_cost": 0,
+        }
+
+    holdings = [dict(r) for r in rows]
+
+    # Fetch fundamentals for each ticker (uses 24hr cache)
+    fundamentals = {}
+    for h in holdings:
+        fundamentals[h["ticker"]] = await get_fundamentals(h["ticker"])
+
+    total_value = sum(
+        h["shares"] * (h["current_price"] or h["avg_cost"]) for h in holdings
+    )
+    total_cost = sum(h["shares"] * h["avg_cost"] for h in holdings)
+
+    # Per-holding enrichment
+    holdings_detail = []
+    sector_agg: dict[str, dict] = {}
+
+    for h in holdings:
+        ticker = h["ticker"]
+        price = h["current_price"] or h["avg_cost"]
+        mv = h["shares"] * price
+        cost = h["shares"] * h["avg_cost"]
+        weight = (mv / total_value) if total_value else 0
+        gain_loss_pct = (
+            ((price - h["avg_cost"]) / h["avg_cost"]) if h["avg_cost"] else 0
+        )
+        return_contribution = weight * gain_loss_pct
+
+        fund = fundamentals.get(ticker, {})
+        beta = fund.get("beta")
+        pe = fund.get("trailing_pe")
+        sector = _resolve_sector(fund, h["type"])
+
+        # Normalize growth fields: yfinance returns as ratios (0.183 = 18.3%)
+        # Convert to percentage values for consistent frontend display
+        raw_eg = fund.get("earnings_growth")
+        raw_rg = fund.get("revenue_growth")
+        earnings_growth_pct = round(raw_eg * 100, 2) if raw_eg is not None else None
+        revenue_growth_pct = round(raw_rg * 100, 2) if raw_rg is not None else None
+
+        # dividend_yield: yfinance returns as percentage already (1.1 = 1.1%)
+        raw_dy = fund.get("dividend_yield")
+        dividend_yield_pct = round(raw_dy, 2) if raw_dy is not None else None
+
+        detail = {
+            "ticker": ticker,
+            "type": h["type"],
+            "shares": h["shares"],
+            "avg_cost": h["avg_cost"],
+            "current_price": round(price, 2),
+            "market_value": round(mv, 2),
+            "cost_basis": round(cost, 2),
+            "weight": round(weight * 100, 2),
+            "gain_loss_pct": round(gain_loss_pct * 100, 2),
+            "return_contribution": round(return_contribution * 100, 4),
+            "beta": beta,
+            "trailing_pe": pe,
+            "forward_pe": fund.get("forward_pe"),
+            "earnings_growth": earnings_growth_pct,
+            "revenue_growth": revenue_growth_pct,
+            "dividend_yield": dividend_yield_pct,
+            "market_cap": fund.get("market_cap"),
+            "sector": sector,
+            "industry": fund.get("industry"),
+        }
+        holdings_detail.append(detail)
+
+        # Aggregate into sectors
+        if sector not in sector_agg:
+            sector_agg[sector] = {
+                "value": 0,
+                "cost": 0,
+                "beta_weighted": 0,
+                "pe_weighted": 0,
+                "pe_weight_total": 0,
+                "beta_weight_total": 0,
+                "holdings": [],
+            }
+        sa = sector_agg[sector]
+        sa["value"] += mv
+        sa["cost"] += cost
+        if beta is not None:
+            sa["beta_weighted"] += beta * mv
+            sa["beta_weight_total"] += mv
+        if pe is not None and pe > 0:
+            sa["pe_weighted"] += pe * mv
+            sa["pe_weight_total"] += mv
+        sa["holdings"].append(detail)
+
+    # Build sectors_detail
+    sectors_detail = []
+    portfolio_beta_weighted = 0.0
+    portfolio_beta_weight_total = 0.0
+
+    for name, data in sector_agg.items():
+        pct = (data["value"] / total_value * 100) if total_value else 0
+        wtd_beta = (
+            (data["beta_weighted"] / data["beta_weight_total"])
+            if data["beta_weight_total"]
+            else None
+        )
+        wtd_pe = (
+            (data["pe_weighted"] / data["pe_weight_total"])
+            if data["pe_weight_total"]
+            else None
+        )
+        sector_return = (
+            ((data["value"] - data["cost"]) / data["cost"]) if data["cost"] else 0
+        )
+        sector_return_contribution = (pct / 100) * sector_return
+
+        # Risk badge logic
+        risk = "normal"
+        if pct > 25:
+            risk = "CONCENTRATION"
+        elif wtd_beta is not None and wtd_beta > 1.5:
+            risk = "ELEVATED"
+        elif wtd_beta is not None and wtd_beta > 1.2:
+            risk = "MODERATE"
+
+        sectors_detail.append(
+            {
+                "sector": name,
+                "value": round(data["value"], 2),
+                "percentage": round(pct, 2),
+                "weighted_beta": round(wtd_beta, 2) if wtd_beta is not None else None,
+                "weighted_pe": round(wtd_pe, 2) if wtd_pe is not None else None,
+                "return_contribution": round(sector_return_contribution * 100, 2),
+                "holdings_count": len(data["holdings"]),
+                "risk": risk,
+                "color": SECTOR_COLORS.get(name, _FALLBACK_COLOR),
+                "holdings": data["holdings"],
+            }
+        )
+
+        if data["beta_weight_total"]:
+            portfolio_beta_weighted += data["beta_weighted"]
+            portfolio_beta_weight_total += data["beta_weight_total"]
+
+    sectors_detail.sort(key=lambda s: s["value"], reverse=True)
+
+    # Portfolio-level risk
+    portfolio_beta = (
+        (portfolio_beta_weighted / portfolio_beta_weight_total)
+        if portfolio_beta_weight_total
+        else None
+    )
+    top_positions = sorted(
+        holdings_detail, key=lambda h: h["weight"], reverse=True
+    )[:3]
+    top3_concentration = sum(h["weight"] for h in top_positions)
+    sector_hhi = sum(s["percentage"] ** 2 for s in sectors_detail)
+
+    # Parametric VaR (95%, 1-day): portfolio_beta * ~1% daily S&P vol * 1.645
+    var_95 = (
+        round(total_value * (portfolio_beta or 1) * 0.01 * 1.645, 2)
+        if total_value
+        else 0
+    )
+
+    portfolio_risk = {
+        "portfolio_beta": round(portfolio_beta, 2) if portfolio_beta is not None else None,
+        "sector_concentration_hhi": round(sector_hhi, 0),
+        "top_3_concentration": round(top3_concentration, 2),
+        "top_3_tickers": [h["ticker"] for h in top_positions],
+        "var_95_1day": var_95,
+    }
+
+    # Factor analysis
+    large_cap = sum(
+        h["weight"]
+        for h in holdings_detail
+        if (h.get("market_cap") or 0) > 10_000_000_000
+    )
+    mid_cap = sum(
+        h["weight"]
+        for h in holdings_detail
+        if 2_000_000_000 < (h.get("market_cap") or 0) <= 10_000_000_000
+    )
+    small_cap = sum(
+        h["weight"]
+        for h in holdings_detail
+        if 0 < (h.get("market_cap") or 0) <= 2_000_000_000
+    )
+    # Weight-averaged metrics across portfolio
+    wtd_pe_sum = sum(
+        (h.get("trailing_pe") or 0) * h["weight"] for h in holdings_detail
+    )
+    wtd_pe_weight = sum(
+        h["weight"] for h in holdings_detail if h.get("trailing_pe")
+    )
+    wtd_div_sum = sum(
+        (h.get("dividend_yield") or 0) * h["weight"] for h in holdings_detail
+    )
+    wtd_div_weight = sum(
+        h["weight"] for h in holdings_detail if h.get("dividend_yield")
+    )
+
+    factors = {
+        "large_cap_pct": round(large_cap, 1),
+        "mid_cap_pct": round(mid_cap, 1),
+        "small_cap_pct": round(small_cap, 1),
+        "unclassified_pct": round(100 - large_cap - mid_cap - small_cap, 1),
+        "weighted_pe": (
+            round(wtd_pe_sum / wtd_pe_weight, 2) if wtd_pe_weight else None
+        ),
+        "weighted_dividend_yield": (
+            round(wtd_div_sum / wtd_div_weight, 2) if wtd_div_weight else None
+        ),
+        "weighted_beta": (
+            round(portfolio_beta, 2) if portfolio_beta is not None else None
+        ),
+    }
+
+    return {
+        "holdings_detail": holdings_detail,
+        "sectors_detail": sectors_detail,
+        "portfolio_risk": portfolio_risk,
+        "factors": factors,
+        "total_value": round(total_value, 2),
+        "total_cost": round(total_cost, 2),
     }

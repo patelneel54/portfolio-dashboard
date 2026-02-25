@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { C, MONO } from '../styles/theme';
 import { api } from '../hooks/useApi';
 import PortfolioPerformanceChart from './PortfolioPerformanceChart';
-import SectorAllocation from './SectorAllocation';
+import PortfolioAnalytics from './PortfolioAnalytics';
 import DividendIntelligence from './DividendIntelligence';
 
 export default function OverviewTab({ holdings, totalValue, accountFilter }) {
@@ -35,25 +35,20 @@ export default function OverviewTab({ holdings, totalValue, accountFilter }) {
         <PortfolioPerformanceChart accountFilter={accountFilter} />
       </div>
 
-      {/* Sector Allocation + Dividend Intelligence */}
-      {loading ? (
-        <div style={{
-          background: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
-          padding: 40, marginBottom: 16, textAlign: 'center',
-        }}>
-          <div style={{ color: C.textDim, fontSize: 12 }}>Loading sector & dividend data...</div>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginBottom: 16 }}>
-          <SectorAllocation
-            sectors={intelligence?.sectors}
-            sectorHhi={intelligence?.sector_hhi || 0}
-            sectorHhiLabel={intelligence?.sector_hhi_label || ''}
-            totalValue={intelligence?.total_value || totalValue}
-          />
+      {/* Portfolio Analytics (3-level drillable) + Dividend Intelligence */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginBottom: 16 }}>
+        <PortfolioAnalytics accountFilter={accountFilter} />
+        {loading ? (
+          <div style={{
+            background: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+            padding: 40, textAlign: 'center',
+          }}>
+            <div style={{ color: C.textDim, fontSize: 12 }}>Loading dividend data...</div>
+          </div>
+        ) : (
           <DividendIntelligence dividends={intelligence?.dividends} />
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Drift Table */}
       <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>

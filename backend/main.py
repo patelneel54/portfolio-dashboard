@@ -26,6 +26,7 @@ from stock_service import (
     get_news,
     get_fundamentals,
     get_portfolio_intelligence,
+    get_portfolio_analytics,
 )
 
 scheduler = AsyncIOScheduler()
@@ -359,6 +360,21 @@ async def portfolio_intelligence_endpoint(account_type: str | None = None, _=Dep
         raise HTTPException(
             status_code=500,
             detail=f"Portfolio intelligence unavailable: {e}",
+        )
+
+
+# ── Portfolio Analytics Route ──
+
+
+@app.get("/api/portfolio-analytics")
+async def portfolio_analytics_endpoint(account_type: str | None = None, _=Depends(require_auth)):
+    """Return enriched analytics for 3-level drill-down views."""
+    try:
+        return await get_portfolio_analytics(account_type=account_type)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Portfolio analytics unavailable: {e}",
         )
 
 

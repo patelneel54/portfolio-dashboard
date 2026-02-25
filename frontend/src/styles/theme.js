@@ -8,7 +8,7 @@ export const C = {
   textDim: "#475569",
   green: "#10b981",
   greenBg: "#064e3b",
-  red: "#ef4444",
+  red: "#f87171",
   redBg: "#7f1d1d",
   blue: "#3b82f6",
   purple: "#8b5cf6",
