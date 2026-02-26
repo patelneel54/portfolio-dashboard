@@ -105,7 +105,7 @@ export default function DriftAnalysis({ holdings = [], totalValue = 0, settings 
 
           return (
             <div
-              key={h.ticker}
+              key={h.id || h.ticker}
               style={{
                 display: 'grid',
                 gridTemplateColumns: '52px 1fr 52px',
@@ -216,7 +216,7 @@ export default function DriftAnalysis({ holdings = [], totalValue = 0, settings 
                 const isOver = h.drift > 0;
                 const monthsLabel = monthly > 0 ? ` (${(dollarAmt / monthly).toFixed(1)} mo of contributions)` : '';
                 return (
-                  <div key={h.ticker} style={{ fontSize: 11, color: isOver ? C.red : C.green, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div key={h.id || h.ticker} style={{ fontSize: 11, color: isOver ? C.red : C.green, display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ fontFamily: MONO, fontWeight: 700, minWidth: 48, color: C.text }}>{h.ticker}</span>
                     <span>
                       {isOver ? 'Sell' : 'Buy'}{' '}

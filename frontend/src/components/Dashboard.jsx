@@ -8,13 +8,23 @@ import PerformanceTab from './PerformanceTab';
 import ProjectionTab from './ProjectionTab';
 import TechnicalsTab from './TechnicalsTab';
 import ManageHoldings from './ManageHoldings';
+import CryptoView from './CryptoView';
 
-const TABS = [
+const STOCK_TABS = [
   { id: 'overview', label: 'Overview' },
   { id: 'allocation', label: 'Allocation' },
   { id: 'performance', label: 'Performance' },
   { id: 'projection', label: 'Projections' },
   { id: 'technicals', label: 'Technicals' },
+];
+
+const CRYPTO_TABS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'positions', label: 'Positions' },
+  { id: 'journal', label: 'Trade Journal' },
+  { id: 'risk', label: 'Risk' },
+  { id: 'market', label: 'Market' },
+  { id: 'scanner', label: 'Scanner' },
 ];
 
 const Stat = ({ label, value, sub, color }) => (
@@ -86,16 +96,19 @@ export default function Dashboard() {
   const totalGLPct = totalCost ? ((totalValue - totalCost) / totalCost) * 100 : 0;
 
   // Recompute actual_allocation and drift relative to filtered total
+  // Drift/target only applies to brokerage (actively managed)
   const holdings = filteredHoldings.map(h => {
     const actualAllocation = totalValue ? (h.market_value / totalValue) * 100 : 0;
+    const isBrokerage = (h.account_type || 'brokerage') === 'brokerage';
     return {
       ...h,
       actual_allocation: Math.round(actualAllocation * 100) / 100,
-      drift: Math.round((actualAllocation - h.target_allocation) * 100) / 100,
+      drift: isBrokerage ? Math.round((actualAllocation - h.target_allocation) * 100) / 100 : 0,
     };
   });
   const etfTotal = holdings.filter(h => h.type === 'ETF').reduce((s, h) => s + h.market_value, 0);
   const stockTotal = holdings.filter(h => h.type === 'Stock').reduce((s, h) => s + h.market_value, 0);
+  const cryptoTotal = holdings.filter(h => h.type === 'Crypto').reduce((s, h) => s + h.market_value, 0);
 
   const fmtK = (v) => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v.toFixed(0)}`;
 
@@ -133,10 +146,11 @@ export default function Dashboard() {
           { id: 'all', label: 'All Accounts' },
           { id: 'brokerage', label: 'Brokerage' },
           { id: '401k', label: '401k' },
+          { id: 'crypto', label: 'Crypto' },
         ].map(opt => (
           <button
             key={opt.id}
-            onClick={() => setAccountFilter(opt.id)}
+            onClick={() => { setAccountFilter(opt.id); setActiveTab('overview'); }}
             style={{
               padding: '8px 16px', borderRadius: 8, border: 'none',
               fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
@@ -154,27 +168,33 @@ export default function Dashboard() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 20 }}>
         <Stat label="Total Value" value={fmtK(totalValue)} sub={`Cost: ${fmtK(totalCost)}`} />
         <Stat label="Total Gain" value={`${totalGL >= 0 ? '+' : ''}${fmtK(Math.abs(totalGL))}`} sub={`${totalGLPct >= 0 ? '+' : ''}${totalGLPct.toFixed(1)}% return`} color={totalGL >= 0 ? C.green : C.red} />
-        <Stat label="ETF / Stock" value={`${totalValue ? ((etfTotal / totalValue) * 100).toFixed(0) : 0}% / ${totalValue ? ((stockTotal / totalValue) * 100).toFixed(0) : 0}%`} sub={`${fmtK(etfTotal)} / ${fmtK(stockTotal)}`} color={C.blue} />
-        <Stat label="Positions" value={holdings.length} sub={`${holdings.filter(h => h.type === 'ETF').length} ETFs \u2022 ${holdings.filter(h => h.type === 'Stock').length} Stocks`} color={C.purple} />
+        <Stat label="ETF / Stock" value={`${totalValue ? ((etfTotal / totalValue) * 100).toFixed(0) : 0}% / ${totalValue ? ((stockTotal / totalValue) * 100).toFixed(0) : 0}%${cryptoTotal ? ' / ' + (totalValue ? ((cryptoTotal / totalValue) * 100).toFixed(0) : 0) + '%' : ''}`} sub={`${fmtK(etfTotal)} / ${fmtK(stockTotal)}${cryptoTotal ? ' / ' + fmtK(cryptoTotal) : ''}`} color={C.blue} />
+        <Stat label="Positions" value={holdings.length} sub={`${holdings.filter(h => h.type === 'ETF').length} ETFs \u2022 ${holdings.filter(h => h.type === 'Stock').length} Stocks${holdings.filter(h => h.type === 'Crypto').length ? ' \u2022 ' + holdings.filter(h => h.type === 'Crypto').length + ' Crypto' : ''}`} color={C.purple} />
       </div>
 
       {/* Tab Bar */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: C.card, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, overflowX: 'auto', WebkitOverflowScrolling: 'touch', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
-        {TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            style={{
-              flex: '1 0 auto', padding: '10px 14px', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
-              background: activeTab === tab.id ? C.accent : 'transparent',
-              color: activeTab === tab.id ? '#fff' : C.textMuted,
-              transition: 'all 0.2s',
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {(() => {
+        const tabs = accountFilter === 'crypto' ? CRYPTO_TABS : STOCK_TABS;
+        const accentColor = accountFilter === 'crypto' ? '#F7931A' : C.accent;
+        return (
+          <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: C.card, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, overflowX: 'auto', WebkitOverflowScrolling: 'touch', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  flex: '1 0 auto', padding: '10px 14px', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+                  background: activeTab === tab.id ? accentColor : 'transparent',
+                  color: activeTab === tab.id ? '#fff' : C.textMuted,
+                  transition: 'all 0.2s',
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Tab Content */}
       {holdings.length === 0 ? (
@@ -186,10 +206,12 @@ export default function Dashboard() {
             Add Holdings
           </button>
         </div>
+      ) : accountFilter === 'crypto' ? (
+        <CryptoView holdings={holdings} totalValue={totalValue} activeTab={activeTab} />
       ) : (
         <>
           {activeTab === 'overview' && <OverviewTab holdings={holdings} totalValue={totalValue} showGuides={showGuides} accountFilter={accountFilter} />}
-          {activeTab === 'allocation' && <AllocationTab holdings={holdings} totalValue={totalValue} showGuides={showGuides} settings={settings} />}
+          {activeTab === 'allocation' && <AllocationTab holdings={holdings} totalValue={totalValue} showGuides={showGuides} settings={settings} accountFilter={accountFilter} />}
           {activeTab === 'performance' && <PerformanceTab holdings={holdings} showGuides={showGuides} />}
           {activeTab === 'projection' && <ProjectionTab totalValue={totalValue} settings={settings} showGuides={showGuides} accountFilter={accountFilter} />}
           {activeTab === 'technicals' && <TechnicalsTab holdings={holdings} showGuides={showGuides} />}
@@ -202,7 +224,7 @@ export default function Dashboard() {
       </div>
 
       {/* Manage Holdings Modal */}
-      {showManage && <ManageHoldings holdings={allHoldings} onClose={() => setShowManage(false)} onUpdate={fetchData} />}
+      {showManage && <ManageHoldings holdings={allHoldings} onClose={() => setShowManage(false)} onUpdate={fetchData} accountFilter={accountFilter} />}
     </div>
   );
 }

@@ -50,4 +50,6 @@ export const api = {
     const params = accountType && accountType !== 'all' ? `?account_type=${accountType}` : '';
     return apiFetch(`/portfolio-analytics${params}`);
   },
+  getFearGreed: () => apiFetch('/crypto/fear-greed'),
+  getCryptoGlobal: () => apiFetch('/crypto/global'),
 };

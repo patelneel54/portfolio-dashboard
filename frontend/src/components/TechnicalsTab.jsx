@@ -738,7 +738,7 @@ export default function TechnicalsTab({ holdings, showGuides }) {
   const [priceHistoryData, setPriceHistoryData] = useState({});
   const [priceHistoryLoading, setPriceHistoryLoading] = useState({});
 
-  const tickers = holdings.filter(h => h.type === 'Stock').map(h => h.ticker);
+  const tickers = [...new Set(holdings.filter(h => h.type === 'Stock' || h.type === 'Crypto').map(h => h.ticker))];
 
   useEffect(() => {
     if (tickers.length > 0 && !selectedStock) {

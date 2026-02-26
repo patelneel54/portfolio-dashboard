@@ -62,7 +62,7 @@ export default function SectorDrillDown({ sectorData, onDrillToStock, onBack }) 
               .sort((a, b) => b.weight - a.weight)
               .map((h) => (
                 <tr
-                  key={h.ticker}
+                  key={h.id || h.ticker}
                   onClick={() => onDrillToStock({ type: 'stock', ticker: h.ticker, sector })}
                   style={{
                     borderBottom: `1px solid ${C.border}22`,

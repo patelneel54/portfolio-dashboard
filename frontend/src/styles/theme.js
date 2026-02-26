@@ -24,5 +24,6 @@ export const TICKER_COLORS = [
   "#fbbf24", "#fb7185", "#34d399", "#60a5fa", "#c084fc", "#facc15", "#4ade80",
 ];
 
-export const TYPE_COLORS = { ETF: C.blue, Stock: C.purple };
+export const TYPE_COLORS = { ETF: C.blue, Stock: C.purple, Crypto: '#F7931A' };
+export const ACCOUNT_COLORS = { brokerage: C.blue, '401k': C.purple, crypto: '#F7931A' };
 export const MONO = "'JetBrains Mono', monospace";

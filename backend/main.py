@@ -27,7 +27,11 @@ from stock_service import (
     get_fundamentals,
     get_portfolio_intelligence,
     get_portfolio_analytics,
+    get_fear_greed,
+    get_crypto_global,
 )
+
+VALID_ACCOUNT_TYPES = ("brokerage", "401k", "crypto")
 
 scheduler = AsyncIOScheduler()
 
@@ -169,13 +173,21 @@ async def add_holding(
     ticker = holding.ticker.upper().strip()
 
     # Validate account_type
-    if holding.account_type not in ("brokerage", "401k"):
-        raise HTTPException(status_code=400, detail="account_type must be 'brokerage' or '401k'")
+    if holding.account_type not in VALID_ACCOUNT_TYPES:
+        raise HTTPException(status_code=400, detail=f"account_type must be one of {VALID_ACCOUNT_TYPES}")
+
+    # For crypto, normalize ticker to yfinance format (e.g. BTC -> BTC-USD)
+    if holding.account_type == "crypto" and not ticker.endswith("-USD"):
+        ticker = f"{ticker}-USD"
 
     # Validate ticker
     info = await validate_ticker(ticker)
     if info is None:
         raise HTTPException(status_code=400, detail=f"Invalid ticker: {ticker}")
+
+    # Override type for crypto
+    if holding.account_type == "crypto":
+        info["type"] = "Crypto"
 
     async with get_db() as db:
         # Check for duplicate (same ticker + same account)
@@ -231,10 +243,24 @@ async def update_holding(
         if update.purchase_date is not None:
             updates["purchase_date"] = update.purchase_date
         if update.account_type is not None:
-            if update.account_type not in ("brokerage", "401k"):
+            if update.account_type not in VALID_ACCOUNT_TYPES:
                 raise HTTPException(
                     status_code=400,
-                    detail="account_type must be 'brokerage' or '401k'",
+                    detail=f"account_type must be one of {VALID_ACCOUNT_TYPES}",
+                )
+            # Check for duplicate when changing account_type
+            cur = await db.execute(
+                "SELECT ticker FROM holdings WHERE id = ?", (holding_id,)
+            )
+            current = await cur.fetchone()
+            dup = await db.execute(
+                "SELECT id FROM holdings WHERE ticker = ? AND account_type = ? AND id != ?",
+                (current["ticker"], update.account_type, holding_id),
+            )
+            if await dup.fetchone():
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"{current['ticker']} already exists in {update.account_type}",
                 )
             updates["account_type"] = update.account_type
 
@@ -261,7 +287,14 @@ async def delete_holding(holding_id: int, _=Depends(require_auth)):
 
         ticker = row["ticker"]
         await db.execute("DELETE FROM holdings WHERE id = ?", (holding_id,))
-        await db.execute("DELETE FROM price_history WHERE ticker = ?", (ticker,))
+        # Only delete price_history if no other holdings reference this ticker
+        remaining = await db.execute(
+            "SELECT COUNT(*) as cnt FROM holdings WHERE ticker = ?", (ticker,)
+        )
+        if (await remaining.fetchone())["cnt"] == 0:
+            await db.execute(
+                "DELETE FROM price_history WHERE ticker = ?", (ticker,)
+            )
         await db.commit()
 
     return {"status": "ok"}
@@ -376,6 +409,27 @@ async def portfolio_analytics_endpoint(account_type: str | None = None, _=Depend
             status_code=500,
             detail=f"Portfolio analytics unavailable: {e}",
         )
+
+
+# ── Crypto Market Data Routes ──
+
+
+@app.get("/api/crypto/fear-greed")
+async def fear_greed_endpoint(_=Depends(require_auth)):
+    """Return Fear & Greed Index (current + 30-day history)."""
+    try:
+        return await get_fear_greed()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Fear & Greed data unavailable: {e}")
+
+
+@app.get("/api/crypto/global")
+async def crypto_global_endpoint(_=Depends(require_auth)):
+    """Return global crypto market data (BTC dominance, total market cap, etc.)."""
+    try:
+        return await get_crypto_global()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Global crypto data unavailable: {e}")
 
 
 # ── Static File Serving (production) ──

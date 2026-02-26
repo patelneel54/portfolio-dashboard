@@ -143,8 +143,8 @@ export default function DividendIntelligence({ dividends }) {
                 </tr>
               </thead>
               <tbody>
-                {top5.map(h => (
-                  <tr key={h.ticker} style={{ borderBottom: `1px solid ${C.border}22` }}>
+                {top5.map((h, i) => (
+                  <tr key={`${h.ticker}-${i}`} style={{ borderBottom: `1px solid ${C.border}22` }}>
                     <td style={{ padding: '6px 10px', fontWeight: 700, fontFamily: MONO, color: C.text }}>{h.ticker}</td>
                     <td style={{ padding: '6px 10px', fontFamily: MONO, color: C.green }}>
                       ${h.annual_income.toLocaleString(undefined, { maximumFractionDigits: 2 })}

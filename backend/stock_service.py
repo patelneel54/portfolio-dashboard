@@ -1,6 +1,8 @@
 import asyncio
 import time
+import json
 from datetime import datetime, timedelta
+from urllib.request import urlopen, Request
 import yfinance as yf
 import pandas as pd
 from database import get_db
@@ -224,6 +226,31 @@ async def get_technicals(ticker: str) -> dict | None:
     else:
         signal_factors.append({"label": "RSI", "direction": "neutral"})
 
+    # MACD (12/26/9)
+    ema12 = df["close"].ewm(span=12).mean()
+    ema26 = df["close"].ewm(span=26).mean()
+    macd_line = ema12 - ema26
+    signal_line = macd_line.ewm(span=9).mean()
+    histogram = macd_line - signal_line
+
+    macd_val = float(macd_line.iloc[-1]) if pd.notna(macd_line.iloc[-1]) else None
+    macd_signal_val = float(signal_line.iloc[-1]) if pd.notna(signal_line.iloc[-1]) else None
+    macd_hist_val = float(histogram.iloc[-1]) if pd.notna(histogram.iloc[-1]) else None
+
+    macd_tail = df.tail(60)[["date"]].copy()
+    macd_tail["macd"] = macd_line.tail(60).values
+    macd_tail["signal"] = signal_line.tail(60).values
+    macd_tail["histogram"] = histogram.tail(60).values
+    macd_history = [
+        {
+            "date": row["date"],
+            "macd": round(float(row["macd"]), 4) if pd.notna(row["macd"]) else None,
+            "signal": round(float(row["signal"]), 4) if pd.notna(row["signal"]) else None,
+            "histogram": round(float(row["histogram"]), 4) if pd.notna(row["histogram"]) else None,
+        }
+        for _, row in macd_tail.iterrows()
+    ]
+
     # Price history for mini chart (last 60 trading days)
     history_tail = df.tail(60)[["date", "close"]].copy()
     price_history_60d = [
@@ -248,6 +275,10 @@ async def get_technicals(ticker: str) -> dict | None:
         "alerts": alerts,
         "signal_factors": signal_factors,
         "price_history_60d": price_history_60d,
+        "macd": round(macd_val, 4) if macd_val is not None else None,
+        "macd_signal": round(macd_signal_val, 4) if macd_signal_val is not None else None,
+        "macd_histogram": round(macd_hist_val, 4) if macd_hist_val is not None else None,
+        "macd_history": macd_history,
         "actionable_summary": _generate_actionable_summary(
             ticker, current, rsi_val, trend, sma50_val, sma200_val, alerts
         ),
@@ -350,8 +381,19 @@ async def get_portfolio_performance(account_type: str | None = None) -> dict:
         if r["close"] is not None:
             date_prices.setdefault(r["date"], {})[r["ticker"]] = float(r["close"])
 
-    # Compute daily portfolio values
+    # Forward-fill: on dates where a ticker has no data (e.g. stocks on
+    # weekends when crypto still trades), carry the last known close forward
+    # so the portfolio value doesn't drop to near-zero.
     sorted_dates = sorted(date_prices.keys())
+    last_known: dict[str, float] = {}
+    for d in sorted_dates:
+        for t in date_prices[d]:
+            last_known[t] = date_prices[d][t]
+        for t in holdings:
+            if t not in date_prices[d] and t in last_known:
+                date_prices[d][t] = last_known[t]
+
+    # Compute daily portfolio values
     portfolio_values = []
     for d in sorted_dates:
         total = sum(
@@ -572,6 +614,9 @@ def _fetch_fundamentals_sync(ticker: str) -> dict:
             "category": info.get("category"),
             "beta": info.get("beta"),
             "revenue_growth": info.get("revenueGrowth"),
+            "volume_24h": info.get("volume"),
+            "circulating_supply": info.get("circulatingSupply"),
+            "total_supply": info.get("totalSupply"),
         }
     except Exception:
         return {}
@@ -604,14 +649,46 @@ SECTOR_COLORS = {
     "Utilities": "#14b8a6",
     "Basic Materials": "#f97316",
     "Diversified ETF": "#60a5fa",
+    "Crypto": "#F7931A",
     "Unknown": "#475569",
+    # ETF fund categories (from yfinance)
+    "Large Blend": "#3b82f6",
+    "Large Growth": "#6366f1",
+    "Large Value": "#10b981",
+    "Mid-Cap Blend": "#06b6d4",
+    "Mid-Cap Growth": "#8b5cf6",
+    "Mid-Cap Value": "#14b8a6",
+    "Small Blend": "#f59e0b",
+    "Small Growth": "#ec4899",
+    "Small Value": "#f97316",
+    "Intermediate Core Bond": "#38bdf8",
+    "Intermediate Core-Plus Bond": "#22d3ee",
+    "Short-Term Bond": "#67e8f9",
+    "Long-Term Bond": "#0ea5e9",
+    "High Yield Bond": "#ef4444",
+    "Foreign Large Blend": "#a78bfa",
+    "Foreign Large Growth": "#c084fc",
+    "World Large Stock": "#818cf8",
+    "Target-Date Retirement": "#84cc16",
 }
 
-_FALLBACK_COLOR = "#475569"
+_FALLBACK_COLORS = [
+    "#475569", "#64748b", "#78716c", "#a3a3a3", "#71717a",
+    "#94a3b8", "#6b7280", "#9ca3af", "#a1a1aa", "#737373",
+]
+
+
+def _get_sector_color(name: str, index: int = 0) -> str:
+    """Return a distinct color for a sector, with dynamic fallbacks."""
+    if name in SECTOR_COLORS:
+        return SECTOR_COLORS[name]
+    return _FALLBACK_COLORS[index % len(_FALLBACK_COLORS)]
 
 
 def _resolve_sector(fund: dict, holding_type: str) -> str:
-    """Resolve sector from fundamentals, falling back for ETFs."""
+    """Resolve sector from fundamentals, falling back for ETFs and Crypto."""
+    if holding_type == "Crypto":
+        return "Crypto"
     sector = fund.get("sector")
     if sector:
         return sector
@@ -626,12 +703,12 @@ async def get_portfolio_intelligence(account_type: str | None = None) -> dict:
     async with get_db() as db:
         if account_type:
             cursor = await db.execute(
-                "SELECT ticker, type, shares, avg_cost, current_price FROM holdings WHERE account_type = ?",
+                "SELECT id, ticker, type, shares, avg_cost, current_price, account_type FROM holdings WHERE account_type = ?",
                 (account_type,),
             )
         else:
             cursor = await db.execute(
-                "SELECT ticker, type, shares, avg_cost, current_price FROM holdings"
+                "SELECT id, ticker, type, shares, avg_cost, current_price, account_type FROM holdings"
             )
         rows = await cursor.fetchall()
 
@@ -673,7 +750,7 @@ async def get_portfolio_intelligence(account_type: str | None = None) -> dict:
         )
 
     sectors = []
-    for name, data in sector_map.items():
+    for idx, (name, data) in enumerate(sector_map.items()):
         pct = (data["value"] / total_value * 100) if total_value else 0
         risk = "high" if pct > 35 else "elevated" if pct > 25 else "normal"
         sectors.append({
@@ -681,7 +758,7 @@ async def get_portfolio_intelligence(account_type: str | None = None) -> dict:
             "value": round(data["value"], 2),
             "percentage": round(pct, 2),
             "risk": risk,
-            "color": SECTOR_COLORS.get(name, _FALLBACK_COLOR),
+            "color": _get_sector_color(name, idx),
             "tickers": data["tickers"],
         })
     sectors.sort(key=lambda s: s["value"], reverse=True)
@@ -718,7 +795,9 @@ async def get_portfolio_intelligence(account_type: str | None = None) -> dict:
         sector = _resolve_sector(fund, h["type"])
 
         dividend_holdings.append({
+            "id": h["id"],
             "ticker": ticker,
+            "account_type": h.get("account_type", "brokerage"),
             "shares": h["shares"],
             "annual_dividend_per_share": round(annual_div_ps, 4),
             "annual_income": round(annual_income, 2),
@@ -770,13 +849,13 @@ async def get_portfolio_analytics(account_type: str | None = None) -> dict:
     async with get_db() as db:
         if account_type:
             cursor = await db.execute(
-                "SELECT ticker, type, shares, avg_cost, current_price, previous_close "
+                "SELECT id, ticker, type, shares, avg_cost, current_price, previous_close, account_type "
                 "FROM holdings WHERE account_type = ?",
                 (account_type,),
             )
         else:
             cursor = await db.execute(
-                "SELECT ticker, type, shares, avg_cost, current_price, previous_close "
+                "SELECT id, ticker, type, shares, avg_cost, current_price, previous_close, account_type "
                 "FROM holdings"
             )
         rows = await cursor.fetchall()
@@ -835,7 +914,9 @@ async def get_portfolio_analytics(account_type: str | None = None) -> dict:
         dividend_yield_pct = round(raw_dy, 2) if raw_dy is not None else None
 
         detail = {
+            "id": h["id"],
             "ticker": ticker,
+            "account_type": h.get("account_type", "brokerage"),
             "type": h["type"],
             "shares": h["shares"],
             "avg_cost": h["avg_cost"],
@@ -884,7 +965,7 @@ async def get_portfolio_analytics(account_type: str | None = None) -> dict:
     portfolio_beta_weighted = 0.0
     portfolio_beta_weight_total = 0.0
 
-    for name, data in sector_agg.items():
+    for idx, (name, data) in enumerate(sector_agg.items()):
         pct = (data["value"] / total_value * 100) if total_value else 0
         wtd_beta = (
             (data["beta_weighted"] / data["beta_weight_total"])
@@ -920,7 +1001,7 @@ async def get_portfolio_analytics(account_type: str | None = None) -> dict:
                 "return_contribution": round(sector_return_contribution * 100, 2),
                 "holdings_count": len(data["holdings"]),
                 "risk": risk,
-                "color": SECTOR_COLORS.get(name, _FALLBACK_COLOR),
+                "color": _get_sector_color(name, idx),
                 "holdings": data["holdings"],
             }
         )
@@ -1012,3 +1093,84 @@ async def get_portfolio_analytics(account_type: str | None = None) -> dict:
         "total_value": round(total_value, 2),
         "total_cost": round(total_cost, 2),
     }
+
+
+# --- Crypto Market Data (Fear & Greed + CoinGecko Global) ---
+
+_fear_greed_cache: dict = {}
+_crypto_global_cache: dict = {}
+CRYPTO_MARKET_CACHE_TTL = 900  # 15 minutes
+
+
+def _fetch_fear_greed_sync() -> dict:
+    """Fetch Fear & Greed Index from alternative.me."""
+    try:
+        req = Request(
+            "https://api.alternative.me/fng/?limit=30",
+            headers={"User-Agent": "PortfolioDashboard/1.0"},
+        )
+        with urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+        entries = data.get("data", [])
+        return {
+            "current": {
+                "value": int(entries[0]["value"]) if entries else 0,
+                "classification": entries[0].get("value_classification", "N/A") if entries else "N/A",
+            },
+            "history": [
+                {
+                    "value": int(e["value"]),
+                    "classification": e.get("value_classification", ""),
+                    "date": datetime.fromtimestamp(int(e["timestamp"])).strftime("%Y-%m-%d"),
+                }
+                for e in entries
+            ],
+        }
+    except Exception as e:
+        return {"current": {"value": 0, "classification": "N/A"}, "history": [], "error": str(e)}
+
+
+async def get_fear_greed() -> dict:
+    """Get cached Fear & Greed Index."""
+    now = time.time()
+    cached = _fear_greed_cache.get("data")
+    if cached and (now - cached["timestamp"]) < CRYPTO_MARKET_CACHE_TTL:
+        return cached["result"]
+
+    result = await asyncio.to_thread(_fetch_fear_greed_sync)
+    _fear_greed_cache["data"] = {"timestamp": now, "result": result}
+    return result
+
+
+def _fetch_crypto_global_sync() -> dict:
+    """Fetch global crypto market data from CoinGecko."""
+    try:
+        req = Request(
+            "https://api.coingecko.com/api/v3/global",
+            headers={"User-Agent": "PortfolioDashboard/1.0"},
+        )
+        with urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+        gd = data.get("data", {})
+        return {
+            "total_market_cap_usd": gd.get("total_market_cap", {}).get("usd", 0),
+            "total_volume_24h_usd": gd.get("total_volume", {}).get("usd", 0),
+            "btc_dominance": gd.get("market_cap_percentage", {}).get("btc", 0),
+            "eth_dominance": gd.get("market_cap_percentage", {}).get("eth", 0),
+            "market_cap_change_24h_pct": gd.get("market_cap_change_percentage_24h_usd", 0),
+            "active_cryptocurrencies": gd.get("active_cryptocurrencies", 0),
+        }
+    except Exception as e:
+        return {"total_market_cap_usd": 0, "btc_dominance": 0, "error": str(e)}
+
+
+async def get_crypto_global() -> dict:
+    """Get cached global crypto market data."""
+    now = time.time()
+    cached = _crypto_global_cache.get("data")
+    if cached and (now - cached["timestamp"]) < CRYPTO_MARKET_CACHE_TTL:
+        return cached["result"]
+
+    result = await asyncio.to_thread(_fetch_crypto_global_sync)
+    _crypto_global_cache["data"] = {"timestamp": now, "result": result}
+    return result

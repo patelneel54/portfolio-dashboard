@@ -56,7 +56,7 @@ export default function PositionConcentration({ holdings = [], totalValue = 0 })
           const crossedThreshold = THRESHOLD_LINES.find(t => prevCum < t && h.cumulative >= t);
 
           return (
-            <div key={h.ticker}>
+            <div key={h.id || h.ticker}>
               {crossedThreshold && (
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', marginBottom: 2,
