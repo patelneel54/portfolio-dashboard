@@ -118,69 +118,40 @@ function SectorsSubTab({ sectors, onDrill }) {
         ))}
       </div>
 
-      {/* Legend */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+      {/* Sector cards — mobile-friendly, replaces legend + table */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {sectors.map((s) => (
-          <span key={s.sector} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: C.textMuted }}>
-            <span style={{ width: 8, height: 8, borderRadius: 2, background: s.color, display: 'inline-block' }} />
-            {s.sector} {s.percentage.toFixed(1)}%
-          </span>
-        ))}
-      </div>
-
-      {/* Enhanced sector table */}
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-          <thead>
-            <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-              {['Sector', '%', 'Value', 'Wtd Beta', 'Wtd P/E', 'Return Contrib', 'Holdings', 'Risk'].map(h => (
-                <th key={h} style={{
-                  padding: '6px 8px', textAlign: 'left',
-                  color: C.textDim, fontWeight: 600, fontSize: 10,
-                  textTransform: 'uppercase', letterSpacing: 0.6, whiteSpace: 'nowrap',
-                }}>
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {sectors.map((s) => (
-              <tr
-                key={s.sector}
-                onClick={() => onDrill({ type: 'sector', name: s.sector })}
-                style={{
-                  borderBottom: `1px solid ${C.border}22`,
-                  cursor: 'pointer', transition: 'background 0.15s',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = C.border + '44'; setHoveredSector(s.sector); }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; setHoveredSector(null); }}
-              >
-                <td style={{ padding: '6px 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: 2, background: s.color, display: 'inline-block', flexShrink: 0 }} />
-                  <span style={{ fontWeight: 600, color: C.text }}>{s.sector}</span>
-                </td>
-                <td style={{ padding: '6px 8px', fontFamily: MONO, color: C.text }}>{s.percentage.toFixed(1)}%</td>
-                <td style={{ padding: '6px 8px', fontFamily: MONO, color: C.textMuted }}>
-                  ${s.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                </td>
-                <td style={{ padding: '6px 8px', fontFamily: MONO, color: s.weighted_beta && s.weighted_beta > 1.2 ? C.amber : C.textMuted }}>
-                  {s.weighted_beta?.toFixed(2) || 'N/A'}
-                </td>
-                <td style={{ padding: '6px 8px', fontFamily: MONO, color: C.textMuted }}>
-                  {s.weighted_pe?.toFixed(1) || 'N/A'}
-                </td>
-                <td style={{ padding: '6px 8px', fontFamily: MONO, color: s.return_contribution >= 0 ? C.green : C.red }}>
+          <div
+            key={s.sector}
+            onClick={() => onDrill({ type: 'sector', name: s.sector })}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+              background: hoveredSector === s.sector ? C.border + '44' : C.bg,
+              borderRadius: 8, border: `1px solid ${C.border}`,
+              cursor: 'pointer', transition: 'background 0.15s',
+            }}
+            onMouseEnter={() => setHoveredSector(s.sector)}
+            onMouseLeave={() => setHoveredSector(null)}
+          >
+            <span style={{ width: 8, height: 8, borderRadius: 2, background: s.color, flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                <span style={{ fontWeight: 600, fontSize: 12, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.sector}</span>
+                <span style={{ fontFamily: MONO, fontSize: 12, fontWeight: 700, color: C.text, flexShrink: 0 }}>{s.percentage.toFixed(1)}%</span>
+              </div>
+              <div style={{ display: 'flex', gap: 10, marginTop: 3, fontSize: 10, color: C.textMuted }}>
+                <span>${s.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                <span style={{ color: s.return_contribution >= 0 ? C.green : C.red }}>
                   {s.return_contribution >= 0 ? '+' : ''}{s.return_contribution.toFixed(2)}%
-                </td>
-                <td style={{ padding: '6px 8px', fontFamily: MONO, color: C.textMuted }}>{s.holdings_count}</td>
-                <td style={{ padding: '6px 8px' }}>
-                  <AnalyticsBadge type={s.risk} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </span>
+                {s.weighted_beta != null && <span>β {s.weighted_beta.toFixed(2)}</span>}
+                <span>{s.holdings_count} {s.holdings_count === 1 ? 'holding' : 'holdings'}</span>
+                {s.risk !== 'normal' && <AnalyticsBadge type={s.risk} />}
+              </div>
+            </div>
+            <span style={{ color: C.textDim, fontSize: 10, flexShrink: 0 }}>&#9654;</span>
+          </div>
+        ))}
       </div>
     </div>
   );

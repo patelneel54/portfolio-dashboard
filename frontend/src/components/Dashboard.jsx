@@ -28,10 +28,10 @@ const CRYPTO_TABS = [
 ];
 
 const Stat = ({ label, value, sub, color }) => (
-  <div style={{ padding: '16px 20px', background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, minWidth: 140, flex: 1 }}>
-    <div style={{ fontSize: 11, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 600 }}>{label}</div>
-    <div style={{ fontSize: 24, fontWeight: 800, color: color || C.text, marginTop: 4, fontFamily: MONO }}>{value}</div>
-    {sub && <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{sub}</div>}
+  <div style={{ padding: '12px 14px', background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, minWidth: 0, flex: 1 }}>
+    <div style={{ fontSize: 10, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>{label}</div>
+    <div style={{ fontSize: 20, fontWeight: 800, color: color || C.text, marginTop: 3, fontFamily: MONO }}>{value}</div>
+    {sub && <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{sub}</div>}
   </div>
 );
 
@@ -115,35 +115,35 @@ export default function Dashboard() {
   return (
     <div style={{ padding: '16px 12px', maxWidth: 1200, margin: '0 auto', paddingTop: 'max(16px, env(safe-area-inset-top))', paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0, letterSpacing: -0.5, background: `linear-gradient(135deg, ${C.text}, ${C.accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: -0.5, background: `linear-gradient(135deg, ${C.text}, ${C.accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             Portfolio Command Center
           </h1>
-          <p style={{ color: C.textMuted, fontSize: 13, margin: '4px 0 0' }}>
+          <p style={{ color: C.textMuted, fontSize: 12, margin: '2px 0 0' }}>
             {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          <button onClick={() => setShowGuides(!showGuides)} style={{ background: showGuides ? C.accent + '22' : 'transparent', border: `1px solid ${showGuides ? C.accent : C.border}`, color: showGuides ? C.accent : C.textMuted, padding: '6px 10px', borderRadius: 8, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
-            {showGuides ? 'Guides On' : 'Guides Off'}
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+          <button onClick={() => setShowGuides(!showGuides)} style={{ background: showGuides ? C.accent + '22' : 'transparent', border: `1px solid ${showGuides ? C.accent : C.border}`, color: showGuides ? C.accent : C.textMuted, padding: '5px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', fontWeight: 600 }}>
+            {showGuides ? 'Guides' : 'Guides'}
           </button>
-          <button onClick={handleRefresh} disabled={refreshing} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.textMuted, padding: '6px 10px', borderRadius: 8, fontSize: 11, cursor: 'pointer', fontWeight: 600, opacity: refreshing ? 0.5 : 1 }}>
-            {refreshing ? 'Refreshing...' : 'Refresh'}
+          <button onClick={handleRefresh} disabled={refreshing} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.textMuted, padding: '5px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', fontWeight: 600, opacity: refreshing ? 0.5 : 1 }}>
+            {refreshing ? '...' : 'Refresh'}
           </button>
-          <button onClick={() => setShowManage(true)} style={{ background: C.accent + '22', border: `1px solid ${C.accent}`, color: C.accent, padding: '6px 10px', borderRadius: 8, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+          <button onClick={() => setShowManage(true)} style={{ background: C.accent + '22', border: `1px solid ${C.accent}`, color: C.accent, padding: '5px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', fontWeight: 600 }}>
             Manage
           </button>
-          <button onClick={() => navigate('/settings')} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.textMuted, padding: '6px 10px', borderRadius: 8, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+          <button onClick={() => navigate('/settings')} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.textMuted, padding: '5px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', fontWeight: 600 }}>
             Settings
           </button>
         </div>
       </div>
 
       {/* Account Filter */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: C.card, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, width: 'fit-content' }}>
+      <div style={{ display: 'flex', gap: 3, marginBottom: 14, background: C.card, borderRadius: 10, padding: 3, border: `1px solid ${C.border}`, overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {[
-          { id: 'all', label: 'All Accounts' },
+          { id: 'all', label: 'All' },
           { id: 'brokerage', label: 'Brokerage' },
           { id: '401k', label: '401k' },
           { id: 'crypto', label: 'Crypto' },
@@ -152,8 +152,8 @@ export default function Dashboard() {
             key={opt.id}
             onClick={() => { setAccountFilter(opt.id); setActiveTab('overview'); }}
             style={{
-              padding: '8px 16px', borderRadius: 8, border: 'none',
-              fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+              padding: '7px 12px', borderRadius: 8, border: 'none', flex: '1 0 auto',
+              fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
               background: accountFilter === opt.id ? C.accent : 'transparent',
               color: accountFilter === opt.id ? '#fff' : C.textMuted,
               transition: 'all 0.2s',
@@ -165,7 +165,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 16 }}>
         <Stat label="Total Value" value={fmtK(totalValue)} sub={`Cost: ${fmtK(totalCost)}`} />
         <Stat label="Total Gain" value={`${totalGL >= 0 ? '+' : ''}${fmtK(Math.abs(totalGL))}`} sub={`${totalGLPct >= 0 ? '+' : ''}${totalGLPct.toFixed(1)}% return`} color={totalGL >= 0 ? C.green : C.red} />
         <Stat label="Funds / Stock" value={`${totalValue ? ((etfTotal / totalValue) * 100).toFixed(0) : 0}% / ${totalValue ? ((stockTotal / totalValue) * 100).toFixed(0) : 0}%${cryptoTotal ? ' / ' + (totalValue ? ((cryptoTotal / totalValue) * 100).toFixed(0) : 0) + '%' : ''}`} sub={`${fmtK(etfTotal)} / ${fmtK(stockTotal)}${cryptoTotal ? ' / ' + fmtK(cryptoTotal) : ''}`} color={C.blue} />
@@ -177,13 +177,13 @@ export default function Dashboard() {
         const tabs = accountFilter === 'crypto' ? CRYPTO_TABS : STOCK_TABS;
         const accentColor = accountFilter === 'crypto' ? '#F7931A' : C.accent;
         return (
-          <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: C.card, borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, overflowX: 'auto', WebkitOverflowScrolling: 'touch', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+          <div style={{ display: 'flex', gap: 3, marginBottom: 16, background: C.card, borderRadius: 10, padding: 3, border: `1px solid ${C.border}`, overflowX: 'auto', WebkitOverflowScrolling: 'touch', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 style={{
-                  flex: '1 0 auto', padding: '10px 14px', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+                  flex: 1, padding: '8px 6px', borderRadius: 8, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 0,
                   background: activeTab === tab.id ? accentColor : 'transparent',
                   color: activeTab === tab.id ? '#fff' : C.textMuted,
                   transition: 'all 0.2s',
