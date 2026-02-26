@@ -17,15 +17,19 @@ KNOWN_ETFS = {
 
 
 def classify_ticker(ticker: str) -> str:
-    """Classify a ticker as ETF or Stock."""
+    """Classify a ticker as ETF, Fund, Crypto, or Stock."""
     if ticker.upper() in KNOWN_ETFS:
         return "ETF"
+    if ticker.upper().endswith("-USD"):
+        return "Crypto"
     try:
         t = yf.Ticker(ticker)
         info = t.info
         qt = info.get("quoteType", "")
         if qt == "ETF":
             return "ETF"
+        if qt == "MUTUALFUND":
+            return "Fund"
     except Exception:
         pass
     return "Stock"
@@ -617,6 +621,7 @@ def _fetch_fundamentals_sync(ticker: str) -> dict:
             "volume_24h": info.get("volume"),
             "circulating_supply": info.get("circulatingSupply"),
             "total_supply": info.get("totalSupply"),
+            "long_name": info.get("longName") or info.get("shortName"),
         }
     except Exception:
         return {}
@@ -670,6 +675,9 @@ SECTOR_COLORS = {
     "Foreign Large Growth": "#c084fc",
     "World Large Stock": "#818cf8",
     "Target-Date Retirement": "#84cc16",
+    "Foreign Small/Mid Blend": "#d946ef",
+    "World Bond": "#7dd3fc",
+    "Diversified Fund": "#94a3b8",
 }
 
 _FALLBACK_COLORS = [
@@ -685,8 +693,54 @@ def _get_sector_color(name: str, index: int = 0) -> str:
     return _FALLBACK_COLORS[index % len(_FALLBACK_COLORS)]
 
 
+def _infer_fund_category(name: str) -> str:
+    """Infer a fund category from its name when yfinance doesn't provide one."""
+    n = name.lower()
+    # Real estate
+    if "real estate" in n or "reit" in n:
+        return "Real Estate"
+    # Bond / fixed income
+    if any(w in n for w in ["bond", "income", "treasury", "aggregate", "fixed"]):
+        if "high yield" in n or "high-yield" in n:
+            return "High Yield Bond"
+        if "short" in n:
+            return "Short-Term Bond"
+        if "long" in n:
+            return "Long-Term Bond"
+        if "international" in n or "global" in n:
+            return "World Bond"
+        return "Intermediate Core Bond"
+    # International / foreign equity
+    if any(w in n for w in ["international", "foreign", "overseas", "global", "world"]):
+        if "small" in n:
+            return "Foreign Small/Mid Blend"
+        return "Foreign Large Blend"
+    # Index / market cap
+    if "500" in n or "s&p" in n or "total market" in n or "total stock" in n:
+        return "Large Blend"
+    if "small" in n and "cap" in n or "small" in n and ("value" in n or "growth" in n or "blend" in n):
+        if "growth" in n:
+            return "Small Growth"
+        if "value" in n:
+            return "Small Value"
+        return "Small Blend"
+    if "mid" in n and ("cap" in n or "value" in n or "growth" in n or "blend" in n):
+        if "growth" in n:
+            return "Mid-Cap Growth"
+        if "value" in n:
+            return "Mid-Cap Value"
+        return "Mid-Cap Blend"
+    if "growth" in n:
+        return "Large Growth"
+    if "value" in n:
+        return "Large Value"
+    if "index" in n:
+        return "Large Blend"
+    return ""
+
+
 def _resolve_sector(fund: dict, holding_type: str) -> str:
-    """Resolve sector from fundamentals, falling back for ETFs and Crypto."""
+    """Resolve sector from fundamentals, falling back for ETFs, Funds, and Crypto."""
     if holding_type == "Crypto":
         return "Crypto"
     sector = fund.get("sector")
@@ -695,7 +749,15 @@ def _resolve_sector(fund: dict, holding_type: str) -> str:
     category = fund.get("category")
     if category:
         return category
-    return "Diversified ETF" if holding_type == "ETF" else "Unknown"
+    # For mutual funds / ETFs without a category, infer from name
+    if holding_type in ("Fund", "ETF"):
+        long_name = fund.get("long_name") or ""
+        if long_name:
+            inferred = _infer_fund_category(long_name)
+            if inferred:
+                return inferred
+        return "Diversified Fund" if holding_type == "Fund" else "Diversified ETF"
+    return "Unknown"
 
 
 async def get_portfolio_intelligence(account_type: str | None = None) -> dict:

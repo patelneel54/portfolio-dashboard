@@ -106,7 +106,7 @@ export default function Dashboard() {
       drift: isBrokerage ? Math.round((actualAllocation - h.target_allocation) * 100) / 100 : 0,
     };
   });
-  const etfTotal = holdings.filter(h => h.type === 'ETF').reduce((s, h) => s + h.market_value, 0);
+  const etfTotal = holdings.filter(h => h.type === 'ETF' || h.type === 'Fund').reduce((s, h) => s + h.market_value, 0);
   const stockTotal = holdings.filter(h => h.type === 'Stock').reduce((s, h) => s + h.market_value, 0);
   const cryptoTotal = holdings.filter(h => h.type === 'Crypto').reduce((s, h) => s + h.market_value, 0);
 
@@ -168,8 +168,8 @@ export default function Dashboard() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 20 }}>
         <Stat label="Total Value" value={fmtK(totalValue)} sub={`Cost: ${fmtK(totalCost)}`} />
         <Stat label="Total Gain" value={`${totalGL >= 0 ? '+' : ''}${fmtK(Math.abs(totalGL))}`} sub={`${totalGLPct >= 0 ? '+' : ''}${totalGLPct.toFixed(1)}% return`} color={totalGL >= 0 ? C.green : C.red} />
-        <Stat label="ETF / Stock" value={`${totalValue ? ((etfTotal / totalValue) * 100).toFixed(0) : 0}% / ${totalValue ? ((stockTotal / totalValue) * 100).toFixed(0) : 0}%${cryptoTotal ? ' / ' + (totalValue ? ((cryptoTotal / totalValue) * 100).toFixed(0) : 0) + '%' : ''}`} sub={`${fmtK(etfTotal)} / ${fmtK(stockTotal)}${cryptoTotal ? ' / ' + fmtK(cryptoTotal) : ''}`} color={C.blue} />
-        <Stat label="Positions" value={holdings.length} sub={`${holdings.filter(h => h.type === 'ETF').length} ETFs \u2022 ${holdings.filter(h => h.type === 'Stock').length} Stocks${holdings.filter(h => h.type === 'Crypto').length ? ' \u2022 ' + holdings.filter(h => h.type === 'Crypto').length + ' Crypto' : ''}`} color={C.purple} />
+        <Stat label="Funds / Stock" value={`${totalValue ? ((etfTotal / totalValue) * 100).toFixed(0) : 0}% / ${totalValue ? ((stockTotal / totalValue) * 100).toFixed(0) : 0}%${cryptoTotal ? ' / ' + (totalValue ? ((cryptoTotal / totalValue) * 100).toFixed(0) : 0) + '%' : ''}`} sub={`${fmtK(etfTotal)} / ${fmtK(stockTotal)}${cryptoTotal ? ' / ' + fmtK(cryptoTotal) : ''}`} color={C.blue} />
+        <Stat label="Positions" value={holdings.length} sub={`${holdings.filter(h => h.type === 'ETF' || h.type === 'Fund').length} ETFs/Funds \u2022 ${holdings.filter(h => h.type === 'Stock').length} Stocks${holdings.filter(h => h.type === 'Crypto').length ? ' \u2022 ' + holdings.filter(h => h.type === 'Crypto').length + ' Crypto' : ''}`} color={C.purple} />
       </div>
 
       {/* Tab Bar */}
