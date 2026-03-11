@@ -40,8 +40,8 @@ function formatDate(dateStr, timeframe) {
 
 function normalizeToBase100(values) {
   if (!values.length) return [];
-  const base = values[0];
-  if (!base || base === 0) return values.map(() => 100);
+  const base = values.find(v => v != null && v !== 0);
+  if (base == null) return values.map(() => null);
   return values.map(v => v != null ? (v / base) * 100 : null);
 }
 

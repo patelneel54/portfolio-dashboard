@@ -4,6 +4,7 @@ import { api } from '../hooks/useApi';
 import { C, MONO } from '../styles/theme';
 import SectorDrillDown from './SectorDrillDown';
 import StockDeepDive from './StockDeepDive';
+import { InlineError } from './ErrorBoundary';
 
 // ── Shared sub-components ──
 
@@ -432,16 +433,19 @@ const SUB_TABS = [
 export default function PortfolioAnalytics({ accountFilter }) {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeSubTab, setActiveSubTab] = useState('sectors');
   const [drillView, setDrillView] = useState(null); // null | {type:'sector', name} | {type:'stock', ticker, sector}
 
   const fetchAnalytics = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await api.getPortfolioAnalytics(accountFilter);
       setAnalytics(data);
     } catch (err) {
       console.error('Failed to fetch portfolio analytics:', err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -465,6 +469,10 @@ export default function PortfolioAnalytics({ accountFilter }) {
         <div style={{ color: C.textDim, fontSize: 12 }}>Loading analytics...</div>
       </div>
     );
+  }
+
+  if (error) {
+    return <InlineError message="Failed to load portfolio analytics" onRetry={fetchAnalytics} />;
   }
 
   if (!analytics || !analytics.sectors_detail?.length) {

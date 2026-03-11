@@ -8,7 +8,12 @@ async function apiFetch(path, options = {}) {
     ...options.headers,
   };
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  let res;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  } catch (err) {
+    throw new Error('Server unavailable. Check your connection.');
+  }
 
   if (res.status === 401) {
     localStorage.removeItem('auth_token');

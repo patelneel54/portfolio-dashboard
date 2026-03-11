@@ -4,18 +4,22 @@ import { api } from '../hooks/useApi';
 import PortfolioPerformanceChart from './PortfolioPerformanceChart';
 import PortfolioAnalytics from './PortfolioAnalytics';
 import DividendIntelligence from './DividendIntelligence';
+import { InlineError } from './ErrorBoundary';
 
 export default function OverviewTab({ holdings, totalValue, accountFilter }) {
   const [intelligence, setIntelligence] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const fetchIntelligence = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await api.getPortfolioIntelligence(accountFilter);
       setIntelligence(data);
     } catch (err) {
       console.error('Failed to fetch portfolio intelligence:', err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -46,6 +50,8 @@ export default function OverviewTab({ holdings, totalValue, accountFilter }) {
           }}>
             <div style={{ color: C.textDim, fontSize: 12 }}>Loading dividend data...</div>
           </div>
+        ) : error ? (
+          <InlineError message="Failed to load portfolio intelligence" onRetry={fetchIntelligence} />
         ) : (
           <DividendIntelligence dividends={intelligence?.dividends} />
         )}

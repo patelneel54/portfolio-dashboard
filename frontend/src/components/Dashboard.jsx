@@ -9,6 +9,7 @@ import ProjectionTab from './ProjectionTab';
 import TechnicalsTab from './TechnicalsTab';
 import ManageHoldings from './ManageHoldings';
 import CryptoView from './CryptoView';
+import ErrorBoundary from './ErrorBoundary';
 
 const STOCK_TABS = [
   { id: 'overview', label: 'Overview' },
@@ -44,9 +45,11 @@ export default function Dashboard() {
   const [showManage, setShowManage] = useState(false);
 
   const [accountFilter, setAccountFilter] = useState('all');
+  const [fetchError, setFetchError] = useState(null);
   const navigate = useNavigate();
 
   const fetchData = useCallback(async () => {
+    setFetchError(null);
     try {
       const [holdingsData, settingsData] = await Promise.all([
         api.getHoldings(),
@@ -56,6 +59,7 @@ export default function Dashboard() {
       setSettings(settingsData);
     } catch (err) {
       console.error('Failed to fetch data:', err);
+      setFetchError(err.message);
     } finally {
       setLoading(false);
     }
@@ -79,6 +83,21 @@ export default function Dashboard() {
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 32, marginBottom: 12 }}>&#128200;</div>
           <div style={{ color: C.textMuted, fontSize: 14 }}>Loading portfolio...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (fetchError && !data) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <div style={{ textAlign: 'center', maxWidth: 340 }}>
+          <div style={{ fontSize: 32, marginBottom: 12, color: C.red }}>&#9888;</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: C.text, marginBottom: 6 }}>Failed to load portfolio data</div>
+          <div style={{ fontSize: 13, color: C.textMuted, marginBottom: 20 }}>Check your connection and try again.</div>
+          <button onClick={() => { setLoading(true); fetchData(); }} style={{ background: C.red + '22', border: `1px solid ${C.red}`, color: C.red, padding: '10px 24px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', minHeight: 44 }}>
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -204,14 +223,16 @@ export default function Dashboard() {
           </button>
         </div>
       ) : accountFilter === 'crypto' ? (
-        <CryptoView holdings={holdings} totalValue={totalValue} activeTab={activeTab} />
+        <ErrorBoundary fallbackMessage="Crypto view encountered an error.">
+          <CryptoView holdings={holdings} totalValue={totalValue} activeTab={activeTab} />
+        </ErrorBoundary>
       ) : (
         <>
-          {activeTab === 'overview' && <OverviewTab holdings={holdings} totalValue={totalValue} accountFilter={accountFilter} />}
-          {activeTab === 'allocation' && <AllocationTab holdings={holdings} totalValue={totalValue} settings={settings} accountFilter={accountFilter} />}
-          {activeTab === 'performance' && <PerformanceTab holdings={holdings} />}
-          {activeTab === 'projection' && <ProjectionTab totalValue={totalValue} settings={settings} accountFilter={accountFilter} />}
-          {activeTab === 'technicals' && <TechnicalsTab holdings={holdings} />}
+          {activeTab === 'overview' && <ErrorBoundary key="overview" fallbackMessage="Overview tab encountered an error."><OverviewTab holdings={holdings} totalValue={totalValue} accountFilter={accountFilter} /></ErrorBoundary>}
+          {activeTab === 'allocation' && <ErrorBoundary key="allocation" fallbackMessage="Allocation tab encountered an error."><AllocationTab holdings={holdings} totalValue={totalValue} settings={settings} accountFilter={accountFilter} /></ErrorBoundary>}
+          {activeTab === 'performance' && <ErrorBoundary key="performance" fallbackMessage="Performance tab encountered an error."><PerformanceTab holdings={holdings} /></ErrorBoundary>}
+          {activeTab === 'projection' && <ErrorBoundary key="projection" fallbackMessage="Projections tab encountered an error."><ProjectionTab totalValue={totalValue} settings={settings} accountFilter={accountFilter} /></ErrorBoundary>}
+          {activeTab === 'technicals' && <ErrorBoundary key="technicals" fallbackMessage="Technicals tab encountered an error."><TechnicalsTab holdings={holdings} /></ErrorBoundary>}
         </>
       )}
 
