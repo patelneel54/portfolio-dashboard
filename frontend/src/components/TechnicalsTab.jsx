@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from 'recharts';
 import { api } from '../hooks/useApi';
 import { C, MONO } from '../styles/theme';
-import GuidePanel from './GuidePanel';
 
 /* ── Helper: RSI plain-English interpretation ── */
 const rsiInterpretation = (rsi) => {
@@ -80,8 +79,8 @@ const PeriodSelector = ({ period, onPeriodChange }) => (
   <div style={{ display: 'flex', gap: 2 }}>
     {PERIODS.map(p => (
       <button key={p} onClick={() => onPeriodChange(p)} style={{
-        padding: '3px 8px', borderRadius: 4, border: 'none', cursor: 'pointer',
-        fontSize: 10, fontWeight: 700, fontFamily: MONO,
+        padding: '8px 10px', borderRadius: 4, border: 'none', cursor: 'pointer',
+        fontSize: 11, fontWeight: 700, fontFamily: MONO, minHeight: 44,
         background: period === p ? C.accent + '33' : 'transparent',
         color: period === p ? C.accent : C.textDim,
         transition: 'all 0.15s',
@@ -726,7 +725,7 @@ const QuickScanCard = ({ tech, isSelected, onClick, isLoading }) => {
 /* ══════════════════════════════════════════════════════════════════════
    TechnicalsTab — main export
    ══════════════════════════════════════════════════════════════════════ */
-export default function TechnicalsTab({ holdings, showGuides }) {
+export default function TechnicalsTab({ holdings }) {
   const [selectedStock, setSelectedStock] = useState(null);
   const [techData, setTechData] = useState({});
   const [loading, setLoading] = useState({});
@@ -802,8 +801,6 @@ export default function TechnicalsTab({ holdings, showGuides }) {
 
   return (
     <div>
-      {showGuides && <GuidePanel guideKey="technicals" />}
-
       {/* Alerts Summary Panel */}
       <AlertsSummary techData={techData} onSelectStock={setSelectedStock} />
 
@@ -816,7 +813,7 @@ export default function TechnicalsTab({ holdings, showGuides }) {
               key={t}
               onClick={() => setSelectedStock(t)}
               style={{
-                padding: '6px 14px', borderRadius: 8,
+                padding: '10px 14px', borderRadius: 8, minHeight: 44,
                 border: `1px solid ${selectedStock === t ? C.accent : hasAlert ? C.amber + '66' : C.border}`,
                 background: selectedStock === t ? C.accent + '22' : C.card,
                 color: selectedStock === t ? C.accent : C.textMuted,

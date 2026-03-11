@@ -1,9 +1,8 @@
 import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell } from 'recharts';
 import { C, MONO } from '../styles/theme';
-import GuidePanel from './GuidePanel';
 
-export default function PerformanceTab({ holdings, showGuides }) {
+export default function PerformanceTab({ holdings }) {
   const computeCagr = (gainLossPct, purchaseDate) => {
     if (!purchaseDate) return null;
     const start = new Date(purchaseDate);
@@ -32,8 +31,6 @@ export default function PerformanceTab({ holdings, showGuides }) {
 
   return (
     <div>
-      {showGuides && <GuidePanel guideKey="gainloss" />}
-
       <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 16 }}>
         <h3 style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>Unrealized Gain/Loss - All Positions</h3>
         <ResponsiveContainer width="100%" height={Math.max(300, gainLossData.length * 28)}>

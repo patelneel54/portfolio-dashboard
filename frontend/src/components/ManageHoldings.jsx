@@ -21,6 +21,7 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
   const [deleting, setDeleting] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const isBrokerage = activeAccount === 'brokerage';
   const isCrypto = activeAccount === 'crypto';
@@ -57,6 +58,7 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
 
   const handleDelete = async (id) => {
     setDeleting(id);
+    setConfirmDelete(null);
     try {
       await api.deleteHolding(id);
       await onUpdate();
@@ -100,7 +102,7 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
       <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, width: '100%', maxWidth: 640, maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>Manage Holdings</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.textMuted, fontSize: 20, cursor: 'pointer', padding: '4px 8px' }}>&times;</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.textMuted, fontSize: 20, cursor: 'pointer', padding: '10px 14px', minHeight: 44, minWidth: 44 }}>&times;</button>
         </div>
 
         {/* Account Tabs */}
@@ -110,8 +112,8 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
               key={tab.id}
               onClick={() => { setActiveAccount(tab.id); setEditingId(null); setError(''); }}
               style={{
-                flex: 1, padding: '8px 14px', borderRadius: 8, border: 'none',
-                fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                flex: 1, padding: '10px 14px', borderRadius: 8, border: 'none',
+                fontSize: 12, fontWeight: 700, cursor: 'pointer', minHeight: 44,
                 background: activeAccount === tab.id ? tab.color : 'transparent',
                 color: activeAccount === tab.id ? '#fff' : C.textMuted,
                 transition: 'all 0.2s',
@@ -152,7 +154,7 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
             </div>
           </div>
           {error && <div style={{ color: C.red, fontSize: 12, marginBottom: 8 }}>{error}</div>}
-          <button type="submit" disabled={adding} style={{ padding: '8px 20px', background: tabColor, color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: adding ? 0.6 : 1 }}>
+          <button type="submit" disabled={adding} style={{ padding: '10px 20px', minHeight: 44, background: tabColor, color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: adding ? 0.6 : 1 }}>
             {adding ? 'Adding...' : isCrypto ? 'Add Coin' : 'Add Holding'}
           </button>
           {isBrokerage && totalTarget > 0 && (
@@ -192,8 +194,8 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
                         <option value="crypto">Crypto</option>
                       </select>
                       <div style={{ display: 'flex', gap: 4 }}>
-                        <button onClick={() => handleEdit(h.id)} style={{ padding: '4px 8px', background: C.green, color: '#fff', border: 'none', borderRadius: 4, fontSize: 11, cursor: 'pointer' }}>Save</button>
-                        <button onClick={() => setEditingId(null)} style={{ padding: '4px 8px', background: C.border, color: C.textMuted, border: 'none', borderRadius: 4, fontSize: 11, cursor: 'pointer' }}>Cancel</button>
+                        <button onClick={() => handleEdit(h.id)} style={{ padding: '10px 14px', minHeight: 44, background: C.green, color: '#fff', border: 'none', borderRadius: 4, fontSize: 12, cursor: 'pointer' }}>Save</button>
+                        <button onClick={() => setEditingId(null)} style={{ padding: '10px 14px', minHeight: 44, background: C.border, color: C.textMuted, border: 'none', borderRadius: 4, fontSize: 12, cursor: 'pointer' }}>Cancel</button>
                       </div>
                     </div>
                   ) : (
@@ -206,8 +208,8 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
                         )}
                       </div>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <button onClick={() => { setEditingId(h.id); setEditData({ shares: h.shares, avg_cost: h.avg_cost, target_allocation: h.target_allocation, purchase_date: h.purchase_date || '', account_type: h.account_type || 'brokerage' }); }} style={{ padding: '4px 10px', background: 'transparent', border: `1px solid ${C.border}`, color: C.textMuted, borderRadius: 4, fontSize: 11, cursor: 'pointer' }}>Edit</button>
-                        <button onClick={() => handleDelete(h.id)} disabled={deleting === h.id} style={{ padding: '4px 10px', background: 'transparent', border: `1px solid ${C.red}44`, color: C.red, borderRadius: 4, fontSize: 11, cursor: 'pointer', opacity: deleting === h.id ? 0.5 : 1 }}>
+                        <button onClick={() => { setEditingId(h.id); setEditData({ shares: h.shares, avg_cost: h.avg_cost, target_allocation: h.target_allocation, purchase_date: h.purchase_date || '', account_type: h.account_type || 'brokerage' }); }} style={{ padding: '10px 16px', minHeight: 44, background: 'transparent', border: `1px solid ${C.border}`, color: C.textMuted, borderRadius: 4, fontSize: 12, cursor: 'pointer' }}>Edit</button>
+                        <button onClick={() => setConfirmDelete(h)} disabled={deleting === h.id} style={{ padding: '10px 16px', minHeight: 44, background: 'transparent', border: `1px solid ${C.red}44`, color: C.red, borderRadius: 4, fontSize: 12, cursor: 'pointer', opacity: deleting === h.id ? 0.5 : 1 }}>
                           {deleting === h.id ? '...' : 'Delete'}
                         </button>
                       </div>
@@ -219,6 +221,25 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {confirmDelete && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setConfirmDelete(null)}>
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 24, width: 320, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+            <p style={{ margin: '0 0 20px', fontSize: 14, color: C.text, fontWeight: 600 }}>
+              Delete {confirmDelete.ticker}? This cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <button onClick={() => setConfirmDelete(null)} style={{ minHeight: 44, padding: '10px 24px', background: 'transparent', border: `1px solid ${C.border}`, color: C.textMuted, borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button onClick={() => handleDelete(confirmDelete.id)} style={{ minHeight: 44, padding: '10px 24px', background: C.red, color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

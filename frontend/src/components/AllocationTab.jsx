@@ -2,9 +2,8 @@ import { useMemo } from 'react';
 import { C, TYPE_COLORS, MONO } from '../styles/theme';
 import PositionConcentration from './PositionConcentration';
 import DriftAnalysis from './DriftAnalysis';
-import GuidePanel from './GuidePanel';
 
-export default function AllocationTab({ holdings, totalValue, showGuides, settings, accountFilter }) {
+export default function AllocationTab({ holdings, totalValue, settings, accountFilter }) {
   const showTargetDrift = !accountFilter || accountFilter === 'all' || accountFilter === 'brokerage';
   const isAllAccounts = !accountFilter || accountFilter === 'all';
 
@@ -16,8 +15,6 @@ export default function AllocationTab({ holdings, totalValue, showGuides, settin
 
   return (
     <div>
-      {showGuides && <GuidePanel guideKey="allocation" />}
-      {showTargetDrift && showGuides && <GuidePanel guideKey="targetRadar" />}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16, marginBottom: 16 }}>
         {/* Position Concentration */}

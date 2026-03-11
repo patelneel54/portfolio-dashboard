@@ -42,7 +42,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showManage, setShowManage] = useState(false);
-  const [showGuides, setShowGuides] = useState(true);
+
   const [accountFilter, setAccountFilter] = useState('all');
   const navigate = useNavigate();
 
@@ -125,16 +125,13 @@ export default function Dashboard() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-          <button onClick={() => setShowGuides(!showGuides)} style={{ background: showGuides ? C.accent + '22' : 'transparent', border: `1px solid ${showGuides ? C.accent : C.border}`, color: showGuides ? C.accent : C.textMuted, padding: '5px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', fontWeight: 600 }}>
-            {showGuides ? 'Guides' : 'Guides'}
-          </button>
-          <button onClick={handleRefresh} disabled={refreshing} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.textMuted, padding: '5px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', fontWeight: 600, opacity: refreshing ? 0.5 : 1 }}>
+<button onClick={handleRefresh} disabled={refreshing} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.textMuted, padding: '10px 16px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 600, opacity: refreshing ? 0.5 : 1 }}>
             {refreshing ? '...' : 'Refresh'}
           </button>
-          <button onClick={() => setShowManage(true)} style={{ background: C.accent + '22', border: `1px solid ${C.accent}`, color: C.accent, padding: '5px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', fontWeight: 600 }}>
+          <button onClick={() => setShowManage(true)} style={{ background: C.accent + '22', border: `1px solid ${C.accent}`, color: C.accent, padding: '10px 16px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
             Manage
           </button>
-          <button onClick={() => navigate('/settings')} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.textMuted, padding: '5px 8px', borderRadius: 6, fontSize: 10, cursor: 'pointer', fontWeight: 600 }}>
+          <button onClick={() => navigate('/settings')} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.textMuted, padding: '10px 16px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
             Settings
           </button>
         </div>
@@ -152,8 +149,8 @@ export default function Dashboard() {
             key={opt.id}
             onClick={() => { setAccountFilter(opt.id); setActiveTab('overview'); }}
             style={{
-              padding: '7px 12px', borderRadius: 8, border: 'none', flex: '1 0 auto',
-              fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+              padding: '10px 12px', borderRadius: 8, border: 'none', flex: '1 0 auto',
+              fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 44,
               background: accountFilter === opt.id ? C.accent : 'transparent',
               color: accountFilter === opt.id ? '#fff' : C.textMuted,
               transition: 'all 0.2s',
@@ -183,7 +180,7 @@ export default function Dashboard() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 style={{
-                  flex: 1, padding: '8px 6px', borderRadius: 8, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 0,
+                  flex: 1, padding: '12px 6px', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 0, minHeight: 44,
                   background: activeTab === tab.id ? accentColor : 'transparent',
                   color: activeTab === tab.id ? '#fff' : C.textMuted,
                   transition: 'all 0.2s',
@@ -210,11 +207,11 @@ export default function Dashboard() {
         <CryptoView holdings={holdings} totalValue={totalValue} activeTab={activeTab} />
       ) : (
         <>
-          {activeTab === 'overview' && <OverviewTab holdings={holdings} totalValue={totalValue} showGuides={showGuides} accountFilter={accountFilter} />}
-          {activeTab === 'allocation' && <AllocationTab holdings={holdings} totalValue={totalValue} showGuides={showGuides} settings={settings} accountFilter={accountFilter} />}
-          {activeTab === 'performance' && <PerformanceTab holdings={holdings} showGuides={showGuides} />}
-          {activeTab === 'projection' && <ProjectionTab totalValue={totalValue} settings={settings} showGuides={showGuides} accountFilter={accountFilter} />}
-          {activeTab === 'technicals' && <TechnicalsTab holdings={holdings} showGuides={showGuides} />}
+          {activeTab === 'overview' && <OverviewTab holdings={holdings} totalValue={totalValue} accountFilter={accountFilter} />}
+          {activeTab === 'allocation' && <AllocationTab holdings={holdings} totalValue={totalValue} settings={settings} accountFilter={accountFilter} />}
+          {activeTab === 'performance' && <PerformanceTab holdings={holdings} />}
+          {activeTab === 'projection' && <ProjectionTab totalValue={totalValue} settings={settings} accountFilter={accountFilter} />}
+          {activeTab === 'technicals' && <TechnicalsTab holdings={holdings} />}
         </>
       )}
 

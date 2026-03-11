@@ -216,8 +216,8 @@ export default function CryptoSetupScanner({ holdings }) {
           {activeSetups.length > 0 && <span style={{ color: CRYPTO_ACCENT, fontWeight: 700, marginLeft: 8 }}>{activeSetups.length} active signal{activeSetups.length !== 1 ? 's' : ''}</span>}
         </div>
         <button onClick={runScan} disabled={scanning} style={{
-          padding: '6px 16px', borderRadius: 6, border: 'none',
-          fontSize: 12, fontWeight: 700, cursor: 'pointer',
+          padding: '10px 16px', borderRadius: 6, border: 'none',
+          fontSize: 12, fontWeight: 700, cursor: 'pointer', minHeight: 44,
           background: CRYPTO_ACCENT, color: '#fff', opacity: scanning ? 0.6 : 1,
         }}>
           {scanning ? 'Scanning...' : 'Scan Now'}
@@ -280,15 +280,15 @@ export default function CryptoSetupScanner({ holdings }) {
                 <button
                   onClick={() => toggleRule(r.id)}
                   style={{
-                    width: 32, height: 18, borderRadius: 9, border: 'none', cursor: 'pointer',
+                    width: 44, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer',
                     background: r.enabled ? CRYPTO_ACCENT : C.border,
                     position: 'relative', padding: 0,
                   }}
                 >
                   <span style={{
-                    position: 'absolute', top: 2, width: 14, height: 14, borderRadius: '50%',
+                    position: 'absolute', top: 3, width: 20, height: 20, borderRadius: '50%',
                     background: '#fff', transition: 'left 0.2s',
-                    left: r.enabled ? 16 : 2,
+                    left: r.enabled ? 21 : 3,
                   }} />
                 </button>
                 <div style={{ flex: 1 }}>
@@ -319,8 +319,8 @@ export default function CryptoSetupScanner({ holdings }) {
               }}
             />
             <button onClick={addToWatchlist} style={{
-              padding: '6px 12px', borderRadius: 6, border: 'none',
-              fontSize: 11, fontWeight: 700, cursor: 'pointer',
+              padding: '10px 14px', borderRadius: 6, border: 'none',
+              fontSize: 12, fontWeight: 700, cursor: 'pointer', minHeight: 44,
               background: CRYPTO_ACCENT, color: '#fff',
             }}>
               Add
@@ -341,7 +341,7 @@ export default function CryptoSetupScanner({ holdings }) {
                   {w}
                   <button onClick={() => removeFromWatchlist(w)} style={{
                     background: 'none', border: 'none', color: C.red, cursor: 'pointer',
-                    fontSize: 12, padding: '0 2px', lineHeight: 1,
+                    fontSize: 14, padding: '8px 8px', lineHeight: 1, minWidth: 32, minHeight: 32,
                   }}>x</button>
                 </span>
               ))}
@@ -374,8 +374,8 @@ export default function CryptoSetupScanner({ holdings }) {
           <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.textMuted }}>Signal History</h3>
           {signalLog.length > 0 && (
             <button onClick={() => { setSignalLog([]); saveSignalLog([]); }} style={{
-              padding: '4px 10px', borderRadius: 4, border: `1px solid ${C.border}`,
-              fontSize: 10, cursor: 'pointer', background: 'transparent', color: C.textDim,
+              padding: '10px 14px', borderRadius: 4, border: `1px solid ${C.border}`,
+              fontSize: 11, cursor: 'pointer', background: 'transparent', color: C.textDim, minHeight: 44,
             }}>
               Clear
             </button>

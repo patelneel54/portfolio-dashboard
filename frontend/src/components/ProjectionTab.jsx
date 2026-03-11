@@ -2,9 +2,8 @@ import { useState, useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, ReferenceLine } from 'recharts';
 import { C, MONO } from '../styles/theme';
 import { projectGrowth } from '../utils/projections';
-import GuidePanel from './GuidePanel';
 
-export default function ProjectionTab({ totalValue, settings, showGuides, accountFilter }) {
+export default function ProjectionTab({ totalValue, settings, accountFilter }) {
   const monthly = parseFloat(settings?.monthly_contribution || '500');
   const monthly401k = parseFloat(settings?.monthly_401k_contribution || '0');
   const [show401k, setShow401k] = useState(false);
@@ -52,8 +51,6 @@ export default function ProjectionTab({ totalValue, settings, showGuides, accoun
 
   return (
     <div>
-      {showGuides && <GuidePanel guideKey="projection" />}
-
       <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
           <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.textMuted }}>Portfolio Growth Projection ({years} Years)</h3>
@@ -61,7 +58,7 @@ export default function ProjectionTab({ totalValue, settings, showGuides, accoun
             <button
               onClick={() => setShow401k(v => !v)}
               style={{
-                padding: '5px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                padding: '10px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', minHeight: 44,
                 border: `1px solid ${show401k ? C.purple : C.border}`,
                 background: show401k ? C.purple + '22' : 'transparent',
                 color: show401k ? C.purple : C.textMuted,

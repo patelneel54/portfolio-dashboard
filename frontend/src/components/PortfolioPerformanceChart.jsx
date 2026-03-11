@@ -210,14 +210,15 @@ export default function PortfolioPerformanceChart({ compact = false, accountFilt
                 key={tf.key}
                 onClick={() => setTimeframe(tf.key)}
                 style={{
-                  padding: '4px 10px',
+                  padding: '8px 10px',
                   borderRadius: 4,
                   border: 'none',
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: 600,
                   fontFamily: MONO,
                   cursor: 'pointer',
                   transition: 'all 0.2s',
+                  minHeight: 44,
                   background: timeframe === tf.key ? gainColor : 'transparent',
                   color: timeframe === tf.key ? '#fff' : C.textDim,
                   borderBottom: timeframe === tf.key ? `2px solid ${gainColor}` : '2px solid transparent',
@@ -234,12 +235,12 @@ export default function PortfolioPerformanceChart({ compact = false, accountFilt
               onClick={() => setShowBenchmark(v => !v)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
-                padding: '4px 10px',
+                padding: '8px 12px',
                 borderRadius: 4,
                 border: `1px solid ${showBenchmark ? C.amber + '66' : C.border}`,
                 background: showBenchmark ? C.amber + '11' : 'transparent',
                 color: showBenchmark ? C.amber : C.textDim,
-                fontSize: 10,
+                fontSize: 11, minHeight: 44,
                 fontWeight: 600,
                 cursor: 'pointer',
                 transition: 'all 0.2s',

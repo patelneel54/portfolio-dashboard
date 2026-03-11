@@ -58,7 +58,7 @@ export default function Settings() {
     <div style={{ padding: '24px 20px', maxWidth: 600, margin: '0 auto', paddingTop: 'max(24px, env(safe-area-inset-top))' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>Settings</h1>
-        <button onClick={() => navigate('/')} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.textMuted, padding: '6px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+        <button onClick={() => navigate('/')} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.textMuted, padding: '10px 16px', minHeight: 44, borderRadius: 8, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
           Back to Dashboard
         </button>
       </div>
@@ -86,7 +86,7 @@ export default function Settings() {
         </div>
 
         <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
-          <button onClick={handleSave} disabled={saving} style={{ padding: '10px 24px', background: C.accent, color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
+          <button onClick={handleSave} disabled={saving} style={{ padding: '10px 24px', minHeight: 44, background: C.accent, color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
             {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Settings'}
           </button>
         </div>
@@ -94,7 +94,7 @@ export default function Settings() {
 
       <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 24, marginTop: 16 }}>
         <h3 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>Account</h3>
-        <button onClick={handleLogout} style={{ padding: '10px 24px', background: C.red + '22', color: C.red, border: `1px solid ${C.red}44`, borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+        <button onClick={handleLogout} style={{ padding: '10px 24px', minHeight: 44, background: C.red + '22', color: C.red, border: `1px solid ${C.red}44`, borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
           Log Out
         </button>
       </div>

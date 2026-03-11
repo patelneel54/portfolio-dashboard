@@ -123,7 +123,7 @@ export default function StockDeepDive({ holdingDetail, portfolioBeta, totalValue
                 key={p.id}
                 onClick={() => setPeriod(p.id)}
                 style={{
-                  padding: '4px 10px', borderRadius: 6, border: 'none', fontSize: 10, fontWeight: 600,
+                  padding: '8px 10px', borderRadius: 6, border: 'none', fontSize: 11, fontWeight: 600, minHeight: 44,
                   cursor: 'pointer',
                   background: period === p.id ? C.accent : 'transparent',
                   color: period === p.id ? '#fff' : C.textDim,

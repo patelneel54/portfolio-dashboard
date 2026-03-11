@@ -142,8 +142,8 @@ export default function CryptoMarketContext({ holdings }) {
           {lastRefresh ? `Last refreshed: ${lastRefresh.toLocaleTimeString()}` : 'Loading...'}
         </span>
         <button onClick={fetchAll} disabled={loading} style={{
-          padding: '4px 12px', borderRadius: 6, border: `1px solid ${C.border}`,
-          fontSize: 11, fontWeight: 600, cursor: 'pointer', background: 'transparent', color: C.textMuted,
+          padding: '10px 14px', borderRadius: 6, border: `1px solid ${C.border}`,
+          fontSize: 12, fontWeight: 600, cursor: 'pointer', background: 'transparent', color: C.textMuted, minHeight: 44,
           opacity: loading ? 0.5 : 1,
         }}>
           Refresh

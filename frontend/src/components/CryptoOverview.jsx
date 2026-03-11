@@ -110,8 +110,8 @@ function CoinCard({ holding, totalCryptoValue }) {
               key={p.key}
               onClick={() => setPeriod(p.key)}
               style={{
-                padding: '4px 10px', borderRadius: 4, border: 'none',
-                fontSize: 10, fontWeight: 600, fontFamily: MONO, cursor: 'pointer',
+                padding: '8px 10px', borderRadius: 4, border: 'none',
+                fontSize: 11, fontWeight: 600, fontFamily: MONO, cursor: 'pointer', minHeight: 44,
                 background: period === p.key ? CRYPTO_ACCENT : 'transparent',
                 color: period === p.key ? '#fff' : C.textDim,
               }}

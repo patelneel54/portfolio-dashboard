@@ -126,8 +126,8 @@ export default function CryptoTradeJournal({ holdings }) {
 
         {trades.length > 0 && (
           <button onClick={exportCSV} style={{
-            padding: '6px 12px', borderRadius: 6, border: `1px solid ${C.border}`,
-            fontSize: 11, fontWeight: 600, cursor: 'pointer', background: 'transparent', color: C.textMuted,
+            padding: '10px 14px', borderRadius: 6, border: `1px solid ${C.border}`,
+            fontSize: 12, fontWeight: 600, cursor: 'pointer', background: 'transparent', color: C.textMuted, minHeight: 44,
           }}>
             Export CSV
           </button>
@@ -271,7 +271,7 @@ export default function CryptoTradeJournal({ holdings }) {
                         <button onClick={() => {
                           const val = document.getElementById(`close-${t.id}`).value;
                           if (val) closeTrade(t.id, val);
-                        }} style={{ padding: '4px 10px', background: C.amber, color: '#fff', border: 'none', borderRadius: 4, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                        }} style={{ padding: '10px 14px', minHeight: 44, background: C.amber, color: '#fff', border: 'none', borderRadius: 4, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                           Close Trade
                         </button>
                       </div>
@@ -327,8 +327,8 @@ export default function CryptoTradeJournal({ holdings }) {
                     {/* Delete */}
                     <div style={{ marginTop: 12, textAlign: 'right' }}>
                       <button onClick={() => deleteTrade(t.id)} style={{
-                        padding: '4px 10px', background: 'transparent', border: `1px solid ${C.red}44`,
-                        color: C.red, borderRadius: 4, fontSize: 11, cursor: 'pointer',
+                        padding: '10px 14px', minHeight: 44, background: 'transparent', border: `1px solid ${C.red}44`,
+                        color: C.red, borderRadius: 4, fontSize: 12, cursor: 'pointer',
                       }}>
                         Delete Trade
                       </button>
