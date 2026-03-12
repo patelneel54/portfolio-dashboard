@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from 'recharts';
 import { api } from '../hooks/useApi';
 import { C, MONO } from '../styles/theme';
+import { SkeletonChart, SkeletonCard, SkeletonText } from './SkeletonLoader';
 
 /* ── Helper: RSI plain-English interpretation ── */
 const rsiInterpretation = (rsi) => {
@@ -155,9 +156,13 @@ const PriceHistoryChart = ({ data, support, resistance, sma50, sma200, price, pe
         </div>
         <PeriodSelector period={period} onPeriodChange={onPeriodChange} />
       </div>
-      <div style={{ height: 380, background: '#0d1424', borderRadius: 8, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ fontSize: 11, color: C.textDim }}>{isLoading ? 'Loading…' : 'No data'}</span>
-      </div>
+      {isLoading ? (
+        <SkeletonChart height={380} />
+      ) : (
+        <div style={{ height: 380, background: '#0d1424', borderRadius: 8, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontSize: 11, color: C.textDim }}>No data</span>
+        </div>
+      )}
     </div>
   );
 
@@ -296,7 +301,7 @@ const PriceHistoryChart = ({ data, support, resistance, sma50, sma200, price, pe
 /* ── News Feed ── */
 const NewsFeed = ({ articles, ticker, loading: isLoading }) => {
   if (isLoading) {
-    return <div style={{ marginTop: 16, fontSize: 11, color: C.textDim }}>Loading news for {ticker}...</div>;
+    return <SkeletonCard height={80} style={{ marginTop: 16 }} />;
   }
   if (!articles || articles.length === 0) return null;
 
@@ -333,7 +338,7 @@ const NewsFeed = ({ articles, ticker, loading: isLoading }) => {
 
 /* ── Valuation Card ── */
 const ValuationCard = ({ data, loading: isLoading }) => {
-  if (isLoading) return <div style={{ marginTop: 12, fontSize: 11, color: C.textDim }}>Loading valuation data...</div>;
+  if (isLoading) return <SkeletonCard height={100} style={{ marginTop: 12 }} />;
   if (!data) return null;
 
   const metrics = [
@@ -862,8 +867,10 @@ export default function TechnicalsTab({ holdings }) {
           )}
         </>
       ) : selectedStock && loading[selectedStock] ? (
-        <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 40, textAlign: 'center', color: C.textMuted }}>
-          Loading technicals for {selectedStock}...
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <SkeletonChart height={380} />
+          <SkeletonCard height={100} />
+          <SkeletonCard height={80} />
         </div>
       ) : selectedStock ? (
         <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 40, textAlign: 'center', color: C.textMuted }}>

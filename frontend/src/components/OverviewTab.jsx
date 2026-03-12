@@ -5,6 +5,7 @@ import PortfolioPerformanceChart from './PortfolioPerformanceChart';
 import PortfolioAnalytics from './PortfolioAnalytics';
 import DividendIntelligence from './DividendIntelligence';
 import { InlineError } from './ErrorBoundary';
+import { SkeletonCard } from './SkeletonLoader';
 
 export default function OverviewTab({ holdings, totalValue, accountFilter }) {
   const [intelligence, setIntelligence] = useState(null);
@@ -44,12 +45,7 @@ export default function OverviewTab({ holdings, totalValue, accountFilter }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginBottom: 16 }}>
         <PortfolioAnalytics accountFilter={accountFilter} />
         {loading ? (
-          <div style={{
-            background: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
-            padding: 40, textAlign: 'center',
-          }}>
-            <div style={{ color: C.textDim, fontSize: 12 }}>Loading dividend data...</div>
-          </div>
+          <SkeletonCard height={140} />
         ) : error ? (
           <InlineError message="Failed to load portfolio intelligence" onRetry={fetchIntelligence} />
         ) : (
