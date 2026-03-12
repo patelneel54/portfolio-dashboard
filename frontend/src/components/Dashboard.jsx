@@ -10,23 +10,21 @@ import TechnicalsTab from './TechnicalsTab';
 import ManageHoldings from './ManageHoldings';
 import CryptoView from './CryptoView';
 import ErrorBoundary from './ErrorBoundary';
+import BottomTabBar from './BottomTabBar';
+import AccountFilterSheet from './AccountFilterSheet';
+import SkeletonLoader from './SkeletonLoader';
 
-const STOCK_TABS = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'allocation', label: 'Allocation' },
-  { id: 'performance', label: 'Performance' },
-  { id: 'projection', label: 'Projections' },
-  { id: 'technicals', label: 'Technicals' },
-];
-
-const CRYPTO_TABS = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'positions', label: 'Positions' },
-  { id: 'journal', label: 'Trade Journal' },
-  { id: 'risk', label: 'Risk' },
-  { id: 'market', label: 'Market' },
-  { id: 'scanner', label: 'Scanner' },
-];
+function formatRefreshTime(date) {
+  const diffMs = Date.now() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHr = Math.floor(diffMs / 3600000);
+  if (diffMin < 2) return 'Updated just now';
+  if (diffMin < 60) return `Updated ${diffMin}m ago`;
+  if (diffHr < 24) return `Updated ${diffHr}h ago`;
+  return `Prices as of ${date.toLocaleString('en-US', {
+    hour: 'numeric', minute: '2-digit', hour12: true, month: 'short', day: 'numeric',
+  })}`;
+}
 
 const Stat = ({ label, value, sub, color }) => (
   <div style={{ padding: '12px 14px', background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, minWidth: 0, flex: 1 }}>
@@ -43,9 +41,11 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showManage, setShowManage] = useState(false);
+  const [showFilterSheet, setShowFilterSheet] = useState(false);
 
   const [accountFilter, setAccountFilter] = useState('all');
   const [fetchError, setFetchError] = useState(null);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState(null);
   const navigate = useNavigate();
 
   const fetchData = useCallback(async () => {
@@ -57,6 +57,7 @@ export default function Dashboard() {
       ]);
       setData(holdingsData);
       setSettings(settingsData);
+      setLastRefreshedAt(new Date());
     } catch (err) {
       console.error('Failed to fetch data:', err);
       setFetchError(err.message);
@@ -66,6 +67,18 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const handler = (event) => {
+      const msg = event.data;
+      if (msg?.type === 'API_UPDATED') fetchData();
+      if (msg?.type === 'API_CACHED_AT' && msg.cachedAt)
+        setLastRefreshedAt(new Date(msg.cachedAt));
+    };
+    navigator.serviceWorker.addEventListener('message', handler);
+    return () => navigator.serviceWorker.removeEventListener('message', handler);
+  }, [fetchData]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -78,14 +91,7 @@ export default function Dashboard() {
   };
 
   if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>&#128200;</div>
-          <div style={{ color: C.textMuted, fontSize: 14 }}>Loading portfolio...</div>
-        </div>
-      </div>
-    );
+    return <SkeletonLoader />;
   }
 
   if (fetchError && !data) {
@@ -130,9 +136,10 @@ export default function Dashboard() {
   const cryptoTotal = holdings.filter(h => h.type === 'Crypto').reduce((s, h) => s + h.market_value, 0);
 
   const fmtK = (v) => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v.toFixed(0)}`;
+  const isStale = lastRefreshedAt && (Date.now() - lastRefreshedAt.getTime() > 24 * 60 * 60 * 1000);
 
   return (
-    <div style={{ padding: '16px 12px', maxWidth: 1200, margin: '0 auto', paddingTop: 'max(16px, env(safe-area-inset-top))', paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
+    <div style={{ padding: '16px 12px', maxWidth: 1200, margin: '0 auto', paddingTop: 'max(16px, env(safe-area-inset-top))', paddingBottom: 'calc(72px + env(safe-area-inset-bottom))' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <div>
@@ -142,6 +149,30 @@ export default function Dashboard() {
           <p style={{ color: C.textMuted, fontSize: 12, margin: '2px 0 0' }}>
             {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </p>
+          {lastRefreshedAt && (
+            <p style={{ color: isStale ? C.amber : C.textMuted, fontSize: 11, margin: '1px 0 0', fontWeight: isStale ? 600 : 400 }}>
+              {formatRefreshTime(lastRefreshedAt)}
+            </p>
+          )}
+          <button
+            onClick={() => setShowFilterSheet(true)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              marginTop: 6, padding: '6px 12px', minHeight: 44,
+              background: C.accent + '18', border: `1px solid ${C.accent}44`,
+              borderRadius: 20, cursor: 'pointer', fontSize: 12, fontWeight: 600,
+              color: C.accent, transition: 'all 0.2s',
+            }}
+          >
+            <span style={{
+              width: 8, height: 8, borderRadius: 4,
+              background: accountFilter === 'all' ? C.accent : accountFilter === 'brokerage' ? C.blue : accountFilter === '401k' ? C.purple : '#F7931A',
+            }} />
+            {accountFilter === 'all' ? 'All Accounts' : accountFilter === 'brokerage' ? 'Brokerage' : accountFilter === '401k' ? '401k' : 'Crypto'}
+            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
         </div>
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
 <button onClick={handleRefresh} disabled={refreshing} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.textMuted, padding: '10px 16px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 600, opacity: refreshing ? 0.5 : 1 }}>
@@ -156,30 +187,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Account Filter */}
-      <div style={{ display: 'flex', gap: 3, marginBottom: 14, background: C.card, borderRadius: 10, padding: 3, border: `1px solid ${C.border}`, overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-        {[
-          { id: 'all', label: 'All' },
-          { id: 'brokerage', label: 'Brokerage' },
-          { id: '401k', label: '401k' },
-          { id: 'crypto', label: 'Crypto' },
-        ].map(opt => (
-          <button
-            key={opt.id}
-            onClick={() => { setAccountFilter(opt.id); setActiveTab('overview'); }}
-            style={{
-              padding: '10px 12px', borderRadius: 8, border: 'none', flex: '1 0 auto',
-              fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minHeight: 44,
-              background: accountFilter === opt.id ? C.accent : 'transparent',
-              color: accountFilter === opt.id ? '#fff' : C.textMuted,
-              transition: 'all 0.2s',
-            }}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-
       {/* Stats Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 16 }}>
         <Stat label="Total Value" value={fmtK(totalValue)} sub={`Cost: ${fmtK(totalCost)}`} />
@@ -187,30 +194,6 @@ export default function Dashboard() {
         <Stat label="Funds / Stock" value={`${totalValue ? ((etfTotal / totalValue) * 100).toFixed(0) : 0}% / ${totalValue ? ((stockTotal / totalValue) * 100).toFixed(0) : 0}%${cryptoTotal ? ' / ' + (totalValue ? ((cryptoTotal / totalValue) * 100).toFixed(0) : 0) + '%' : ''}`} sub={`${fmtK(etfTotal)} / ${fmtK(stockTotal)}${cryptoTotal ? ' / ' + fmtK(cryptoTotal) : ''}`} color={C.blue} />
         <Stat label="Positions" value={holdings.length} sub={`${holdings.filter(h => h.type === 'ETF' || h.type === 'Fund').length} ETFs/Funds \u2022 ${holdings.filter(h => h.type === 'Stock').length} Stocks${holdings.filter(h => h.type === 'Crypto').length ? ' \u2022 ' + holdings.filter(h => h.type === 'Crypto').length + ' Crypto' : ''}`} color={C.purple} />
       </div>
-
-      {/* Tab Bar */}
-      {(() => {
-        const tabs = accountFilter === 'crypto' ? CRYPTO_TABS : STOCK_TABS;
-        const accentColor = accountFilter === 'crypto' ? '#F7931A' : C.accent;
-        return (
-          <div style={{ display: 'flex', gap: 3, marginBottom: 16, background: C.card, borderRadius: 10, padding: 3, border: `1px solid ${C.border}`, overflowX: 'auto', WebkitOverflowScrolling: 'touch', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                style={{
-                  flex: 1, padding: '12px 6px', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 0, minHeight: 44,
-                  background: activeTab === tab.id ? accentColor : 'transparent',
-                  color: activeTab === tab.id ? '#fff' : C.textMuted,
-                  transition: 'all 0.2s',
-                }}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        );
-      })()}
 
       {/* Tab Content */}
       {holdings.length === 0 ? (
@@ -243,6 +226,15 @@ export default function Dashboard() {
 
       {/* Manage Holdings Modal */}
       {showManage && <ManageHoldings holdings={allHoldings} onClose={() => setShowManage(false)} onUpdate={fetchData} accountFilter={accountFilter} />}
+
+      <AccountFilterSheet
+        isOpen={showFilterSheet}
+        onClose={() => setShowFilterSheet(false)}
+        accountFilter={accountFilter}
+        onSelect={(id) => { setAccountFilter(id); setActiveTab('overview'); }}
+      />
+
+      <BottomTabBar activeTab={activeTab} onTabChange={setActiveTab} accountFilter={accountFilter} />
     </div>
   );
 }
