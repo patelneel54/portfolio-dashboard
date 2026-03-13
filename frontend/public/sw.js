@@ -1,5 +1,6 @@
-const STATIC_CACHE = 'portfolio-v1';
+const STATIC_CACHE = 'portfolio-v2';
 const API_CACHE = 'portfolio-api-v1';
+const FONT_CACHE = 'google-fonts-v1';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -32,13 +33,19 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  const keep = new Set([STATIC_CACHE, API_CACHE]);
+  const keep = new Set([STATIC_CACHE, API_CACHE, FONT_CACHE]);
   event.waitUntil(
-    caches.keys().then((names) =>
-      Promise.all(names.filter((n) => !keep.has(n)).map((n) => caches.delete(n)))
-    )
+    caches.keys().then((names) => {
+      const toDelete = names.filter((n) => !keep.has(n));
+      return Promise.all(toDelete.map((n) => caches.delete(n)))
+        .then(() => self.clients.claim())
+        .then(() => {
+          if (toDelete.length > 0) {
+            return notifyClients({ type: 'SW_UPDATED' });
+          }
+        });
+    })
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
@@ -103,6 +110,22 @@ self.addEventListener('fetch', (event) => {
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request).catch(() => caches.match('/index.html'))
+    );
+    return;
+  }
+
+  // Cache-first for Google Fonts
+  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+    event.respondWith(
+      caches.open(FONT_CACHE).then((cache) =>
+        cache.match(request).then((cached) => {
+          if (cached) return cached;
+          return fetch(request).then((response) => {
+            if (response.ok) cache.put(request, response.clone());
+            return response;
+          });
+        })
+      )
     );
     return;
   }

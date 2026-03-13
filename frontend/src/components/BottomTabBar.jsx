@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { C } from '../styles/theme';
 
 const Icon = ({ paths, color = C.textMuted, size = 22 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+  <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill="none"
     stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
     {paths.map((d, i) => <path key={i} d={d} />)}
   </svg>
 );
 
 const CircleIcon = ({ r, cx, cy, color, extra }) => (
-  <svg width={22} height={22} viewBox="0 0 24 24" fill="none"
+  <svg aria-hidden="true" focusable="false" width={22} height={22} viewBox="0 0 24 24" fill="none"
     stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
     <circle cx={cx} cy={cy} r={r} />
     {extra}
@@ -30,7 +30,7 @@ const ICONS = {
   more: ['M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z', 'M19 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z', 'M5 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z'],
 };
 
-const STOCK_TABS = [
+export const STOCK_TABS = [
   { id: 'overview', label: 'Overview', icon: 'chartBar' },
   { id: 'allocation', label: 'Allocation', icon: 'pieChart' },
   { id: 'performance', label: 'Performance', icon: 'trendingUp' },
@@ -38,14 +38,14 @@ const STOCK_TABS = [
   { id: 'technicals', label: 'Technicals', icon: 'activity' },
 ];
 
-const CRYPTO_PRIMARY = [
+export const CRYPTO_PRIMARY = [
   { id: 'overview', label: 'Overview', icon: 'chartBar' },
   { id: 'positions', label: 'Positions', icon: 'layers' },
   { id: 'journal', label: 'Journal', icon: 'bookOpen' },
   { id: 'risk', label: 'Risk', icon: 'shield' },
 ];
 
-const CRYPTO_OVERFLOW = [
+export const CRYPTO_OVERFLOW = [
   { id: 'market', label: 'Market', icon: 'globe' },
   { id: 'scanner', label: 'Scanner', icon: 'crosshair' },
 ];
@@ -92,7 +92,7 @@ export default function BottomTabBar({ activeTab, onTabChange, accountFilter }) 
       borderTop: `1px solid ${C.border}`,
       paddingBottom: 'env(safe-area-inset-bottom)',
     }}>
-      <div style={{
+      <div role="tablist" aria-label="Dashboard navigation" style={{
         display: 'flex',
         justifyContent: 'space-around',
         alignItems: 'center',
@@ -105,6 +105,10 @@ export default function BottomTabBar({ activeTab, onTabChange, accountFilter }) 
         {primaryTabs.map(tab => (
           <button
             key={tab.id}
+            id={`tab-${tab.id}`}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-controls={`tabpanel-${tab.id}`}
             onClick={() => handleTabPress(tab.id)}
             style={tabButtonStyle(activeTab === tab.id)}
           >
@@ -116,6 +120,9 @@ export default function BottomTabBar({ activeTab, onTabChange, accountFilter }) 
         {isCrypto && (
           <button
             onClick={() => setShowMore(prev => !prev)}
+            aria-haspopup="true"
+            aria-expanded={showMore}
+            aria-label="More tabs"
             style={tabButtonStyle(isOverflowActive)}
           >
             <Icon paths={ICONS.more} color={isOverflowActive ? accentColor : C.textMuted} />
@@ -145,6 +152,8 @@ export default function BottomTabBar({ activeTab, onTabChange, accountFilter }) 
               {CRYPTO_OVERFLOW.map(tab => (
                 <button
                   key={tab.id}
+                  role="tab"
+                  aria-selected={activeTab === tab.id}
                   onClick={() => handleTabPress(tab.id)}
                   style={{
                     display: 'flex',

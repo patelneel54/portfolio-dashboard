@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../hooks/useApi';
 import { C, MONO } from '../styles/theme';
+import { cardStyle, buttonPrimary, buttonSecondary, labelStyle, srOnly } from '../styles/shared';
 import OverviewTab from './OverviewTab';
 import AllocationTab from './AllocationTab';
 import PerformanceTab from './PerformanceTab';
@@ -10,9 +11,11 @@ import TechnicalsTab from './TechnicalsTab';
 import ManageHoldings from './ManageHoldings';
 import CryptoView from './CryptoView';
 import ErrorBoundary from './ErrorBoundary';
-import BottomTabBar from './BottomTabBar';
+import BottomTabBar, { STOCK_TABS, CRYPTO_PRIMARY, CRYPTO_OVERFLOW } from './BottomTabBar';
+import SwipeContainer from './SwipeContainer';
 import AccountFilterSheet from './AccountFilterSheet';
 import SkeletonLoader from './SkeletonLoader';
+import PullToRefresh from './PullToRefresh';
 
 function formatRefreshTime(date) {
   const diffMs = Date.now() - date.getTime();
@@ -27,8 +30,8 @@ function formatRefreshTime(date) {
 }
 
 const Stat = ({ label, value, sub, color }) => (
-  <div style={{ padding: '12px 14px', background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, minWidth: 0, flex: 1 }}>
-    <div style={{ fontSize: 10, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>{label}</div>
+  <div style={{ ...cardStyle, padding: '12px 14px', minWidth: 0, flex: 1 }}>
+    <div style={labelStyle}>{label}</div>
     <div style={{ fontSize: 20, fontWeight: 800, color: color || C.text, marginTop: 3, fontFamily: MONO }}>{value}</div>
     {sub && <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{sub}</div>}
   </div>
@@ -57,7 +60,8 @@ export default function Dashboard() {
       ]);
       setData(holdingsData);
       setSettings(settingsData);
-      setLastRefreshedAt(new Date());
+      const serverTs = holdingsData.last_refreshed;
+      setLastRefreshedAt(serverTs ? new Date(serverTs + 'Z') : new Date());
     } catch (err) {
       console.error('Failed to fetch data:', err);
       setFetchError(err.message);
@@ -137,8 +141,13 @@ export default function Dashboard() {
 
   const fmtK = (v) => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v.toFixed(0)}`;
   const isStale = lastRefreshedAt && (Date.now() - lastRefreshedAt.getTime() > 24 * 60 * 60 * 1000);
+  const tabOrder = accountFilter === 'crypto'
+    ? [...CRYPTO_PRIMARY, ...CRYPTO_OVERFLOW].map(t => t.id)
+    : STOCK_TABS.map(t => t.id);
 
   return (
+    <PullToRefresh onRefresh={handleRefresh} refreshing={refreshing}>
+    <style>{`@keyframes tabFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
     <div style={{ padding: '16px 12px', maxWidth: 1200, margin: '0 auto', paddingTop: 'max(16px, env(safe-area-inset-top))', paddingBottom: 'calc(72px + env(safe-area-inset-bottom))' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
@@ -156,6 +165,8 @@ export default function Dashboard() {
           )}
           <button
             onClick={() => setShowFilterSheet(true)}
+            aria-label="Filter by account"
+            aria-haspopup="dialog"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
               marginTop: 6, padding: '6px 12px', minHeight: 44,
@@ -164,24 +175,24 @@ export default function Dashboard() {
               color: C.accent, transition: 'all 0.2s',
             }}
           >
-            <span style={{
+            <span aria-hidden="true" style={{
               width: 8, height: 8, borderRadius: 4,
               background: accountFilter === 'all' ? C.accent : accountFilter === 'brokerage' ? C.blue : accountFilter === '401k' ? C.purple : '#F7931A',
             }} />
             {accountFilter === 'all' ? 'All Accounts' : accountFilter === 'brokerage' ? 'Brokerage' : accountFilter === '401k' ? '401k' : 'Crypto'}
-            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <svg aria-hidden="true" width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
               <path d="M6 9l6 6 6-6" />
             </svg>
           </button>
         </div>
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-<button onClick={handleRefresh} disabled={refreshing} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.textMuted, padding: '10px 16px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 600, opacity: refreshing ? 0.5 : 1 }}>
+<button onClick={handleRefresh} disabled={refreshing} aria-label="Refresh prices" aria-busy={refreshing} style={{ ...buttonSecondary, borderRadius: 6, opacity: refreshing ? 0.5 : 1 }}>
             {refreshing ? '...' : 'Refresh'}
           </button>
-          <button onClick={() => setShowManage(true)} style={{ background: C.accent + '22', border: `1px solid ${C.accent}`, color: C.accent, padding: '10px 16px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+          <button onClick={() => setShowManage(true)} style={{ ...buttonSecondary, borderRadius: 6, background: C.accent + '22', border: `1px solid ${C.accent}`, color: C.accent }}>
             Manage
           </button>
-          <button onClick={() => navigate('/settings')} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.textMuted, padding: '10px 16px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+          <button onClick={() => navigate('/settings')} aria-label="Open settings" style={{ ...buttonSecondary, borderRadius: 6 }}>
             Settings
           </button>
         </div>
@@ -190,7 +201,7 @@ export default function Dashboard() {
       {/* Stats Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 16 }}>
         <Stat label="Total Value" value={fmtK(totalValue)} sub={`Cost: ${fmtK(totalCost)}`} />
-        <Stat label="Total Gain" value={`${totalGL >= 0 ? '+' : ''}${fmtK(Math.abs(totalGL))}`} sub={`${totalGLPct >= 0 ? '+' : ''}${totalGLPct.toFixed(1)}% return`} color={totalGL >= 0 ? C.green : C.red} />
+        <Stat label="Total Gain" value={<>{totalGL >= 0 ? '+' : ''}{fmtK(Math.abs(totalGL))}<span style={srOnly}>{totalGL >= 0 ? ' gain' : ' loss'}</span></>} sub={`${totalGLPct >= 0 ? '+' : ''}${totalGLPct.toFixed(1)}% return`} color={totalGL >= 0 ? C.green : C.red} />
         <Stat label="Funds / Stock" value={`${totalValue ? ((etfTotal / totalValue) * 100).toFixed(0) : 0}% / ${totalValue ? ((stockTotal / totalValue) * 100).toFixed(0) : 0}%${cryptoTotal ? ' / ' + (totalValue ? ((cryptoTotal / totalValue) * 100).toFixed(0) : 0) + '%' : ''}`} sub={`${fmtK(etfTotal)} / ${fmtK(stockTotal)}${cryptoTotal ? ' / ' + fmtK(cryptoTotal) : ''}`} color={C.blue} />
         <Stat label="Positions" value={holdings.length} sub={`${holdings.filter(h => h.type === 'ETF' || h.type === 'Fund').length} ETFs/Funds \u2022 ${holdings.filter(h => h.type === 'Stock').length} Stocks${holdings.filter(h => h.type === 'Crypto').length ? ' \u2022 ' + holdings.filter(h => h.type === 'Crypto').length + ' Crypto' : ''}`} color={C.purple} />
       </div>
@@ -201,22 +212,28 @@ export default function Dashboard() {
           <div style={{ fontSize: 48, marginBottom: 16 }}>&#128188;</div>
           <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>No Holdings Yet</div>
           <div style={{ fontSize: 13, marginBottom: 20 }}>Add your first stock or ETF to get started.</div>
-          <button onClick={() => setShowManage(true)} style={{ background: C.accent, color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+          <button onClick={() => setShowManage(true)} style={{ ...buttonPrimary, padding: '10px 24px' }}>
             Add Holdings
           </button>
         </div>
-      ) : accountFilter === 'crypto' ? (
-        <ErrorBoundary fallbackMessage="Crypto view encountered an error.">
-          <CryptoView holdings={holdings} totalValue={totalValue} activeTab={activeTab} />
-        </ErrorBoundary>
       ) : (
-        <>
-          {activeTab === 'overview' && <ErrorBoundary key="overview" fallbackMessage="Overview tab encountered an error."><OverviewTab holdings={holdings} totalValue={totalValue} accountFilter={accountFilter} /></ErrorBoundary>}
-          {activeTab === 'allocation' && <ErrorBoundary key="allocation" fallbackMessage="Allocation tab encountered an error."><AllocationTab holdings={holdings} totalValue={totalValue} settings={settings} accountFilter={accountFilter} /></ErrorBoundary>}
-          {activeTab === 'performance' && <ErrorBoundary key="performance" fallbackMessage="Performance tab encountered an error."><PerformanceTab holdings={holdings} /></ErrorBoundary>}
-          {activeTab === 'projection' && <ErrorBoundary key="projection" fallbackMessage="Projections tab encountered an error."><ProjectionTab totalValue={totalValue} settings={settings} accountFilter={accountFilter} /></ErrorBoundary>}
-          {activeTab === 'technicals' && <ErrorBoundary key="technicals" fallbackMessage="Technicals tab encountered an error."><TechnicalsTab holdings={holdings} /></ErrorBoundary>}
-        </>
+        <SwipeContainer tabs={tabOrder} activeTab={activeTab} onTabChange={setActiveTab}>
+          {accountFilter === 'crypto' ? (
+            <div key={activeTab} role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`} style={{ animation: 'tabFadeIn 150ms ease-out' }}>
+              <ErrorBoundary fallbackMessage="Crypto view encountered an error.">
+                <CryptoView holdings={holdings} totalValue={totalValue} activeTab={activeTab} />
+              </ErrorBoundary>
+            </div>
+          ) : (
+            <div key={activeTab} role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`} style={{ animation: 'tabFadeIn 150ms ease-out' }}>
+              {activeTab === 'overview' && <ErrorBoundary key="overview" fallbackMessage="Overview tab encountered an error."><OverviewTab holdings={holdings} totalValue={totalValue} accountFilter={accountFilter} /></ErrorBoundary>}
+              {activeTab === 'allocation' && <ErrorBoundary key="allocation" fallbackMessage="Allocation tab encountered an error."><AllocationTab holdings={holdings} totalValue={totalValue} settings={settings} accountFilter={accountFilter} /></ErrorBoundary>}
+              {activeTab === 'performance' && <ErrorBoundary key="performance" fallbackMessage="Performance tab encountered an error."><PerformanceTab holdings={holdings} /></ErrorBoundary>}
+              {activeTab === 'projection' && <ErrorBoundary key="projection" fallbackMessage="Projections tab encountered an error."><ProjectionTab totalValue={totalValue} settings={settings} accountFilter={accountFilter} /></ErrorBoundary>}
+              {activeTab === 'technicals' && <ErrorBoundary key="technicals" fallbackMessage="Technicals tab encountered an error."><TechnicalsTab holdings={holdings} /></ErrorBoundary>}
+            </div>
+          )}
+        </SwipeContainer>
       )}
 
       {/* Footer */}
@@ -236,5 +253,6 @@ export default function Dashboard() {
 
       <BottomTabBar activeTab={activeTab} onTabChange={setActiveTab} accountFilter={accountFilter} />
     </div>
+    </PullToRefresh>
   );
 }

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { C, MONO } from '../styles/theme';
+import { cardStyle, sectionTitle, labelStyle } from '../styles/shared';
 
 const MATERIAL_THRESHOLD = 1.0;
 
@@ -13,7 +14,7 @@ function StatCell({ label, value }) {
       border: `1px solid ${C.border}`,
       minWidth: 0,
     }}>
-      <span style={{ fontSize: 10, color: C.textDim, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+      <span style={{ ...labelStyle, color: C.textDim, letterSpacing: 0.6 }}>
         {label}
       </span>
       <span style={{ fontSize: 16, fontWeight: 700, fontFamily: MONO, color: C.text }}>
@@ -54,9 +55,9 @@ export default function DriftAnalysis({ holdings = [], totalValue = 0, settings 
   const hhi = sorted.length ? sorted.reduce((s, h) => s + h.pct * h.pct, 0) : 0;
 
   return (
-    <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
+    <div style={cardStyle}>
       {/* Header */}
-      <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>Drift Analysis</h3>
+      <h3 style={sectionTitle}>Drift Analysis</h3>
 
       {/* Concentration Summary */}
       <div style={{
@@ -106,6 +107,7 @@ export default function DriftAnalysis({ holdings = [], totalValue = 0, settings 
           return (
             <div
               key={h.id || h.ticker}
+              aria-label={`${h.ticker}: ${isOverweight ? 'overweight' : 'underweight'} ${absDrift.toFixed(1)}%, actual ${(h.actual_allocation || 0).toFixed(1)}%, target ${(h.target_allocation || 0).toFixed(1)}%`}
               style={{
                 display: 'grid',
                 gridTemplateColumns: '52px 1fr 52px',
@@ -209,7 +211,7 @@ export default function DriftAnalysis({ holdings = [], totalValue = 0, settings 
         const monthly = parseFloat(settings?.monthly_contribution || '0');
         return (
           <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
-            <div style={{ fontSize: 10, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, fontWeight: 600 }}>Rebalance Actions</div>
+            <div style={{ ...labelStyle, marginBottom: 8 }}>Rebalance Actions</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {driftSorted.filter(h => Math.abs(h.drift) >= MATERIAL_THRESHOLD).map(h => {
                 const dollarAmt = Math.abs(h.drift * totalValue / 100);

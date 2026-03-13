@@ -320,7 +320,7 @@ export default function CryptoRiskDashboard({ holdings, totalCryptoValue }) {
       {/* Section 4: Risk Classification */}
       <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginTop: 16 }}>
         <h3 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>Risk Classification</h3>
-        <div style={{ overflowX: 'auto' }}>
+        <div data-no-swipe style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${C.border}` }}>

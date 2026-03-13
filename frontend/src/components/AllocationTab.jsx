@@ -1,14 +1,37 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { C, TYPE_COLORS, MONO } from '../styles/theme';
+import { cardStyle, sectionTitle, tableHeader, badge, srOnly } from '../styles/shared';
 import PositionConcentration from './PositionConcentration';
 import DriftAnalysis from './DriftAnalysis';
+import RebalancePlanner from './RebalancePlanner';
+import HoldingCard from './HoldingCard';
+import useMediaQuery from '../hooks/useMediaQuery';
+
+const SORT_OPTIONS = [
+  { key: 'drift', label: 'Drift' },
+  { key: 'value', label: 'Value' },
+  { key: 'gl', label: 'G/L %' },
+  { key: 'ticker', label: 'Ticker' },
+];
 
 export default function AllocationTab({ holdings, totalValue, settings, accountFilter }) {
   const showTargetDrift = !accountFilter || accountFilter === 'all' || accountFilter === 'brokerage';
   const isAllAccounts = !accountFilter || accountFilter === 'all';
+  const isMobile = useMediaQuery('(max-width: 767px)');
 
-  const sortedByDrift = useMemo(() =>
-    [...holdings].sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift)), [holdings]);
+  const [expandedId, setExpandedId] = useState(null);
+  const [sortKey, setSortKey] = useState('drift');
+
+  const sortedHoldings = useMemo(() => {
+    const arr = [...holdings];
+    switch (sortKey) {
+      case 'drift':  return arr.sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift));
+      case 'value':  return arr.sort((a, b) => (b.market_value || 0) - (a.market_value || 0));
+      case 'gl':     return arr.sort((a, b) => (b.gain_loss_pct || 0) - (a.gain_loss_pct || 0));
+      case 'ticker': return arr.sort((a, b) => a.ticker.localeCompare(b.ticker));
+      default:       return arr;
+    }
+  }, [holdings, sortKey]);
 
   const baseHeaders = ['Ticker', 'Type', 'Account', 'Shares', 'Avg Cost', 'Current', 'Value', 'G/L $', 'G/L %', 'Actual %'];
   const headers = showTargetDrift ? [...baseHeaders, 'Target %', 'Drift'] : baseHeaders;
@@ -24,56 +47,111 @@ export default function AllocationTab({ holdings, totalValue, settings, accountF
         {showTargetDrift && <DriftAnalysis holdings={holdings} totalValue={totalValue} settings={settings} />}
       </div>
 
-      {/* Full Holdings Table */}
-      <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>
-          {showTargetDrift ? 'All Holdings - Sorted by Drift' : 'All Holdings'}
-        </h3>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-            <thead>
-              <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                {headers.map(h => (
-                  <th key={h} style={{ padding: '8px 10px', textAlign: 'left', color: C.textDim, fontWeight: 600, fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8 }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {sortedByDrift.map(h => {
-                const hIsBrokerage = (h.account_type || 'brokerage') === 'brokerage';
-                return (
-                  <tr key={h.id} style={{ borderBottom: `1px solid ${C.border}22` }}>
-                    <td style={{ padding: '8px 10px', fontWeight: 700, fontFamily: MONO }}>{h.ticker}</td>
-                    <td style={{ padding: '8px 10px' }}><span style={{ color: TYPE_COLORS[h.type], fontSize: 10, fontWeight: 600 }}>{h.type}</span></td>
-                    <td style={{ padding: '8px 10px' }}>
-                      <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 4, fontWeight: 700, textTransform: 'uppercase', background: (h.account_type === '401k' ? C.purple : h.account_type === 'crypto' ? '#F7931A' : C.blue) + '22', color: h.account_type === '401k' ? C.purple : h.account_type === 'crypto' ? '#F7931A' : C.blue }}>
-                        {h.account_type || 'brokerage'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '8px 10px', fontFamily: MONO, color: C.textMuted }}>{h.shares}</td>
-                    <td style={{ padding: '8px 10px', fontFamily: MONO, color: C.textMuted }}>${(h.avg_cost || 0).toFixed(0)}</td>
-                    <td style={{ padding: '8px 10px', fontFamily: MONO }}>${(h.current_price || h.avg_cost || 0).toFixed(0)}</td>
-                    <td style={{ padding: '8px 10px', fontFamily: MONO }}>${(h.market_value || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                    <td style={{ padding: '8px 10px', fontFamily: MONO, color: (h.gain_loss || 0) >= 0 ? C.green : C.red }}>{(h.gain_loss || 0) >= 0 ? '+' : ''}${(h.gain_loss || 0).toFixed(0)}</td>
-                    <td style={{ padding: '8px 10px', fontFamily: MONO, color: (h.gain_loss_pct || 0) >= 0 ? C.green : C.red }}>{(h.gain_loss_pct || 0) >= 0 ? '+' : ''}{(h.gain_loss_pct || 0).toFixed(1)}%</td>
-                    <td style={{ padding: '8px 10px', fontFamily: MONO }}>{(h.actual_allocation || 0).toFixed(1)}%</td>
-                    {showTargetDrift && (
-                      <>
-                        <td style={{ padding: '8px 10px', fontFamily: MONO, color: C.textMuted }}>
-                          {isAllAccounts && !hIsBrokerage ? '-' : `${(h.target_allocation || 0).toFixed(1)}%`}
-                        </td>
-                        <td style={{ padding: '8px 10px', fontFamily: MONO, fontWeight: 700, color: isAllAccounts && !hIsBrokerage ? C.textDim : Math.abs(h.drift || 0) < 0.5 ? C.textDim : (h.drift || 0) > 0 ? C.red : C.green }}>
-                          {isAllAccounts && !hIsBrokerage ? '-' : `${(h.drift || 0) > 0 ? '+' : ''}${(h.drift || 0).toFixed(1)}%`}
-                        </td>
-                      </>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      {/* Rebalance Planner — only for brokerage */}
+      {showTargetDrift && <RebalancePlanner holdings={holdings} totalValue={totalValue} />}
+
+      {isMobile ? (
+        /* ── Mobile: Card List ── */
+        <div>
+          <h3 style={{ ...sectionTitle, margin: '0 0 10px' }}>
+            All Holdings
+          </h3>
+
+          {/* Sort pill bar */}
+          <div role="toolbar" aria-label="Sort holdings" data-no-swipe style={{ display: 'flex', gap: 8, marginBottom: 12, overflowX: 'auto' }}>
+            {SORT_OPTIONS.map(opt => {
+              const active = sortKey === opt.key;
+              return (
+                <button
+                  key={opt.key}
+                  aria-pressed={active}
+                  onClick={() => setSortKey(opt.key)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: 20,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    minHeight: 32,
+                    border: `1px solid ${active ? C.accent : C.border}`,
+                    background: active ? C.accent + '22' : 'transparent',
+                    color: active ? C.accent : C.textMuted,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Card list */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {sortedHoldings.map(h => (
+              <HoldingCard
+                key={h.id}
+                holding={h}
+                isExpanded={expandedId === h.id}
+                onToggle={() => setExpandedId(prev => prev === h.id ? null : h.id)}
+                showTargetDrift={showTargetDrift}
+                isAllAccounts={isAllAccounts}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        /* ── Desktop: Table with sticky headers ── */
+        <div style={cardStyle}>
+          <h3 style={{ ...sectionTitle, margin: '0 0 12px' }}>
+            {showTargetDrift ? 'All Holdings - Sorted by Drift' : 'All Holdings'}
+          </h3>
+          <div data-no-swipe style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                  {headers.map(h => (
+                    <th key={h} style={{ ...tableHeader, position: 'sticky', top: 0, background: C.card, zIndex: 1 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sortedHoldings.map(h => {
+                  const hIsBrokerage = (h.account_type || 'brokerage') === 'brokerage';
+                  return (
+                    <tr key={h.id} style={{ borderBottom: `1px solid ${C.border}22` }}>
+                      <td style={{ padding: '8px 10px', fontWeight: 700, fontFamily: MONO }}>{h.ticker}</td>
+                      <td style={{ padding: '8px 10px' }}><span style={{ color: TYPE_COLORS[h.type], fontSize: 10, fontWeight: 600 }}>{h.type}</span></td>
+                      <td style={{ padding: '8px 10px' }}>
+                        <span style={badge(h.account_type === '401k' ? C.purple : h.account_type === 'crypto' ? '#F7931A' : C.blue)}>
+                          {h.account_type || 'brokerage'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '8px 10px', fontFamily: MONO, color: C.textMuted }}>{h.shares}</td>
+                      <td style={{ padding: '8px 10px', fontFamily: MONO, color: C.textMuted }}>${(h.avg_cost || 0).toFixed(0)}</td>
+                      <td style={{ padding: '8px 10px', fontFamily: MONO }}>${(h.current_price || h.avg_cost || 0).toFixed(0)}</td>
+                      <td style={{ padding: '8px 10px', fontFamily: MONO }}>${(h.market_value || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+                      <td style={{ padding: '8px 10px', fontFamily: MONO, color: (h.gain_loss || 0) >= 0 ? C.green : C.red }}><span style={srOnly}>{(h.gain_loss || 0) >= 0 ? 'gain ' : 'loss '}</span>{(h.gain_loss || 0) >= 0 ? '+' : ''}${(h.gain_loss || 0).toFixed(0)}</td>
+                      <td style={{ padding: '8px 10px', fontFamily: MONO, color: (h.gain_loss_pct || 0) >= 0 ? C.green : C.red }}><span style={srOnly}>{(h.gain_loss_pct || 0) >= 0 ? 'gain ' : 'loss '}</span>{(h.gain_loss_pct || 0) >= 0 ? '+' : ''}{(h.gain_loss_pct || 0).toFixed(1)}%</td>
+                      <td style={{ padding: '8px 10px', fontFamily: MONO }}>{(h.actual_allocation || 0).toFixed(1)}%</td>
+                      {showTargetDrift && (
+                        <>
+                          <td style={{ padding: '8px 10px', fontFamily: MONO, color: C.textMuted }}>
+                            {isAllAccounts && !hIsBrokerage ? '-' : `${(h.target_allocation || 0).toFixed(1)}%`}
+                          </td>
+                          <td style={{ padding: '8px 10px', fontFamily: MONO, fontWeight: 700, color: isAllAccounts && !hIsBrokerage ? C.textDim : Math.abs(h.drift || 0) < 0.5 ? C.textDim : (h.drift || 0) > 0 ? C.red : C.green }}>
+                            {isAllAccounts && !hIsBrokerage ? '-' : <><span style={srOnly}>{(h.drift || 0) > 0 ? 'overweight ' : 'underweight '}</span>{`${(h.drift || 0) > 0 ? '+' : ''}${(h.drift || 0).toFixed(1)}%`}</>}
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

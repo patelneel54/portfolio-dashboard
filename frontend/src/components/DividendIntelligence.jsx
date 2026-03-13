@@ -127,7 +127,7 @@ export default function DividendIntelligence({ dividends }) {
           <div style={{ fontSize: 11, color: C.textDim, marginBottom: 8, fontWeight: 600 }}>
             Top Dividend Contributors
           </div>
-          <div style={{ overflowX: 'auto' }}>
+          <div data-no-swipe style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${C.border}` }}>

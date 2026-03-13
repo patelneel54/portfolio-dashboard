@@ -88,6 +88,9 @@ export default function AccountFilterSheet({ isOpen, onClose, accountFilter, onS
       }}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Select account"
         onClick={e => e.stopPropagation()}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}

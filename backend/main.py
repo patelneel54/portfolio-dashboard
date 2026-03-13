@@ -119,6 +119,9 @@ async def list_holdings(_=Depends(require_auth)):
     async with get_db() as db:
         cursor = await db.execute("SELECT * FROM holdings ORDER BY id")
         rows = await cursor.fetchall()
+        lr_cursor = await db.execute("SELECT MAX(last_updated) as lr FROM holdings")
+        lr_row = await lr_cursor.fetchone()
+        last_refreshed = lr_row["lr"] if lr_row else None
 
     holdings = [dict(r) for r in rows]
     total_value = sum(
@@ -161,6 +164,7 @@ async def list_holdings(_=Depends(require_auth)):
             if total_cost
             else 0
         ),
+        "last_refreshed": last_refreshed,
     }
 
 

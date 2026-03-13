@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../hooks/useApi';
 import { C, MONO } from '../styles/theme';
+import { inputStyle as baseInputStyle } from '../styles/shared';
 import useMediaQuery from '../hooks/useMediaQuery';
 
 const ACCOUNT_TABS = [
@@ -141,17 +142,8 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
     }
   }, [dragOffset, handleMobileClose]);
 
-  const inputStyle = {
-    width: '100%', padding: '8px 10px', fontSize: 13, fontFamily: MONO,
-    background: '#0d1424', border: `1px solid ${C.border}`, borderRadius: 6,
-    color: C.text, outline: 'none', boxSizing: 'border-box',
-  };
-
-  const mobileInputStyle = {
-    width: '100%', padding: '12px 14px', fontSize: 16, fontFamily: MONO,
-    background: '#0d1424', border: `1px solid ${C.border}`, borderRadius: 8,
-    color: C.text, outline: 'none', boxSizing: 'border-box', minHeight: 48,
-  };
+  const inputStyle = { ...baseInputStyle, padding: '8px 10px', fontSize: 13, borderRadius: 6 };
+  const mobileInputStyle = { ...baseInputStyle, padding: '12px 14px', minHeight: 48 };
 
   const tabColor = ACCOUNT_TABS.find(t => t.id === activeAccount)?.color || C.blue;
 
@@ -174,10 +166,12 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
   // --- Render helpers ---
 
   const renderAccountTabs = (mobile) => (
-    <div style={{ display: 'flex', gap: 4, marginBottom: mobile ? 16 : 20, background: C.bg, borderRadius: 10, padding: 4, border: `1px solid ${C.border}` }}>
+    <div role="tablist" aria-label="Account type" style={{ display: 'flex', gap: 4, marginBottom: mobile ? 16 : 20, background: C.bg, borderRadius: 10, padding: 4, border: `1px solid ${C.border}` }}>
       {ACCOUNT_TABS.map(tab => (
         <button
           key={tab.id}
+          role="tab"
+          aria-selected={activeAccount === tab.id}
           onClick={() => switchTab(tab.id)}
           style={{
             flex: 1, padding: '10px 14px', borderRadius: 8, border: 'none',
@@ -197,7 +191,7 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
     if (!confirmDelete) return null;
     return (
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setConfirmDelete(null)}>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 24, width: 320, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+        <div role="alertdialog" aria-modal="true" aria-label="Confirm deletion" style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 24, width: 320, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
           <p style={{ margin: '0 0 20px', fontSize: 14, color: C.text, fontWeight: 600 }}>
             Delete {confirmDelete.ticker}? This cannot be undone.
           </p>
@@ -216,10 +210,10 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
 
   const renderDesktopModal = () => (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
-      <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, width: '100%', maxWidth: 640, maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-label="Manage holdings" style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, width: '100%', maxWidth: 640, maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>Manage Holdings</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.textMuted, fontSize: 20, cursor: 'pointer', padding: '10px 14px', minHeight: 44, minWidth: 44 }}>&times;</button>
+          <button onClick={onClose} aria-label="Close manage holdings" style={{ background: 'none', border: 'none', color: C.textMuted, fontSize: 20, cursor: 'pointer', padding: '10px 14px', minHeight: 44, minWidth: 44 }}>&times;</button>
         </div>
 
         {renderAccountTabs(false)}
@@ -231,30 +225,30 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: addGridCols, gap: 8, marginBottom: 8 }}>
             <div>
-              <label style={{ fontSize: 10, color: C.textDim }}>{isCrypto ? 'Coin' : 'Ticker'}</label>
-              <input value={ticker} onChange={e => setTicker(e.target.value)} placeholder={isCrypto ? 'BTC' : 'AAPL'} required style={inputStyle} />
+              <label htmlFor="add-ticker" style={{ fontSize: 10, color: C.textDim }}>{isCrypto ? 'Coin' : 'Ticker'}</label>
+              <input id="add-ticker" value={ticker} onChange={e => setTicker(e.target.value)} placeholder={isCrypto ? 'BTC' : 'AAPL'} required style={inputStyle} />
             </div>
             <div>
-              <label style={{ fontSize: 10, color: C.textDim }}>{isCrypto ? 'Amount' : 'Shares'}</label>
-              <input type="number" step="any" value={shares} onChange={e => setShares(e.target.value)} placeholder={isCrypto ? '0.5' : '10'} required style={inputStyle} />
+              <label htmlFor="add-shares" style={{ fontSize: 10, color: C.textDim }}>{isCrypto ? 'Amount' : 'Shares'}</label>
+              <input id="add-shares" type="number" step="any" value={shares} onChange={e => setShares(e.target.value)} placeholder={isCrypto ? '0.5' : '10'} required style={inputStyle} />
             </div>
             <div>
-              <label style={{ fontSize: 10, color: C.textDim }}>{isCrypto ? 'Avg Buy Price' : 'Avg Cost'}</label>
-              <input type="number" step="any" value={avgCost} onChange={e => setAvgCost(e.target.value)} placeholder={isCrypto ? '45000' : '150.00'} required style={inputStyle} />
+              <label htmlFor="add-avgcost" style={{ fontSize: 10, color: C.textDim }}>{isCrypto ? 'Avg Buy Price' : 'Avg Cost'}</label>
+              <input id="add-avgcost" type="number" step="any" value={avgCost} onChange={e => setAvgCost(e.target.value)} placeholder={isCrypto ? '45000' : '150.00'} required style={inputStyle} />
             </div>
             {isBrokerage && (
               <div>
-                <label style={{ fontSize: 10, color: C.textDim }}>Target %</label>
-                <input type="number" step="any" value={target} onChange={e => setTarget(e.target.value)} placeholder="5.0" style={inputStyle} />
+                <label htmlFor="add-target" style={{ fontSize: 10, color: C.textDim }}>Target %</label>
+                <input id="add-target" type="number" step="any" value={target} onChange={e => setTarget(e.target.value)} placeholder="5.0" style={inputStyle} />
               </div>
             )}
             <div>
-              <label style={{ fontSize: 10, color: C.textDim }}>Purchase Date</label>
-              <input type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)} style={inputStyle} />
+              <label htmlFor="add-date" style={{ fontSize: 10, color: C.textDim }}>Purchase Date</label>
+              <input id="add-date" type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)} style={inputStyle} />
             </div>
           </div>
-          {error && <div style={{ color: C.red, fontSize: 12, marginBottom: 8 }}>{error}</div>}
-          <button type="submit" disabled={adding} style={{ padding: '10px 20px', minHeight: 44, background: tabColor, color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: adding ? 0.6 : 1 }}>
+          {error && <div role="alert" style={{ color: C.red, fontSize: 12, marginBottom: 8 }}>{error}</div>}
+          <button type="submit" disabled={adding} aria-busy={adding} style={{ padding: '10px 20px', minHeight: 44, background: tabColor, color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: adding ? 0.6 : 1 }}>
             {adding ? 'Adding...' : isCrypto ? 'Add Coin' : 'Add Holding'}
           </button>
           {isBrokerage && totalTarget > 0 && (
@@ -282,13 +276,13 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
                   {editingId === h.id ? (
                     <div style={{ display: 'grid', gridTemplateColumns: editGridCols, gap: 8, alignItems: 'center' }}>
                       <span style={{ fontWeight: 700, fontFamily: MONO, fontSize: 12 }}>{h.ticker}</span>
-                      <input type="number" step="any" value={editData.shares} onChange={e => setEditData({ ...editData, shares: e.target.value })} style={{ ...inputStyle, padding: '4px 8px' }} />
-                      <input type="number" step="any" value={editData.avg_cost} onChange={e => setEditData({ ...editData, avg_cost: e.target.value })} style={{ ...inputStyle, padding: '4px 8px' }} />
+                      <input type="number" step="any" aria-label="Shares" value={editData.shares} onChange={e => setEditData({ ...editData, shares: e.target.value })} style={{ ...inputStyle, padding: '4px 8px' }} />
+                      <input type="number" step="any" aria-label="Average cost" value={editData.avg_cost} onChange={e => setEditData({ ...editData, avg_cost: e.target.value })} style={{ ...inputStyle, padding: '4px 8px' }} />
                       {hIsBrokerage && (
-                        <input type="number" step="any" value={editData.target_allocation} onChange={e => setEditData({ ...editData, target_allocation: e.target.value })} placeholder="Target %" style={{ ...inputStyle, padding: '4px 8px' }} />
+                        <input type="number" step="any" aria-label="Target allocation" value={editData.target_allocation} onChange={e => setEditData({ ...editData, target_allocation: e.target.value })} placeholder="Target %" style={{ ...inputStyle, padding: '4px 8px' }} />
                       )}
-                      <input type="date" value={editData.purchase_date || ''} onChange={e => setEditData({ ...editData, purchase_date: e.target.value })} style={{ ...inputStyle, padding: '4px 8px' }} />
-                      <select value={editData.account_type || 'brokerage'} onChange={e => setEditData({ ...editData, account_type: e.target.value })} style={{ ...inputStyle, padding: '4px 8px' }}>
+                      <input type="date" aria-label="Purchase date" value={editData.purchase_date || ''} onChange={e => setEditData({ ...editData, purchase_date: e.target.value })} style={{ ...inputStyle, padding: '4px 8px' }} />
+                      <select aria-label="Account type" value={editData.account_type || 'brokerage'} onChange={e => setEditData({ ...editData, account_type: e.target.value })} style={{ ...inputStyle, padding: '4px 8px' }}>
                         <option value="brokerage">Brokerage</option>
                         <option value="401k">401k</option>
                         <option value="crypto">Crypto</option>
@@ -344,6 +338,9 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
         }}
       >
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Manage holdings"
           onClick={e => e.stopPropagation()}
           onTransitionEnd={handleTransitionEnd}
           style={{
@@ -371,6 +368,7 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
               <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: C.text }}>Manage Holdings</h2>
               <button
                 onClick={handleMobileClose}
+                aria-label="Close manage holdings"
                 style={{
                   background: 'none', border: 'none', color: C.textMuted,
                   fontSize: 20, cursor: 'pointer',
@@ -397,34 +395,34 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div>
-                  <label style={{ fontSize: 14, color: C.textMuted, display: 'block', marginBottom: 4 }}>{isCrypto ? 'Coin' : 'Ticker'}</label>
-                  <input value={ticker} onChange={e => setTicker(e.target.value)} placeholder={isCrypto ? 'BTC' : 'AAPL'} required style={mobileInputStyle} />
+                  <label htmlFor="m-add-ticker" style={{ fontSize: 14, color: C.textMuted, display: 'block', marginBottom: 4 }}>{isCrypto ? 'Coin' : 'Ticker'}</label>
+                  <input id="m-add-ticker" value={ticker} onChange={e => setTicker(e.target.value)} placeholder={isCrypto ? 'BTC' : 'AAPL'} required style={mobileInputStyle} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
-                    <label style={{ fontSize: 14, color: C.textMuted, display: 'block', marginBottom: 4 }}>{isCrypto ? 'Amount' : 'Shares'}</label>
-                    <input type="number" step="any" value={shares} onChange={e => setShares(e.target.value)} placeholder={isCrypto ? '0.5' : '10'} required style={mobileInputStyle} />
+                    <label htmlFor="m-add-shares" style={{ fontSize: 14, color: C.textMuted, display: 'block', marginBottom: 4 }}>{isCrypto ? 'Amount' : 'Shares'}</label>
+                    <input id="m-add-shares" type="number" step="any" value={shares} onChange={e => setShares(e.target.value)} placeholder={isCrypto ? '0.5' : '10'} required style={mobileInputStyle} />
                   </div>
                   <div>
-                    <label style={{ fontSize: 14, color: C.textMuted, display: 'block', marginBottom: 4 }}>{isCrypto ? 'Avg Buy Price' : 'Avg Cost'}</label>
-                    <input type="number" step="any" value={avgCost} onChange={e => setAvgCost(e.target.value)} placeholder={isCrypto ? '45000' : '150.00'} required style={mobileInputStyle} />
+                    <label htmlFor="m-add-avgcost" style={{ fontSize: 14, color: C.textMuted, display: 'block', marginBottom: 4 }}>{isCrypto ? 'Avg Buy Price' : 'Avg Cost'}</label>
+                    <input id="m-add-avgcost" type="number" step="any" value={avgCost} onChange={e => setAvgCost(e.target.value)} placeholder={isCrypto ? '45000' : '150.00'} required style={mobileInputStyle} />
                   </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: isBrokerage ? '1fr 1fr' : '1fr', gap: 12 }}>
                   {isBrokerage && (
                     <div>
-                      <label style={{ fontSize: 14, color: C.textMuted, display: 'block', marginBottom: 4 }}>Target %</label>
-                      <input type="number" step="any" value={target} onChange={e => setTarget(e.target.value)} placeholder="5.0" style={mobileInputStyle} />
+                      <label htmlFor="m-add-target" style={{ fontSize: 14, color: C.textMuted, display: 'block', marginBottom: 4 }}>Target %</label>
+                      <input id="m-add-target" type="number" step="any" value={target} onChange={e => setTarget(e.target.value)} placeholder="5.0" style={mobileInputStyle} />
                     </div>
                   )}
                   <div>
-                    <label style={{ fontSize: 14, color: C.textMuted, display: 'block', marginBottom: 4 }}>Purchase Date</label>
-                    <input type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)} style={mobileInputStyle} />
+                    <label htmlFor="m-add-date" style={{ fontSize: 14, color: C.textMuted, display: 'block', marginBottom: 4 }}>Purchase Date</label>
+                    <input id="m-add-date" type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)} style={mobileInputStyle} />
                   </div>
                 </div>
               </div>
-              {error && <div style={{ color: C.red, fontSize: 13, marginTop: 8 }}>{error}</div>}
-              <button type="submit" disabled={adding} style={{
+              {error && <div role="alert" style={{ color: C.red, fontSize: 13, marginTop: 8 }}>{error}</div>}
+              <button type="submit" disabled={adding} aria-busy={adding} style={{
                 width: '100%', padding: '14px 20px', minHeight: 48,
                 background: tabColor, color: '#fff', border: 'none',
                 borderRadius: 10, fontSize: 15, fontWeight: 600,
@@ -460,27 +458,27 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
                           <div style={{ fontWeight: 700, fontFamily: MONO, fontSize: 15, color: C.text }}>{h.ticker}</div>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                             <div>
-                              <label style={{ fontSize: 14, color: C.textMuted, display: 'block', marginBottom: 4 }}>{hIsCrypto ? 'Amount' : 'Shares'}</label>
-                              <input type="number" step="any" value={editData.shares} onChange={e => setEditData({ ...editData, shares: e.target.value })} style={mobileInputStyle} />
+                              <label htmlFor={`m-edit-shares-${h.id}`} style={{ fontSize: 14, color: C.textMuted, display: 'block', marginBottom: 4 }}>{hIsCrypto ? 'Amount' : 'Shares'}</label>
+                              <input id={`m-edit-shares-${h.id}`} type="number" step="any" value={editData.shares} onChange={e => setEditData({ ...editData, shares: e.target.value })} style={mobileInputStyle} />
                             </div>
                             <div>
-                              <label style={{ fontSize: 14, color: C.textMuted, display: 'block', marginBottom: 4 }}>{hIsCrypto ? 'Avg Buy Price' : 'Avg Cost'}</label>
-                              <input type="number" step="any" value={editData.avg_cost} onChange={e => setEditData({ ...editData, avg_cost: e.target.value })} style={mobileInputStyle} />
+                              <label htmlFor={`m-edit-cost-${h.id}`} style={{ fontSize: 14, color: C.textMuted, display: 'block', marginBottom: 4 }}>{hIsCrypto ? 'Avg Buy Price' : 'Avg Cost'}</label>
+                              <input id={`m-edit-cost-${h.id}`} type="number" step="any" value={editData.avg_cost} onChange={e => setEditData({ ...editData, avg_cost: e.target.value })} style={mobileInputStyle} />
                             </div>
                           </div>
                           {hIsBrokerage && (
                             <div>
-                              <label style={{ fontSize: 14, color: C.textMuted, display: 'block', marginBottom: 4 }}>Target %</label>
-                              <input type="number" step="any" value={editData.target_allocation} onChange={e => setEditData({ ...editData, target_allocation: e.target.value })} placeholder="Target %" style={mobileInputStyle} />
+                              <label htmlFor={`m-edit-target-${h.id}`} style={{ fontSize: 14, color: C.textMuted, display: 'block', marginBottom: 4 }}>Target %</label>
+                              <input id={`m-edit-target-${h.id}`} type="number" step="any" value={editData.target_allocation} onChange={e => setEditData({ ...editData, target_allocation: e.target.value })} placeholder="Target %" style={mobileInputStyle} />
                             </div>
                           )}
                           <div>
-                            <label style={{ fontSize: 14, color: C.textMuted, display: 'block', marginBottom: 4 }}>Purchase Date</label>
-                            <input type="date" value={editData.purchase_date || ''} onChange={e => setEditData({ ...editData, purchase_date: e.target.value })} style={mobileInputStyle} />
+                            <label htmlFor={`m-edit-date-${h.id}`} style={{ fontSize: 14, color: C.textMuted, display: 'block', marginBottom: 4 }}>Purchase Date</label>
+                            <input id={`m-edit-date-${h.id}`} type="date" value={editData.purchase_date || ''} onChange={e => setEditData({ ...editData, purchase_date: e.target.value })} style={mobileInputStyle} />
                           </div>
                           <div>
-                            <label style={{ fontSize: 14, color: C.textMuted, display: 'block', marginBottom: 4 }}>Account</label>
-                            <select value={editData.account_type || 'brokerage'} onChange={e => setEditData({ ...editData, account_type: e.target.value })} style={mobileInputStyle}>
+                            <label htmlFor={`m-edit-account-${h.id}`} style={{ fontSize: 14, color: C.textMuted, display: 'block', marginBottom: 4 }}>Account</label>
+                            <select id={`m-edit-account-${h.id}`} value={editData.account_type || 'brokerage'} onChange={e => setEditData({ ...editData, account_type: e.target.value })} style={mobileInputStyle}>
                               <option value="brokerage">Brokerage</option>
                               <option value="401k">401k</option>
                               <option value="crypto">Crypto</option>
@@ -508,6 +506,9 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
                           {/* Three-dot menu button */}
                           <button
                             onClick={(e) => { e.stopPropagation(); setMenuOpenId(menuOpenId === h.id ? null : h.id); }}
+                            aria-label={`Options for ${h.ticker}`}
+                            aria-haspopup="true"
+                            aria-expanded={menuOpenId === h.id}
                             style={{
                               background: 'none', border: 'none', cursor: 'pointer',
                               padding: 10, minHeight: 44, minWidth: 44,
@@ -515,7 +516,7 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
                               color: C.textMuted,
                             }}
                           >
-                            <svg width={20} height={20} viewBox="0 0 24 24" fill="currentColor">
+                            <svg aria-hidden="true" focusable="false" width={20} height={20} viewBox="0 0 24 24" fill="currentColor">
                               <circle cx={12} cy={5} r={2} />
                               <circle cx={12} cy={12} r={2} />
                               <circle cx={12} cy={19} r={2} />

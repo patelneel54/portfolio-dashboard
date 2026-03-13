@@ -12,3 +12,5 @@ export default function useMediaQuery(query) {
 
   return matches;
 }
+
+export const useIsMobile = () => useMediaQuery('(max-width: 768px)');

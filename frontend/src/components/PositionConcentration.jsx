@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { C, MONO } from '../styles/theme';
+import { cardStyle, sectionTitle, srOnly } from '../styles/shared';
 
 const BAR_COLORS = {
   ETF: { bar: '#4f46e5', barBg: '#4f46e520' },
@@ -29,16 +30,16 @@ export default function PositionConcentration({ holdings = [], totalValue = 0 })
   const hasMore = sorted.length > VISIBLE_COUNT;
 
   return (
-    <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
+    <div style={cardStyle}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.textMuted }}>Position Concentration</h3>
+        <h3 style={{ ...sectionTitle, margin: 0 }}>Position Concentration</h3>
         <div style={{ display: 'flex', gap: 12, fontSize: 10, color: C.textDim }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span style={{ width: 10, height: 10, borderRadius: 2, background: BAR_COLORS.ETF.bar }} />
+            <span aria-hidden="true" style={{ width: 10, height: 10, borderRadius: 2, background: BAR_COLORS.ETF.bar }} />
             ETF
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span style={{ width: 10, height: 10, borderRadius: 2, background: BAR_COLORS.Stock.bar }} />
+            <span aria-hidden="true" style={{ width: 10, height: 10, borderRadius: 2, background: BAR_COLORS.Stock.bar }} />
             Stock
           </span>
         </div>
@@ -69,6 +70,7 @@ export default function PositionConcentration({ holdings = [], totalValue = 0 })
                 </div>
               )}
               <div
+                aria-label={`${h.ticker}: ${h.pct.toFixed(1)}% of portfolio, $${h.market_value.toLocaleString(undefined, { maximumFractionDigits: 0 })}, ${(h.gain_loss_pct || 0) >= 0 ? 'gain' : 'loss'} ${Math.abs(h.gain_loss_pct || 0).toFixed(1)}%`}
                 style={{
                   display: 'grid',
                   gridTemplateColumns: '52px 46px 1fr',
@@ -142,6 +144,7 @@ export default function PositionConcentration({ holdings = [], totalValue = 0 })
                     }}>
                       <span>${h.market_value.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                       <span style={{ color: (h.gain_loss_pct || 0) >= 0 ? C.green : C.red }}>
+                        <span style={srOnly}>{(h.gain_loss_pct || 0) >= 0 ? 'gain ' : 'loss '}</span>
                         {(h.gain_loss_pct || 0) >= 0 ? '+' : ''}{(h.gain_loss_pct || 0).toFixed(1)}%
                       </span>
                       {h.drift != null && Math.abs(h.drift) >= 0.3 && (
@@ -162,6 +165,7 @@ export default function PositionConcentration({ holdings = [], totalValue = 0 })
       {hasMore && (
         <button
           onClick={() => setShowAll(v => !v)}
+          aria-expanded={showAll}
           style={{
             display: 'block',
             margin: '12px auto 0',
