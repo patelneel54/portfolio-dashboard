@@ -16,6 +16,7 @@ import SwipeContainer from './SwipeContainer';
 import AccountFilterSheet from './AccountFilterSheet';
 import SkeletonLoader from './SkeletonLoader';
 import PullToRefresh from './PullToRefresh';
+import { haptic } from '../utils/haptics';
 
 function formatRefreshTime(date) {
   const diffMs = Date.now() - date.getTime();
@@ -37,6 +38,7 @@ const Stat = ({ label, value, sub, color }) => (
   </div>
 );
 
+/** @returns {JSX.Element} Main dashboard with tabs, stats, alerts banner, and holdings management. */
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [data, setData] = useState(null);
@@ -49,6 +51,7 @@ export default function Dashboard() {
   const [accountFilter, setAccountFilter] = useState('all');
   const [fetchError, setFetchError] = useState(null);
   const [lastRefreshedAt, setLastRefreshedAt] = useState(null);
+  const [triggeredAlerts, setTriggeredAlerts] = useState([]);
   const navigate = useNavigate();
 
   const fetchData = useCallback(async () => {
@@ -72,6 +75,13 @@ export default function Dashboard() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Fetch triggered alerts after data loads/refreshes
+  useEffect(() => {
+    if (data) {
+      api.getAlerts(true).then(setTriggeredAlerts).catch(() => {});
+    }
+  }, [data]);
+
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
     const handler = (event) => {
@@ -89,6 +99,7 @@ export default function Dashboard() {
     try {
       await api.refreshPrices();
       await fetchData();
+      haptic();
     } finally {
       setRefreshing(false);
     }
@@ -198,6 +209,32 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Triggered Alerts Banner */}
+      {triggeredAlerts.length > 0 && (
+        <div role="alert" style={{
+          background: C.amber + '18', border: `1px solid ${C.amber}44`,
+          borderRadius: 10, padding: '10px 14px', marginBottom: 12,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: C.amber }}>
+            {triggeredAlerts.length} alert{triggeredAlerts.length > 1 ? 's' : ''} triggered
+          </span>
+          <button
+            onClick={async () => {
+              await Promise.all(triggeredAlerts.map(a => api.dismissAlert(a.id)));
+              setTriggeredAlerts([]);
+            }}
+            style={{
+              background: 'none', border: `1px solid ${C.amber}44`, color: C.amber,
+              borderRadius: 6, padding: '6px 12px', fontSize: 11, fontWeight: 600,
+              cursor: 'pointer', minHeight: 36,
+            }}
+          >
+            Dismiss All
+          </button>
+        </div>
+      )}
+
       {/* Stats Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 16 }}>
         <Stat label="Total Value" value={fmtK(totalValue)} sub={`Cost: ${fmtK(totalCost)}`} />
@@ -217,7 +254,7 @@ export default function Dashboard() {
           </button>
         </div>
       ) : (
-        <SwipeContainer tabs={tabOrder} activeTab={activeTab} onTabChange={setActiveTab}>
+        <SwipeContainer tabs={tabOrder} activeTab={activeTab} onTabChange={(tab) => { haptic(); setActiveTab(tab); }}>
           {accountFilter === 'crypto' ? (
             <div key={activeTab} role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`} style={{ animation: 'tabFadeIn 150ms ease-out' }}>
               <ErrorBoundary fallbackMessage="Crypto view encountered an error.">
@@ -251,7 +288,7 @@ export default function Dashboard() {
         onSelect={(id) => { setAccountFilter(id); setActiveTab('overview'); }}
       />
 
-      <BottomTabBar activeTab={activeTab} onTabChange={setActiveTab} accountFilter={accountFilter} />
+      <BottomTabBar activeTab={activeTab} onTabChange={(tab) => { haptic(); setActiveTab(tab); }} accountFilter={accountFilter} />
     </div>
     </PullToRefresh>
   );

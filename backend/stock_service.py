@@ -57,27 +57,55 @@ async def validate_ticker(ticker: str) -> dict | None:
 async def refresh_all_prices():
     """Fetch current prices for all holdings and update price history."""
     async with get_db() as db:
-        cursor = await db.execute("SELECT DISTINCT ticker FROM holdings")
-        rows = await cursor.fetchall()
-        tickers = [r["ticker"] for r in rows]
+        cursor = await db.execute(
+            "SELECT DISTINCT ticker, is_manual, benchmark_ticker, current_price FROM holdings"
+        )
+        rows = [dict(r) for r in await cursor.fetchall()]
 
-    if not tickers:
+    # Separate auto vs manual holdings
+    auto_tickers = [r["ticker"] for r in rows if not r["is_manual"]]
+    manual_with_bench = [r for r in rows if r["is_manual"] and r["benchmark_ticker"]]
+
+    # Collect all tickers to fetch (auto + benchmarks for manual)
+    benchmark_tickers = list({r["benchmark_ticker"] for r in manual_with_bench})
+    all_fetch_tickers = list(set(auto_tickers + benchmark_tickers))
+
+    if not all_fetch_tickers:
         return
 
-    data = await asyncio.to_thread(_fetch_prices_sync, tickers)
+    data = await asyncio.to_thread(_fetch_prices_sync, all_fetch_tickers)
 
     async with get_db() as db:
+        # Update auto holdings directly
         for ticker, info in data.items():
-            await db.execute(
-                """UPDATE holdings
-                   SET current_price = ?, previous_close = ?, last_updated = datetime('now')
-                   WHERE ticker = ?""",
-                (info["price"], info["previous_close"], ticker),
-            )
+            if ticker in auto_tickers:
+                await db.execute(
+                    """UPDATE holdings
+                       SET current_price = ?, previous_close = ?, last_updated = datetime('now')
+                       WHERE ticker = ? AND is_manual = 0""",
+                    (info["price"], info["previous_close"], ticker),
+                )
+
+        # Update manual holdings via benchmark proxy
+        for manual in manual_with_bench:
+            bench = manual["benchmark_ticker"]
+            if bench in data and manual["current_price"]:
+                bench_info = data[bench]
+                # Get the benchmark's previous close to compute % change
+                if bench_info.get("previous_close") and bench_info["previous_close"] > 0:
+                    pct_change = (bench_info["price"] - bench_info["previous_close"]) / bench_info["previous_close"]
+                    new_price = manual["current_price"] * (1 + pct_change)
+                    await db.execute(
+                        """UPDATE holdings
+                           SET current_price = ?, previous_close = ?, last_updated = datetime('now')
+                           WHERE ticker = ? AND is_manual = 1""",
+                        (round(new_price, 4), manual["current_price"], manual["ticker"]),
+                    )
+
         await db.commit()
 
     # Also refresh price history (recent 1 month) so technicals stay current
-    for ticker in tickers:
+    for ticker in auto_tickers:
         try:
             await fetch_price_history(ticker, period="1mo")
         except Exception:
@@ -903,6 +931,201 @@ async def get_portfolio_intelligence(account_type: str | None = None) -> dict:
     }
 
 
+# --- Dividend Calendar ---
+
+_dividend_calendar_cache: dict[str, dict] = {}
+DIVIDEND_CALENDAR_CACHE_TTL = 3600  # 1 hour
+
+
+def _infer_dividend_frequency(dividends_series) -> int:
+    """Infer payment frequency from historical dividend series.
+
+    Returns approximate payments per year: 12, 4, 2, or 1.
+    """
+    if len(dividends_series) < 2:
+        return 4  # assume quarterly
+    dates = dividends_series.index.sort_values()
+    gaps = [(dates[i] - dates[i - 1]).days for i in range(1, len(dates))]
+    median_gap = sorted(gaps)[len(gaps) // 2]
+    if median_gap <= 45:
+        return 12
+    elif median_gap <= 120:
+        return 4
+    elif median_gap <= 220:
+        return 2
+    return 1
+
+
+def _fetch_dividend_events_sync(ticker: str, year: int, month: int) -> list[dict]:
+    """Fetch dividend events for a ticker in a given month. Runs on thread."""
+    try:
+        t = yf.Ticker(ticker)
+        divs = t.dividends
+
+        events = []
+        month_start = datetime(year, month, 1)
+        if month == 12:
+            month_end = datetime(year + 1, 1, 1)
+        else:
+            month_end = datetime(year, month + 1, 1)
+
+        # Historical payment events from dividends series
+        if divs is not None and len(divs) > 0:
+            for dt_idx, amount in divs.items():
+                dt_naive = dt_idx.to_pydatetime().replace(tzinfo=None)
+                if month_start <= dt_naive < month_end:
+                    events.append({
+                        "date": dt_naive.strftime("%Y-%m-%d"),
+                        "type": "payment",
+                        "amount_per_share": round(float(amount), 4),
+                        "estimated": False,
+                    })
+
+        # Fetch .info separately — it can be slow/fail for some tickers
+        info = {}
+        try:
+            info = t.info or {}
+        except Exception:
+            pass
+
+        # Ex-dividend date from .info
+        ex_div_ts = info.get("exDividendDate")
+        annual_rate = info.get("trailingAnnualDividendRate") or 0
+        frequency = _infer_dividend_frequency(divs) if divs is not None and len(divs) >= 2 else 4
+
+        if ex_div_ts:
+            try:
+                if isinstance(ex_div_ts, (int, float)):
+                    ex_dt = datetime.fromtimestamp(ex_div_ts)
+                else:
+                    ex_dt = datetime.fromisoformat(str(ex_div_ts).replace("Z", "+00:00")).replace(tzinfo=None)
+            except Exception:
+                ex_dt = None
+            if ex_dt and month_start <= ex_dt < month_end:
+                per_share = round(annual_rate / frequency, 4) if frequency and annual_rate else 0
+                # Avoid duplicate if already in historical data
+                ex_date_str = ex_dt.strftime("%Y-%m-%d")
+                if not any(e["date"] == ex_date_str for e in events):
+                    events.append({
+                        "date": ex_date_str,
+                        "type": "ex-dividend",
+                        "amount_per_share": per_share,
+                        "estimated": False,
+                    })
+
+        # Future projections for months beyond known data
+        if annual_rate > 0 and divs is not None and len(divs) >= 2:
+            interval_days = 365 // frequency
+            last_known = divs.index.sort_values()[-1].to_pydatetime().replace(tzinfo=None)
+            per_share_est = round(annual_rate / frequency, 4)
+            projected = last_known
+            # Project up to 2 years forward
+            for _ in range(frequency * 2):
+                projected = projected + timedelta(days=interval_days)
+                if projected >= month_end:
+                    break
+                if month_start <= projected < month_end:
+                    proj_str = projected.strftime("%Y-%m-%d")
+                    if not any(e["date"] == proj_str for e in events):
+                        events.append({
+                            "date": proj_str,
+                            "type": "payment",
+                            "amount_per_share": per_share_est,
+                            "estimated": True,
+                        })
+
+        return events
+    except Exception:
+        return []
+
+
+async def get_dividend_calendar(month: str, account_type: str | None = None) -> dict:
+    """Return dividend events for all holdings in a given month."""
+    # Validate month format
+    try:
+        parts = month.split("-")
+        if len(parts) != 2:
+            raise ValueError()
+        year, mo = int(parts[0]), int(parts[1])
+        if mo < 1 or mo > 12 or year < 2000 or year > 2100:
+            raise ValueError()
+    except (ValueError, IndexError):
+        raise ValueError("month must be in YYYY-MM format (e.g. 2026-03)")
+
+    async with get_db() as db:
+        if account_type:
+            cursor = await db.execute(
+                "SELECT id, ticker, shares, account_type FROM holdings WHERE account_type = ?",
+                (account_type,),
+            )
+        else:
+            cursor = await db.execute(
+                "SELECT id, ticker, shares, account_type FROM holdings"
+            )
+        rows = await cursor.fetchall()
+
+    if not rows:
+        return {"month": month, "events": [], "total_estimated_income": 0}
+
+    holdings = [dict(r) for r in rows]
+    all_events = []
+    now = time.time()
+
+    # Separate cached vs uncached holdings
+    cached_results = {}
+    uncached_holdings = []
+    for h in holdings:
+        ticker = h["ticker"]
+        cache_key = f"{ticker}:{month}"
+        cached = _dividend_calendar_cache.get(cache_key)
+        if cached and (now - cached["timestamp"]) < DIVIDEND_CALENDAR_CACHE_TTL:
+            cached_results[ticker] = cached["data"]
+        else:
+            uncached_holdings.append(h)
+
+    # Fetch uncached tickers in parallel (with concurrency limit)
+    async def _fetch_one(ticker):
+        try:
+            return await asyncio.to_thread(
+                _fetch_dividend_events_sync, ticker, year, mo
+            )
+        except Exception:
+            return []
+
+    if uncached_holdings:
+        unique_tickers = list({h["ticker"] for h in uncached_holdings})
+        tasks = [_fetch_one(t) for t in unique_tickers]
+        results = await asyncio.gather(*tasks)
+        for ticker, events in zip(unique_tickers, results):
+            cache_key = f"{ticker}:{month}"
+            _dividend_calendar_cache[cache_key] = {
+                "timestamp": now,
+                "data": events,
+            }
+            cached_results[ticker] = events
+
+    for h in holdings:
+        ticker_events = cached_results.get(h["ticker"], [])
+        for ev in ticker_events:
+            estimated_income = round(ev["amount_per_share"] * h["shares"], 2)
+            all_events.append({
+                **ev,
+                "ticker": h["ticker"],
+                "shares_held": h["shares"],
+                "estimated_income": estimated_income,
+                "account_type": h.get("account_type", "brokerage"),
+            })
+
+    all_events.sort(key=lambda e: e["date"])
+    total = sum(e["estimated_income"] for e in all_events)
+
+    return {
+        "month": month,
+        "events": all_events,
+        "total_estimated_income": round(total, 2),
+    }
+
+
 # --- Portfolio Analytics (enriched 3-level drill-down data) ---
 
 
@@ -1236,3 +1459,209 @@ async def get_crypto_global() -> dict:
     result = await asyncio.to_thread(_fetch_crypto_global_sync)
     _crypto_global_cache["data"] = {"timestamp": now, "result": result}
     return result
+
+
+# ── Bond Metrics ──
+
+_bond_cache = {}
+BOND_CACHE_TTL = 86400  # 24 hours
+
+
+def _fetch_bond_metrics_sync(ticker: str) -> dict:
+    """Fetch bond-specific metrics from yfinance."""
+    try:
+        t = yf.Ticker(ticker)
+        info = t.info
+        return {
+            "ticker": ticker,
+            "yield_pct": info.get("yield", info.get("dividendYield")),
+            "sec_yield": info.get("ytdReturn"),
+            "expense_ratio": info.get("annualReportExpenseRatio") or info.get("totalExpenseRatio"),
+            "total_assets": info.get("totalAssets"),
+            "category": info.get("category", ""),
+            "fund_family": info.get("fundFamily", ""),
+            "inception_date": info.get("fundInceptionDate"),
+            "three_year_return": info.get("threeYearAverageReturn"),
+            "five_year_return": info.get("fiveYearAverageReturn"),
+            "ten_year_return": info.get("tenYearAverageReturn", None),
+            "beta": info.get("beta3Year"),
+            "morningstar_rating": info.get("morningStarOverallRating"),
+        }
+    except Exception:
+        return {"ticker": ticker}
+
+
+async def get_bond_metrics(ticker: str) -> dict:
+    """Get cached bond fund metrics."""
+    now = time.time()
+    cached = _bond_cache.get(ticker)
+    if cached and (now - cached["timestamp"]) < BOND_CACHE_TTL:
+        return cached["result"]
+
+    result = await asyncio.to_thread(_fetch_bond_metrics_sync, ticker)
+    _bond_cache[ticker] = {"timestamp": now, "result": result}
+    return result
+
+
+# ── Rebalance Suggestions ──
+
+# Age-based allocation models
+ALLOCATION_MODELS = {
+    "aggressive": {"stocks": 90, "bonds": 10, "label": "Aggressive (age < 30)"},
+    "moderate": {"stocks": 70, "bonds": 25, "label": "Moderate (age 30-50)"},
+    "conservative": {"stocks": 50, "bonds": 40, "label": "Conservative (age 50+)"},
+}
+
+STOCK_CLASSES = {"large_cap", "mid_cap", "small_cap", "international", "specialty", "blended"}
+BOND_CLASSES = {"bond", "stable_value", "money_market"}
+
+
+async def get_rebalance_suggestions(account_type: str | None = None) -> dict:
+    """Generate smart rebalancing suggestions based on asset class allocation and age."""
+    async with get_db() as db:
+        if account_type:
+            cursor = await db.execute(
+                "SELECT * FROM holdings WHERE account_type = ?", (account_type,)
+            )
+        else:
+            cursor = await db.execute("SELECT * FROM holdings")
+        holdings = [dict(r) for r in await cursor.fetchall()]
+
+        # Get age from settings
+        age_cursor = await db.execute("SELECT value FROM settings WHERE key = 'age'")
+        age_row = await age_cursor.fetchone()
+        age = int(age_row["value"]) if age_row else 30
+
+    if not holdings:
+        return {"suggestions": [], "allocation": {}, "model": {}}
+
+    total_value = sum(h["shares"] * (h["current_price"] or h["avg_cost"]) for h in holdings)
+    if total_value <= 0:
+        return {"suggestions": [], "allocation": {}, "model": {}}
+
+    # Determine age-based model
+    if age < 30:
+        model = ALLOCATION_MODELS["aggressive"]
+        model_key = "aggressive"
+    elif age < 50:
+        model = ALLOCATION_MODELS["moderate"]
+        model_key = "moderate"
+    else:
+        model = ALLOCATION_MODELS["conservative"]
+        model_key = "conservative"
+
+    # Compute actual allocation by asset class
+    class_values = {}
+    for h in holdings:
+        mv = h["shares"] * (h["current_price"] or h["avg_cost"])
+        ac = h.get("asset_class") or "unclassified"
+        class_values[ac] = class_values.get(ac, 0) + mv
+
+    class_pcts = {k: round((v / total_value) * 100, 1) for k, v in class_values.items()}
+
+    # Compute stocks vs bonds split
+    stock_pct = sum(class_pcts.get(c, 0) for c in STOCK_CLASSES)
+    stock_pct += class_pcts.get("unclassified", 0)  # Assume unclassified are stocks
+    bond_pct = sum(class_pcts.get(c, 0) for c in BOND_CLASSES)
+    other_pct = 100 - stock_pct - bond_pct
+
+    suggestions = []
+
+    # 1. Stocks vs Bonds balance
+    target_stocks = model["stocks"]
+    target_bonds = model["bonds"]
+    stock_diff = stock_pct - target_stocks
+    bond_diff = bond_pct - target_bonds
+
+    if bond_diff < -10:
+        suggestions.append({
+            "severity": "warning",
+            "category": "asset_allocation",
+            "message": f"Your bond allocation is {bond_pct:.0f}% vs recommended {target_bonds}% for age {age}. Consider increasing fixed income exposure.",
+            "action": f"Shift ~${abs(bond_diff) / 100 * total_value:,.0f} from stocks to bond funds.",
+        })
+    elif bond_diff < -5:
+        suggestions.append({
+            "severity": "info",
+            "category": "asset_allocation",
+            "message": f"Bond allocation ({bond_pct:.0f}%) is slightly below the {target_bonds}% target for your age group.",
+            "action": "Consider gradually increasing bond allocation with future contributions.",
+        })
+
+    if stock_diff > 15:
+        suggestions.append({
+            "severity": "warning",
+            "category": "asset_allocation",
+            "message": f"You're {stock_diff:.0f}% overweight in stocks relative to the {model['label']} model.",
+            "action": "Consider rebalancing toward bonds to reduce portfolio risk.",
+        })
+
+    # 2. Domestic vs International split (within stocks)
+    domestic_pct = sum(class_pcts.get(c, 0) for c in ["large_cap", "mid_cap", "small_cap", "specialty"])
+    domestic_pct += class_pcts.get("unclassified", 0)
+    intl_pct = class_pcts.get("international", 0)
+    total_stock = domestic_pct + intl_pct
+
+    if total_stock > 0:
+        intl_share = (intl_pct / total_stock) * 100
+        if intl_share < 20:
+            suggestions.append({
+                "severity": "info",
+                "category": "diversification",
+                "message": f"International stocks are only {intl_share:.0f}% of your equity allocation. A common target is 25-40%.",
+                "action": "Consider increasing international fund holdings for geographic diversification.",
+            })
+        elif intl_share > 50:
+            suggestions.append({
+                "severity": "info",
+                "category": "diversification",
+                "message": f"International stocks are {intl_share:.0f}% of your equity — above the typical 25-40% range.",
+                "action": "Consider whether your international exposure matches your risk tolerance.",
+            })
+
+    # 3. Concentration risk
+    for h in holdings:
+        mv = h["shares"] * (h["current_price"] or h["avg_cost"])
+        pct = (mv / total_value) * 100
+        name = h.get("manual_name") or h["ticker"]
+        if pct > 30:
+            suggestions.append({
+                "severity": "warning",
+                "category": "concentration",
+                "message": f"Strong concentration in {name} ({pct:.0f}% of portfolio).",
+                "action": "Consider diversifying to reduce single-fund risk.",
+            })
+        elif pct > 20:
+            suggestions.append({
+                "severity": "info",
+                "category": "concentration",
+                "message": f"{name} is {pct:.0f}% of your portfolio — relatively concentrated.",
+                "action": "Monitor this position; consider trimming if it grows further.",
+            })
+
+    # 4. Missing asset classes
+    if class_pcts.get("small_cap", 0) == 0 and total_stock > 0:
+        suggestions.append({
+            "severity": "info",
+            "category": "diversification",
+            "message": "No small-cap exposure. Small caps can improve long-term growth potential.",
+            "action": "Consider adding a small-cap index fund.",
+        })
+
+    return {
+        "suggestions": suggestions,
+        "allocation": {
+            "by_class": class_pcts,
+            "stocks_pct": round(stock_pct, 1),
+            "bonds_pct": round(bond_pct, 1),
+            "other_pct": round(other_pct, 1),
+        },
+        "model": {
+            "key": model_key,
+            "label": model["label"],
+            "target_stocks": target_stocks,
+            "target_bonds": target_bonds,
+            "age": age,
+        },
+        "total_value": round(total_value, 2),
+    }

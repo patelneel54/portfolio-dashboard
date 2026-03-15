@@ -1,4 +1,4 @@
-# Portfolio Dashboard - Implementation Plan
+# Portfolio Command Center - Implementation Plan
 
 ## Tech Stack
 - **Backend**: Python 3.12 + FastAPI + SQLite (via aiosqlite)

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0e17" />
+    <title>Portfolio Command Center — Offline</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        background: #0a0e17;
+        color: #e2e8f0;
+        font-family: Inter, -apple-system, system-ui, sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 20px;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .card {
+        background: #111827;
+        border: 1px solid #1e293b;
+        border-radius: 16px;
+        padding: 40px;
+        width: 100%;
+        max-width: 360px;
+        text-align: center;
+      }
+      .icon { margin-bottom: 16px; }
+      h1 {
+        font-size: 20px;
+        font-weight: 800;
+        margin-bottom: 8px;
+      }
+      p {
+        color: #7B8FA3;
+        font-size: 13px;
+        line-height: 1.6;
+        margin-bottom: 28px;
+      }
+      button {
+        width: 100%;
+        padding: 12px 16px;
+        min-height: 44px;
+        background: #6366f1;
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      button:active { opacity: 0.8; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="80" height="80">
+          <rect width="512" height="512" rx="96" fill="#0a0e17"/>
+          <rect x="80" y="320" width="60" height="120" rx="8" fill="#3b82f6" opacity="0.8"/>
+          <rect x="170" y="240" width="60" height="200" rx="8" fill="#10b981" opacity="0.8"/>
+          <rect x="260" y="180" width="60" height="260" rx="8" fill="#6366f1" opacity="0.8"/>
+          <rect x="350" y="120" width="60" height="320" rx="8" fill="#f59e0b" opacity="0.8"/>
+          <path d="M80 280 L170 200 L260 140 L350 80 L440 60" stroke="#e2e8f0" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="80" cy="280" r="6" fill="#e2e8f0"/>
+          <circle cx="170" cy="200" r="6" fill="#e2e8f0"/>
+          <circle cx="260" cy="140" r="6" fill="#e2e8f0"/>
+          <circle cx="350" cy="80" r="6" fill="#e2e8f0"/>
+          <circle cx="440" cy="60" r="6" fill="#e2e8f0"/>
+        </svg>
+      </div>
+      <h1>You're offline</h1>
+      <p>Showing last synced data. Check your connection and try again.</p>
+      <button onclick="window.location.reload()">Try Again</button>
+    </div>
+  </body>
+</html>

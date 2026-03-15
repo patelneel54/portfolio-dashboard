@@ -37,6 +37,24 @@ CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS webauthn_credentials (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    credential_id TEXT NOT NULL UNIQUE,
+    public_key TEXT NOT NULL,
+    sign_count INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS alerts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticker TEXT NOT NULL,
+    alert_type TEXT NOT NULL CHECK(alert_type IN ('price_below', 'price_above', 'drift_above')),
+    threshold REAL NOT NULL,
+    triggered INTEGER NOT NULL DEFAULT 0,
+    triggered_at TEXT DEFAULT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+);
 """
 
 DEFAULT_SETTINGS = {
@@ -66,6 +84,10 @@ async def init_db():
             "ALTER TABLE holdings ADD COLUMN account_type TEXT NOT NULL DEFAULT 'brokerage'",
             "DROP INDEX IF EXISTS sqlite_autoindex_holdings_1",
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_holdings_ticker_account ON holdings(ticker, account_type)",
+            "ALTER TABLE holdings ADD COLUMN asset_class TEXT DEFAULT NULL",
+            "ALTER TABLE holdings ADD COLUMN is_manual INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE holdings ADD COLUMN manual_name TEXT DEFAULT NULL",
+            "ALTER TABLE holdings ADD COLUMN benchmark_ticker TEXT DEFAULT NULL",
         ]
         for migration in migrations:
             try:

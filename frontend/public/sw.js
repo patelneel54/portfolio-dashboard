@@ -1,10 +1,11 @@
-const STATIC_CACHE = 'portfolio-v2';
+const STATIC_CACHE = 'portfolio-v3';
 const API_CACHE = 'portfolio-api-v1';
 const FONT_CACHE = 'google-fonts-v1';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/offline.html',
 ];
 const SWR_PATHS = ['/api/holdings', '/api/settings'];
 
@@ -109,7 +110,11 @@ self.addEventListener('fetch', (event) => {
   // Network-first for navigation (HTML pages)
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(() => caches.match('/index.html'))
+      fetch(request).catch(() =>
+        caches.match('/index.html').then((cached) =>
+          cached || caches.match('/offline.html')
+        )
+      )
     );
     return;
   }

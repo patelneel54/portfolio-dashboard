@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from 'recharts';
 import { api } from '../hooks/useApi';
-import { C, MONO } from '../styles/theme';
+import { C, MONO, TICKER_COLORS } from '../styles/theme';
 import { SkeletonChart, SkeletonCard, SkeletonText } from './SkeletonLoader';
 
 /* ── Helper: RSI plain-English interpretation ── */
@@ -727,9 +727,230 @@ const QuickScanCard = ({ tech, isSelected, onClick, isLoading }) => {
   );
 };
 
+/* ── Comparison Chart — overlaid normalized % change ── */
+const ComparisonChart = ({ compareTickers, priceHistoryData, selectedPeriod, onPeriodChange, tickers, isLoading }) => {
+  const fmtDate = (dateStr) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  if (compareTickers.length < 2) {
+    return (
+      <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 40, textAlign: 'center', marginBottom: 16 }}>
+        <div style={{ fontSize: 14, color: C.textMuted, marginBottom: 8 }}>Select at least 2 holdings to compare.</div>
+        <div style={{ fontSize: 11, color: C.textDim }}>Tap tickers above to add them (max 3).</div>
+      </div>
+    );
+  }
+
+  if (isLoading) return <SkeletonChart height={380} />;
+
+  // Gather and normalize price series
+  const seriesMap = {};
+  let commonDates = null;
+  compareTickers.forEach(ticker => {
+    const key = `${ticker}-${selectedPeriod}`;
+    const raw = priceHistoryData[key];
+    if (!raw || raw.length === 0) return;
+    const firstClose = raw[0].close;
+    const dateMap = {};
+    raw.forEach(d => { dateMap[d.date] = ((d.close - firstClose) / firstClose) * 100; });
+    seriesMap[ticker] = dateMap;
+    const dates = new Set(raw.map(d => d.date));
+    commonDates = commonDates ? new Set([...commonDates].filter(d => dates.has(d))) : dates;
+  });
+
+  if (!commonDates || commonDates.size === 0) return (
+    <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 40, textAlign: 'center', marginBottom: 16 }}>
+      <span style={{ fontSize: 12, color: C.textDim }}>No overlapping price data for selected tickers.</span>
+    </div>
+  );
+
+  const chartData = [...commonDates].sort().map(date => {
+    const point = { date };
+    compareTickers.forEach(ticker => {
+      if (seriesMap[ticker]) point[ticker] = seriesMap[ticker][date];
+    });
+    return point;
+  });
+
+  return (
+    <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ fontSize: 11, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>
+          Normalized % Change — {selectedPeriod}
+        </div>
+        <PeriodSelector period={selectedPeriod} onPeriodChange={onPeriodChange} />
+      </div>
+      <ResponsiveContainer width="100%" height={380}>
+        <LineChart data={chartData} margin={{ top: 12, right: 16, left: 8, bottom: 4 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke={C.border} strokeOpacity={0.4} />
+          <XAxis dataKey="date" tick={{ fill: C.textDim, fontSize: 11 }} tickFormatter={fmtDate} interval="preserveStartEnd" />
+          <YAxis tick={{ fill: C.textDim, fontSize: 11, fontFamily: MONO }} tickFormatter={v => `${v.toFixed(1)}%`} width={58} />
+          <ReferenceLine y={0} stroke={C.textDim} strokeDasharray="4 4" strokeOpacity={0.5} />
+          <Tooltip content={({ active, payload, label }) => {
+            if (!active || !payload?.length) return null;
+            return (
+              <div style={{ background: '#1e293b', border: `1px solid ${C.border}`, borderRadius: 6, padding: '8px 12px', fontSize: 12, minWidth: 140 }}>
+                <div style={{ color: C.textDim, marginBottom: 6 }}>{fmtDate(label)}</div>
+                {payload.map(p => (
+                  <div key={p.dataKey} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 2 }}>
+                    <span style={{ color: p.stroke, fontWeight: 700, fontFamily: MONO }}>{p.dataKey}</span>
+                    <span style={{ color: p.value >= 0 ? C.green : C.red, fontFamily: MONO, fontWeight: 600 }}>
+                      {p.value >= 0 ? '+' : ''}{p.value.toFixed(2)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            );
+          }} />
+          {compareTickers.map(ticker => (
+            <Line
+              key={ticker}
+              type="monotone"
+              dataKey={ticker}
+              stroke={TICKER_COLORS[tickers.indexOf(ticker) % TICKER_COLORS.length]}
+              strokeWidth={2}
+              dot={false}
+              connectNulls
+            />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
+      {/* Legend */}
+      <div style={{ display: 'flex', gap: 16, fontSize: 11, color: C.textMuted, marginTop: 10, flexWrap: 'wrap' }}>
+        {compareTickers.map(ticker => (
+          <span key={ticker} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{
+              display: 'inline-block', width: 14, height: 3, borderRadius: 2,
+              background: TICKER_COLORS[tickers.indexOf(ticker) % TICKER_COLORS.length],
+            }} />
+            <span style={{ fontFamily: MONO, fontWeight: 700 }}>{ticker}</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/* ── Comparison Table — side-by-side metrics ── */
+const ComparisonTable = ({ compareTickers, techData, tickers }) => {
+  const metrics = [
+    {
+      label: 'RSI (14)',
+      getValue: (t) => {
+        const d = techData[t];
+        if (!d?.rsi) return { text: '—', color: C.textDim };
+        const color = d.rsi > 70 ? C.red : d.rsi < 30 ? C.green : C.amber;
+        return { text: d.rsi.toFixed(0), color };
+      },
+    },
+    {
+      label: 'Trend',
+      getValue: (t) => {
+        const d = techData[t];
+        if (!d?.trend) return { text: '—', color: C.textDim };
+        const color = d.trend.includes('Bull') ? C.green : d.trend.includes('Bear') ? C.red : C.amber;
+        return { text: d.trend, color };
+      },
+    },
+    {
+      label: 'vs 50d SMA',
+      getValue: (t) => {
+        const d = techData[t];
+        if (!d?.price || !d?.sma50) return { text: '—', color: C.textDim };
+        const pct = ((d.price - d.sma50) / d.sma50 * 100);
+        return { text: `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`, color: pct >= 0 ? C.green : C.red };
+      },
+    },
+    {
+      label: 'Dist. to Support',
+      getValue: (t) => {
+        const d = techData[t];
+        if (!d?.price || !d?.support?.[0]) return { text: '—', color: C.textDim };
+        const pct = ((d.price - d.support[0]) / d.price * 100);
+        return { text: `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`, color: C.textMuted };
+      },
+    },
+    {
+      label: 'Dist. to Resistance',
+      getValue: (t) => {
+        const d = techData[t];
+        if (!d?.price || !d?.resistance?.[0]) return { text: '—', color: C.textDim };
+        const pct = ((d.resistance[0] - d.price) / d.price * 100);
+        return { text: `+${pct.toFixed(1)}%`, color: C.textMuted };
+      },
+    },
+    {
+      label: 'Volume vs Avg',
+      getValue: (t) => {
+        const d = techData[t];
+        if (d?.volume_vs_avg == null) return { text: '—', color: C.textDim };
+        const v = d.volume_vs_avg;
+        const color = v > 20 ? C.green : v < -20 ? C.red : C.textMuted;
+        return { text: `${v > 0 ? '+' : ''}${v}%`, color };
+      },
+    },
+  ];
+
+  const cellBg = '#0d1424';
+
+  return (
+    <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 16 }}>
+      <div style={{ fontSize: 11, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600, marginBottom: 14 }}>
+        Side-by-Side Technicals
+      </div>
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 4px', minWidth: compareTickers.length * 120 + 120 }}>
+          <thead>
+            <tr>
+              <th style={{ textAlign: 'left', fontSize: 10, color: C.textDim, fontWeight: 600, padding: '6px 10px', textTransform: 'uppercase', letterSpacing: 1 }}>Metric</th>
+              {compareTickers.map(ticker => (
+                <th key={ticker} style={{ textAlign: 'right', padding: '6px 10px', fontSize: 12, fontWeight: 700, fontFamily: MONO }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{
+                      width: 8, height: 8, borderRadius: '50%',
+                      background: TICKER_COLORS[tickers.indexOf(ticker) % TICKER_COLORS.length],
+                    }} />
+                    <span style={{ color: C.text }}>{ticker}</span>
+                  </span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {metrics.map(metric => (
+              <tr key={metric.label}>
+                <td style={{ fontSize: 11, color: C.textMuted, fontWeight: 600, padding: '8px 10px', background: cellBg, borderRadius: '6px 0 0 6px' }}>
+                  {metric.label}
+                </td>
+                {compareTickers.map((ticker, i) => {
+                  const val = metric.getValue(ticker);
+                  return (
+                    <td key={ticker} style={{
+                      textAlign: 'right', padding: '8px 10px', background: cellBg,
+                      borderRadius: i === compareTickers.length - 1 ? '0 6px 6px 0' : 0,
+                    }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, fontFamily: MONO, color: val.color }}>{val.text}</span>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
 /* ══════════════════════════════════════════════════════════════════════
    TechnicalsTab — main export
    ══════════════════════════════════════════════════════════════════════ */
+/**
+ * @param {Object} props
+ * @param {import('../types').Holding[]} props.holdings - Holdings to show technicals for
+ */
 export default function TechnicalsTab({ holdings }) {
   const [selectedStock, setSelectedStock] = useState(null);
   const [techData, setTechData] = useState({});
@@ -741,8 +962,10 @@ export default function TechnicalsTab({ holdings }) {
   const [selectedPeriod, setSelectedPeriod] = useState('3M');
   const [priceHistoryData, setPriceHistoryData] = useState({});
   const [priceHistoryLoading, setPriceHistoryLoading] = useState({});
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareTickers, setCompareTickers] = useState([]);
 
-  const tickers = [...new Set(holdings.filter(h => h.type === 'Stock' || h.type === 'Crypto').map(h => h.ticker))];
+  const tickers = [...new Set(holdings.filter(h => !h.is_manual && (h.type === 'Stock' || h.type === 'ETF' || h.type === 'Fund' || h.type === 'Crypto')).map(h => h.ticker))];
 
   useEffect(() => {
     if (tickers.length > 0 && !selectedStock) {
@@ -788,6 +1011,20 @@ export default function TechnicalsTab({ holdings }) {
       .finally(() => setPriceHistoryLoading(prev => ({ ...prev, [key]: false })));
   }, [selectedStock, selectedPeriod]);
 
+  // Load price history for all compare tickers
+  useEffect(() => {
+    if (!compareMode) return;
+    compareTickers.forEach(ticker => {
+      const key = `${ticker}-${selectedPeriod}`;
+      if (priceHistoryData[key] || priceHistoryLoading[key]) return;
+      setPriceHistoryLoading(prev => ({ ...prev, [key]: true }));
+      api.getPriceHistory(ticker, selectedPeriod.toLowerCase())
+        .then(data => setPriceHistoryData(prev => ({ ...prev, [key]: data })))
+        .catch(() => {})
+        .finally(() => setPriceHistoryLoading(prev => ({ ...prev, [key]: false })));
+    });
+  }, [compareMode, compareTickers.join(','), selectedPeriod]);
+
   // Load fundamentals when selectedStock changes (Stocks only)
   useEffect(() => {
     if (!selectedStock) return;
@@ -804,6 +1041,24 @@ export default function TechnicalsTab({ holdings }) {
   // Count stocks with alerts
   const alertCount = Object.values(techData).filter(t => t.alerts && t.alerts.length > 0).length;
 
+  const handleCompareToggle = () => {
+    if (compareMode) {
+      setCompareMode(false);
+      setCompareTickers([]);
+    } else {
+      setCompareMode(true);
+      setCompareTickers(selectedStock ? [selectedStock] : []);
+    }
+  };
+
+  const handleCompareTickerToggle = (ticker) => {
+    setCompareTickers(prev => {
+      if (prev.includes(ticker)) return prev.filter(t => t !== ticker);
+      if (prev.length >= 3) return prev;
+      return [...prev, ticker];
+    });
+  };
+
   return (
     <div>
       {/* Alerts Summary Panel */}
@@ -813,70 +1068,120 @@ export default function TechnicalsTab({ holdings }) {
       <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         {tickers.map(t => {
           const hasAlert = techData[t]?.alerts?.length > 0;
+          const isActive = compareMode ? compareTickers.includes(t) : selectedStock === t;
+          const tickerColor = TICKER_COLORS[tickers.indexOf(t) % TICKER_COLORS.length];
           return (
             <button
               key={t}
-              onClick={() => setSelectedStock(t)}
+              onClick={() => compareMode ? handleCompareTickerToggle(t) : setSelectedStock(t)}
               style={{
                 padding: '10px 14px', borderRadius: 8, minHeight: 44,
-                border: `1px solid ${selectedStock === t ? C.accent : hasAlert ? C.amber + '66' : C.border}`,
-                background: selectedStock === t ? C.accent + '22' : C.card,
-                color: selectedStock === t ? C.accent : C.textMuted,
+                border: `1px solid ${isActive ? (compareMode ? tickerColor : C.accent) : hasAlert ? C.amber + '66' : C.border}`,
+                background: isActive ? (compareMode ? tickerColor + '22' : C.accent + '22') : C.card,
+                color: isActive ? (compareMode ? tickerColor : C.accent) : C.textMuted,
                 fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: MONO,
                 position: 'relative',
+                opacity: compareMode && compareTickers.length >= 3 && !compareTickers.includes(t) ? 0.45 : 1,
               }}
             >
-              {hasAlert && (
+              {hasAlert && !compareMode && (
                 <span style={{
                   position: 'absolute', top: -3, right: -3, width: 8, height: 8,
                   background: C.amber, borderRadius: '50%', border: `2px solid ${C.card}`,
                 }} />
               )}
+              {compareMode && isActive && (
+                <span style={{
+                  position: 'absolute', top: -3, right: -3, width: 10, height: 10,
+                  background: tickerColor, borderRadius: '50%', border: `2px solid ${C.card}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 7, color: '#fff', fontWeight: 800, lineHeight: 1,
+                }}>✓</span>
+              )}
               {t}
             </button>
           );
         })}
-        {alertCount > 0 && (
+        {!compareMode && alertCount > 0 && (
           <span style={{ fontSize: 10, color: C.amber, marginLeft: 8 }}>
             ⚠ {alertCount} stock{alertCount > 1 ? 's' : ''} with alerts
           </span>
         )}
+        {compareMode && (
+          <span style={{ fontSize: 10, color: C.textDim, marginLeft: 4 }}>
+            {compareTickers.length}/3 selected
+          </span>
+        )}
+        <button
+          onClick={handleCompareToggle}
+          style={{
+            padding: '10px 14px', borderRadius: 8, minHeight: 44, marginLeft: 'auto',
+            border: `1px solid ${compareMode ? C.accent : C.border}`,
+            background: compareMode ? C.accent + '22' : C.card,
+            color: compareMode ? C.accent : C.textMuted,
+            fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: MONO,
+            transition: 'all 0.15s',
+          }}
+        >
+          {compareMode ? 'Compare ✓' : 'Compare'}
+        </button>
       </div>
 
-      {/* Selected Stock Detail */}
-      {selectedStock && techData[selectedStock] ? (
+      {/* Compare Mode View */}
+      {compareMode ? (
         <>
-          <TechnicalCard
-            data={techData[selectedStock]}
-            holding={holdings.find(h => h.ticker === selectedStock)}
-            priceHistory={priceHistoryData[`${selectedStock}-${selectedPeriod}`]}
-            priceHistoryLoading={priceHistoryLoading[`${selectedStock}-${selectedPeriod}`]}
+          <ComparisonChart
+            compareTickers={compareTickers}
+            priceHistoryData={priceHistoryData}
             selectedPeriod={selectedPeriod}
             onPeriodChange={setSelectedPeriod}
+            tickers={tickers}
+            isLoading={compareTickers.some(t => priceHistoryLoading[`${t}-${selectedPeriod}`])}
           />
-          <NewsFeed
-            articles={newsData[selectedStock]?.articles}
-            ticker={selectedStock}
-            loading={newsLoading[selectedStock]}
-          />
-          {holdings.find(h => h.ticker === selectedStock)?.type === 'Stock' && (
-            <ValuationCard
-              data={fundamentals[selectedStock]}
-              loading={fundLoading[selectedStock]}
+          {compareTickers.length >= 2 && (
+            <ComparisonTable
+              compareTickers={compareTickers}
+              techData={techData}
+              tickers={tickers}
             />
           )}
         </>
-      ) : selectedStock && loading[selectedStock] ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <SkeletonChart height={380} />
-          <SkeletonCard height={100} />
-          <SkeletonCard height={80} />
-        </div>
-      ) : selectedStock ? (
-        <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 40, textAlign: 'center', color: C.textMuted }}>
-          No technical data for {selectedStock} yet. Price history is still being fetched.
-        </div>
-      ) : null}
+      ) : (
+        /* Selected Stock Detail */
+        selectedStock && techData[selectedStock] ? (
+          <>
+            <TechnicalCard
+              data={techData[selectedStock]}
+              holding={holdings.find(h => h.ticker === selectedStock)}
+              priceHistory={priceHistoryData[`${selectedStock}-${selectedPeriod}`]}
+              priceHistoryLoading={priceHistoryLoading[`${selectedStock}-${selectedPeriod}`]}
+              selectedPeriod={selectedPeriod}
+              onPeriodChange={setSelectedPeriod}
+            />
+            <NewsFeed
+              articles={newsData[selectedStock]?.articles}
+              ticker={selectedStock}
+              loading={newsLoading[selectedStock]}
+            />
+            {holdings.find(h => h.ticker === selectedStock)?.type === 'Stock' && (
+              <ValuationCard
+                data={fundamentals[selectedStock]}
+                loading={fundLoading[selectedStock]}
+              />
+            )}
+          </>
+        ) : selectedStock && loading[selectedStock] ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <SkeletonChart height={380} />
+            <SkeletonCard height={100} />
+            <SkeletonCard height={80} />
+          </div>
+        ) : selectedStock ? (
+          <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 40, textAlign: 'center', color: C.textMuted }}>
+            No technical data for {selectedStock} yet. Price history is still being fetched.
+          </div>
+        ) : null
+      )}
 
       {/* Quick Scan Grid */}
       <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginTop: 16 }}>
@@ -893,8 +1198,8 @@ export default function TechnicalsTab({ holdings }) {
               <QuickScanCard
                 key={t}
                 tech={tech}
-                isSelected={selectedStock === t}
-                onClick={() => setSelectedStock(t)}
+                isSelected={compareMode ? compareTickers.includes(t) : selectedStock === t}
+                onClick={() => compareMode ? handleCompareTickerToggle(t) : setSelectedStock(t)}
                 isLoading={loading[t]}
               />
             );

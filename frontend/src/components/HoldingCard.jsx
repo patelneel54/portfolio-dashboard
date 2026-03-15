@@ -1,4 +1,4 @@
-import { C, TYPE_COLORS, MONO } from '../styles/theme';
+import { C, TYPE_COLORS, MONO, ASSET_CLASS_LABELS } from '../styles/theme';
 import { cardStyle, badge as badgeStyle, labelStyle, srOnly } from '../styles/shared';
 
 const ACCOUNT_BADGE = {
@@ -38,7 +38,7 @@ export default function HoldingCard({ holding: h, isExpanded, onToggle, showTarg
       >
         {/* Left: Ticker + account badge */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-          <span style={{ fontFamily: MONO, fontWeight: 700, fontSize: 14, color: C.text }}>{h.ticker}</span>
+          <span style={{ fontFamily: MONO, fontWeight: 700, fontSize: 14, color: C.text }}>{h.is_manual && h.manual_name ? h.manual_name : h.ticker}</span>
           <span style={badgeStyle(badge.color)}>
             {acct}
           </span>
@@ -80,6 +80,8 @@ export default function HoldingCard({ holding: h, isExpanded, onToggle, showTarg
           <Detail label="G/L $" value={<><span style={srOnly}>{(h.gain_loss || 0) >= 0 ? 'gain ' : 'loss '}</span>{`${(h.gain_loss || 0) >= 0 ? '+' : ''}$${(h.gain_loss || 0).toFixed(0)}`}</>} color={(h.gain_loss || 0) >= 0 ? C.green : C.red} />
           <Detail label="Actual %" value={`${(h.actual_allocation || 0).toFixed(1)}%`} />
           <Detail label="Account" value={badge.label} />
+          {h.asset_class && <Detail label="Asset Class" value={ASSET_CLASS_LABELS[h.asset_class] || h.asset_class} />}
+          {h.is_manual && h.benchmark_ticker && <Detail label="Benchmark" value={h.benchmark_ticker} />}
           {showTargetDrift && (isAllAccounts ? hIsBrokerage : true) && (
             <>
               <Detail label="Target %" value={`${(h.target_allocation || 0).toFixed(1)}%`} />

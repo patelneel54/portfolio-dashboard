@@ -4,13 +4,21 @@ import { api } from '../hooks/useApi';
 import PortfolioPerformanceChart from './PortfolioPerformanceChart';
 import PortfolioAnalytics from './PortfolioAnalytics';
 import DividendIntelligence from './DividendIntelligence';
+import DividendCalendar from './DividendCalendar';
 import { InlineError } from './ErrorBoundary';
 import { SkeletonCard } from './SkeletonLoader';
 
+/**
+ * @param {Object} props
+ * @param {import('../types').Holding[]} props.holdings - Filtered holdings
+ * @param {number} props.totalValue - Total portfolio value
+ * @param {string} props.accountFilter - Current account filter
+ */
 export default function OverviewTab({ holdings, totalValue, accountFilter }) {
   const [intelligence, setIntelligence] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showCalendar, setShowCalendar] = useState(false);
 
   const fetchIntelligence = useCallback(async () => {
     setLoading(true);
@@ -51,6 +59,35 @@ export default function OverviewTab({ holdings, totalValue, accountFilter }) {
         ) : (
           <DividendIntelligence dividends={intelligence?.dividends} />
         )}
+        {!loading && !error && intelligence?.dividends?.summary?.total_annual_income > 0 && (
+          <>
+            <button
+              onClick={() => setShowCalendar(v => !v)}
+              aria-expanded={showCalendar}
+              style={{
+                background: showCalendar ? C.green + '11' : 'transparent',
+                border: `1px solid ${showCalendar ? C.green + '44' : C.border}`,
+                color: showCalendar ? C.green : C.textMuted,
+                borderRadius: 8,
+                padding: '10px 16px',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                minHeight: 44,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                width: '100%',
+                transition: 'all 0.2s',
+              }}
+            >
+              {showCalendar ? 'Hide Calendar' : 'View Dividend Calendar'}
+              <span style={{ fontSize: 10 }}>{showCalendar ? '\u25B2' : '\u25BC'}</span>
+            </button>
+            {showCalendar && <DividendCalendar accountFilter={accountFilter} />}
+          </>
+        )}
       </div>
 
       {/* Drift Table — brokerage only */}
@@ -63,7 +100,7 @@ export default function OverviewTab({ holdings, totalValue, accountFilter }) {
               <div key={h.id} style={{ padding: '10px 14px', background: '#0d1424', borderRadius: 8, border: `1px solid ${isOver ? C.red + '33' : C.green + '33'}` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontWeight: 700, fontSize: 14, fontFamily: MONO }}>{h.ticker}</span>
+                    <span style={{ fontWeight: 700, fontSize: 14, fontFamily: MONO }}>{h.is_manual && h.manual_name ? h.manual_name : h.ticker}</span>
                     <span style={{ fontSize: 8, padding: '1px 5px', borderRadius: 3, fontWeight: 700, textTransform: 'uppercase', background: (h.account_type === '401k' ? C.purple : h.account_type === 'crypto' ? '#F7931A' : C.blue) + '22', color: h.account_type === '401k' ? C.purple : h.account_type === 'crypto' ? '#F7931A' : C.blue }}>
                       {h.account_type || 'brokerage'}
                     </span>

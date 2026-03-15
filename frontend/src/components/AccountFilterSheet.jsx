@@ -8,6 +8,13 @@ const ACCOUNT_OPTIONS = [
   { id: 'crypto', label: 'Crypto', color: '#F7931A' },
 ];
 
+/**
+ * @param {Object} props
+ * @param {boolean} props.isOpen - Whether the sheet is visible
+ * @param {() => void} props.onClose - Close callback
+ * @param {string} props.accountFilter - Currently selected filter
+ * @param {(id: string) => void} props.onSelect - Callback when an account is selected
+ */
 export default function AccountFilterSheet({ isOpen, onClose, accountFilter, onSelect }) {
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);

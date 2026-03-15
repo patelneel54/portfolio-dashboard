@@ -5,6 +5,8 @@ import { cardStyle, sectionTitle, srOnly } from '../styles/shared';
 const BAR_COLORS = {
   ETF: { bar: '#4f46e5', barBg: '#4f46e520' },
   Stock: { bar: '#8b5cf6', barBg: '#8b5cf620' },
+  Fund: { bar: '#10b981', barBg: '#10b98120' },
+  Crypto: { bar: '#F7931A', barBg: '#F7931A20' },
 };
 
 const THRESHOLD_LINES = [50, 80];
@@ -93,7 +95,7 @@ export default function PositionConcentration({ holdings = [], totalValue = 0 })
                   color: isHovered ? C.text : C.textMuted,
                   transition: 'color 0.15s',
                 }}>
-                  {h.ticker}
+                  {h.is_manual && h.manual_name ? h.manual_name.substring(0, 14) : h.ticker}
                 </span>
 
                 {/* Percentage */}

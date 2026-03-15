@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { C } from '../styles/theme';
+import { haptic } from '../utils/haptics';
 
 const THRESHOLD = 60;
 const MAX_PULL = 100;
@@ -20,6 +21,12 @@ if (typeof document !== 'undefined' && !document.getElementById('ptr-styles')) {
   document.head.appendChild(style);
 }
 
+/**
+ * @param {Object} props
+ * @param {() => Promise<void>} props.onRefresh - Async function to call on refresh
+ * @param {boolean} props.refreshing - Whether a refresh is in progress
+ * @param {React.ReactNode} props.children - Content to render inside the pull container
+ */
 export default function PullToRefresh({ onRefresh, refreshing, children }) {
   const [pullDistance, setPullDistance] = useState(0);
   const [pulling, setPulling] = useState(false);
@@ -76,6 +83,7 @@ export default function PullToRefresh({ onRefresh, refreshing, children }) {
     if (pullDistance >= THRESHOLD) {
       setTriggered(true);
       setPullDistance(THRESHOLD);
+      haptic();
       onRefresh();
     } else {
       setPullDistance(0);

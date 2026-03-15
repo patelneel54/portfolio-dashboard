@@ -1,6 +1,6 @@
 {
-  "name": "Portfolio Dashboard",
-  "short_name": "Portfolio",
+  "name": "Portfolio Command Center",
+  "short_name": "Portfolio CC",
   "description": "Stock portfolio tracker and analyzer",
   "start_url": "/",
   "display": "standalone",

@@ -3,19 +3,32 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../hooks/useApi';
 import { C, MONO } from '../styles/theme';
 import { cardStyle, inputStyle, buttonPrimary, buttonSecondary, sectionTitle, labelStyle } from '../styles/shared';
+import { isWebAuthnSupported, startRegistration } from '../utils/webauthn';
+import AlertManager from './AlertManager';
 
+/** @returns {JSX.Element} Settings page with projection parameters, alerts, security, and account options. */
 export default function Settings() {
   const navigate = useNavigate();
   const [settings, setSettings] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [biometricSupported, setBiometricSupported] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [biometricLoading, setBiometricLoading] = useState(false);
 
   useEffect(() => {
     api.getSettings().then(data => {
       setSettings(data);
       setLoading(false);
     });
+
+    if (isWebAuthnSupported()) {
+      setBiometricSupported(true);
+      api.webauthnStatus().then(data => {
+        setBiometricEnabled(data.registered);
+      }).catch(() => {});
+    }
   }, []);
 
   const handleSave = async () => {
@@ -44,7 +57,29 @@ export default function Settings() {
 
   const handleLogout = () => {
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('webauthn_credential_id');
     navigate('/login');
+  };
+
+  const handleBiometricToggle = async () => {
+    setBiometricLoading(true);
+    try {
+      if (biometricEnabled) {
+        await api.webauthnDeleteCredential();
+        localStorage.removeItem('webauthn_credential_id');
+        setBiometricEnabled(false);
+      } else {
+        const options = await api.webauthnRegisterOptions();
+        const credential = await startRegistration(options);
+        const result = await api.webauthnRegisterVerify(credential);
+        localStorage.setItem('webauthn_credential_id', result.credential_id);
+        setBiometricEnabled(true);
+      }
+    } catch (err) {
+      console.error('Biometric toggle failed:', err);
+    } finally {
+      setBiometricLoading(false);
+    }
   };
 
   if (loading) {
@@ -90,6 +125,42 @@ export default function Settings() {
           </button>
         </div>
       </div>
+
+      {biometricSupported && (
+        <div style={{ ...cardStyle, padding: 24, marginTop: 16 }}>
+          <h3 style={{ ...sectionTitle, margin: '0 0 12px' }}>Security</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Biometric Unlock</div>
+              <div style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>
+                Use Face ID or Touch ID to unlock
+              </div>
+            </div>
+            <button
+              onClick={handleBiometricToggle}
+              disabled={biometricLoading}
+              aria-label={biometricEnabled ? 'Disable biometric unlock' : 'Enable biometric unlock'}
+              style={{
+                width: 48, height: 28, borderRadius: 14, border: 'none',
+                background: biometricEnabled ? C.green : C.border,
+                position: 'relative', cursor: 'pointer', padding: 0,
+                opacity: biometricLoading ? 0.5 : 1,
+                transition: 'background 0.2s',
+              }}
+            >
+              <div style={{
+                width: 22, height: 22, borderRadius: 11,
+                background: '#fff',
+                position: 'absolute', top: 3,
+                left: biometricEnabled ? 23 : 3,
+                transition: 'left 0.2s',
+              }} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      <AlertManager />
 
       <div style={{ ...cardStyle, padding: 24, marginTop: 16 }}>
         <h3 style={{ ...sectionTitle, margin: '0 0 12px' }}>Account</h3>
