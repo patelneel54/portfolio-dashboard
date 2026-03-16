@@ -265,7 +265,7 @@ export default function Dashboard() {
             <div key={activeTab} role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`} style={{ animation: 'tabFadeIn 150ms ease-out' }}>
               {activeTab === 'overview' && <ErrorBoundary key="overview" fallbackMessage="Overview tab encountered an error."><OverviewTab holdings={holdings} totalValue={totalValue} accountFilter={accountFilter} /></ErrorBoundary>}
               {activeTab === 'allocation' && <ErrorBoundary key="allocation" fallbackMessage="Allocation tab encountered an error."><AllocationTab holdings={holdings} totalValue={totalValue} settings={settings} accountFilter={accountFilter} /></ErrorBoundary>}
-              {activeTab === 'performance' && <ErrorBoundary key="performance" fallbackMessage="Performance tab encountered an error."><PerformanceTab holdings={holdings} /></ErrorBoundary>}
+              {activeTab === 'performance' && <ErrorBoundary key="performance" fallbackMessage="Performance tab encountered an error."><PerformanceTab holdings={holdings} accountFilter={accountFilter} /></ErrorBoundary>}
               {activeTab === 'projection' && <ErrorBoundary key="projection" fallbackMessage="Projections tab encountered an error."><ProjectionTab totalValue={totalValue} settings={settings} accountFilter={accountFilter} /></ErrorBoundary>}
               {activeTab === 'technicals' && <ErrorBoundary key="technicals" fallbackMessage="Technicals tab encountered an error."><TechnicalsTab holdings={holdings} /></ErrorBoundary>}
             </div>

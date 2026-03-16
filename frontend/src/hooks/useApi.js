@@ -78,6 +78,12 @@ export const api = {
     if (accountType && accountType !== 'all') params += `&account_type=${accountType}`;
     return apiFetch(`/dividend-calendar${params}`);
   },
+  /** @param {number} [months] @param {string} [accountType] @returns {Promise<Object>} */
+  getDividendHistory: (months = 12, accountType) => {
+    let params = `?months=${months}`;
+    if (accountType && accountType !== 'all') params += `&account_type=${accountType}`;
+    return apiFetch(`/dividend-history${params}`);
+  },
   /** @param {string} [accountType] @returns {Promise<Object>} */
   getPortfolioAnalytics: (accountType) => {
     const params = accountType && accountType !== 'all' ? `?account_type=${accountType}` : '';

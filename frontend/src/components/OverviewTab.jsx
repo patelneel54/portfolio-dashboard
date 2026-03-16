@@ -1,12 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import { C, MONO } from '../styles/theme';
-import { api } from '../hooks/useApi';
 import PortfolioPerformanceChart from './PortfolioPerformanceChart';
 import PortfolioAnalytics from './PortfolioAnalytics';
-import DividendIntelligence from './DividendIntelligence';
-import DividendCalendar from './DividendCalendar';
-import { InlineError } from './ErrorBoundary';
-import { SkeletonCard } from './SkeletonLoader';
 
 /**
  * @param {Object} props
@@ -15,29 +10,6 @@ import { SkeletonCard } from './SkeletonLoader';
  * @param {string} props.accountFilter - Current account filter
  */
 export default function OverviewTab({ holdings, totalValue, accountFilter }) {
-  const [intelligence, setIntelligence] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [showCalendar, setShowCalendar] = useState(false);
-
-  const fetchIntelligence = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await api.getPortfolioIntelligence(accountFilter);
-      setIntelligence(data);
-    } catch (err) {
-      console.error('Failed to fetch portfolio intelligence:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [accountFilter]);
-
-  useEffect(() => {
-    fetchIntelligence();
-  }, [fetchIntelligence]);
-
   const driftData = useMemo(() =>
     holdings.filter(h => (h.account_type || 'brokerage') === 'brokerage')
       .sort((a, b) => Math.abs(b.drift) - Math.abs(a.drift)).slice(0, 8), [holdings]);
@@ -49,45 +21,9 @@ export default function OverviewTab({ holdings, totalValue, accountFilter }) {
         <PortfolioPerformanceChart accountFilter={accountFilter} />
       </div>
 
-      {/* Portfolio Analytics (3-level drillable) + Dividend Intelligence */}
+      {/* Portfolio Analytics (3-level drillable) */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginBottom: 16 }}>
         <PortfolioAnalytics accountFilter={accountFilter} />
-        {loading ? (
-          <SkeletonCard height={140} />
-        ) : error ? (
-          <InlineError message="Failed to load portfolio intelligence" onRetry={fetchIntelligence} />
-        ) : (
-          <DividendIntelligence dividends={intelligence?.dividends} />
-        )}
-        {!loading && !error && intelligence?.dividends?.summary?.total_annual_income > 0 && (
-          <>
-            <button
-              onClick={() => setShowCalendar(v => !v)}
-              aria-expanded={showCalendar}
-              style={{
-                background: showCalendar ? C.green + '11' : 'transparent',
-                border: `1px solid ${showCalendar ? C.green + '44' : C.border}`,
-                color: showCalendar ? C.green : C.textMuted,
-                borderRadius: 8,
-                padding: '10px 16px',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-                minHeight: 44,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                width: '100%',
-                transition: 'all 0.2s',
-              }}
-            >
-              {showCalendar ? 'Hide Calendar' : 'View Dividend Calendar'}
-              <span style={{ fontSize: 10 }}>{showCalendar ? '\u25B2' : '\u25BC'}</span>
-            </button>
-            {showCalendar && <DividendCalendar accountFilter={accountFilter} />}
-          </>
-        )}
       </div>
 
       {/* Drift Table — brokerage only */}

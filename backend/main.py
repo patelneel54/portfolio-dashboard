@@ -38,6 +38,7 @@ from stock_service import (
     get_fear_greed,
     get_crypto_global,
     get_dividend_calendar,
+    get_dividend_history,
     get_bond_metrics,
     get_rebalance_suggestions,
 )
@@ -762,6 +763,22 @@ async def dividend_calendar_endpoint(
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Dividend calendar unavailable: {e}"
+        )
+
+
+# ── Dividend History Route ──
+
+
+@app.get("/api/dividend-history")
+async def dividend_history_endpoint(
+    months: int = 12, account_type: str | None = None, _=Depends(require_auth)
+):
+    """Return monthly dividend income totals for the last N months."""
+    try:
+        return await get_dividend_history(months=months, account_type=account_type)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Dividend history unavailable: {e}"
         )
 
 

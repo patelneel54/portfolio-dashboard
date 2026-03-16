@@ -1126,6 +1126,121 @@ async def get_dividend_calendar(month: str, account_type: str | None = None) -> 
     }
 
 
+# --- Dividend History (monthly income totals) ---
+
+_dividend_history_cache: dict[str, dict] = {}
+DIVIDEND_HISTORY_CACHE_TTL = 3600  # 1 hour
+
+
+def _fetch_dividend_history_sync(
+    ticker: str, shares: float, months: int
+) -> list[dict]:
+    """Fetch monthly dividend totals for a single ticker over the last N months."""
+    try:
+        t = yf.Ticker(ticker)
+        divs = t.dividends
+        if divs is None or len(divs) == 0:
+            return []
+
+        now = datetime.now()
+        start_date = now - timedelta(days=months * 31)
+
+        results = []
+        for dt_idx, amount in divs.items():
+            dt = dt_idx.to_pydatetime().replace(tzinfo=None)
+            if dt < start_date:
+                continue
+            income = float(amount) * shares
+            results.append({
+                "date": dt.strftime("%Y-%m-%d"),
+                "month": dt.strftime("%Y-%m"),
+                "ticker": ticker,
+                "per_share": round(float(amount), 4),
+                "shares": shares,
+                "amount": round(income, 2),
+            })
+        return results
+    except Exception:
+        return []
+
+
+async def get_dividend_history(
+    months: int = 12, account_type: str | None = None
+) -> dict:
+    """Return monthly dividend income for the last N months."""
+    cache_key = f"history:{months}:{account_type or 'all'}"
+    now = time.time()
+    cached = _dividend_history_cache.get(cache_key)
+    if cached and (now - cached["timestamp"]) < DIVIDEND_HISTORY_CACHE_TTL:
+        return cached["data"]
+
+    async with get_db() as db:
+        if account_type:
+            cursor = await db.execute(
+                "SELECT id, ticker, shares, account_type FROM holdings WHERE account_type = ?",
+                (account_type,),
+            )
+        else:
+            cursor = await db.execute(
+                "SELECT id, ticker, shares, account_type FROM holdings"
+            )
+        rows = await cursor.fetchall()
+
+    if not rows:
+        return {"months": []}
+
+    holdings = [dict(r) for r in rows]
+
+    # Fetch dividend history for each unique ticker in parallel
+    ticker_shares: dict[str, float] = {}
+    for h in holdings:
+        ticker_shares[h["ticker"]] = ticker_shares.get(h["ticker"], 0) + h["shares"]
+
+    async def _fetch_one(ticker, shares):
+        try:
+            return await asyncio.to_thread(
+                _fetch_dividend_history_sync, ticker, shares, months
+            )
+        except Exception:
+            return []
+
+    tasks = [_fetch_one(t, s) for t, s in ticker_shares.items()]
+    results = await asyncio.gather(*tasks)
+
+    # Flatten all events and group by month
+    all_events = []
+    for events in results:
+        all_events.extend(events)
+
+    monthly_map: dict[str, dict] = {}
+    for ev in all_events:
+        mk = ev["month"]
+        if mk not in monthly_map:
+            monthly_map[mk] = {"total": 0, "by_ticker": []}
+        monthly_map[mk]["total"] += ev["amount"]
+        monthly_map[mk]["by_ticker"].append({
+            "ticker": ev["ticker"],
+            "per_share": ev["per_share"],
+            "shares": ev["shares"],
+            "amount": ev["amount"],
+        })
+
+    month_list = []
+    for mk in sorted(monthly_map.keys()):
+        data = monthly_map[mk]
+        month_list.append({
+            "month": mk,
+            "total": round(data["total"], 2),
+            "by_ticker": sorted(
+                data["by_ticker"], key=lambda x: x["amount"], reverse=True
+            ),
+        })
+
+    result = {"months": month_list}
+    _dividend_history_cache[cache_key] = {"timestamp": now, "data": result}
+    return result
+
+
 # --- Portfolio Analytics (enriched 3-level drill-down data) ---
 
 
