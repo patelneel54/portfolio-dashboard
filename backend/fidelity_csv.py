@@ -100,8 +100,8 @@ def parse_fidelity_csv(text: str) -> list[dict]:
     holdings = []
 
     for row in reader:
-        # Normalize row keys
-        norm_row = {k.strip().lower(): v.strip() if v else '' for k, v in row.items()}
+        # Normalize row keys (skip None keys from trailing commas)
+        norm_row = {k.strip().lower(): v.strip() if v else '' for k, v in row.items() if k is not None}
 
         # Skip total/summary rows
         if any(skip in norm_row.get('name', '').lower() for skip in ['account total', 'total', 'pending']):
@@ -142,6 +142,7 @@ def parse_fidelity_csv(text: str) -> list[dict]:
 
         # Get cost basis
         cost_basis = _parse_money(
+            norm_row.get('cost basis total', '') or
             norm_row.get('cost basis', '') or
             norm_row.get('cost', '') or
             '0'
@@ -176,7 +177,12 @@ def parse_fidelity_csv(text: str) -> list[dict]:
             current_price = balance  # Treat as 1 share with value = balance
             shares = 1.0
 
-        avg_cost = cost_basis / shares if shares > 0 else current_price
+        # Use average cost basis column if available, otherwise compute from total
+        avg_cost_raw = norm_row.get('average cost basis', '')
+        if avg_cost_raw:
+            avg_cost = _parse_money(avg_cost_raw)
+        else:
+            avg_cost = cost_basis / shares if shares > 0 else current_price
 
         entry = {
             "ticker": ticker,
