@@ -37,6 +37,20 @@ BENCHMARK_MAP = {
 }
 
 
+def _is_valid_ticker(symbol: str) -> bool:
+    """Check if a symbol looks like a real ticker vs a CUSIP or junk."""
+    if not symbol:
+        return False
+    # CUSIPs are 9 chars with mixed digits/letters (e.g. 31617E851, 84679P389)
+    if re.fullmatch(r'[A-Z0-9]{9}', symbol):
+        return False
+    # Symbols with special characters (e.g. SPAXX**)
+    if re.search(r'[^A-Z]', symbol):
+        return False
+    # Valid tickers are 1-6 uppercase letters
+    return bool(re.fullmatch(r'[A-Z]{1,6}', symbol))
+
+
 def _extract_ticker(name: str) -> str | None:
     """Extract ticker symbol from fund name like 'FID 500 INDEX (FXAIX)'."""
     match = re.search(r'\(([A-Z]{2,6})\)', name)
@@ -103,10 +117,12 @@ def parse_fidelity_csv(text: str) -> list[dict]:
         # Normalize row keys (skip None keys from trailing commas)
         norm_row = {k.strip().lower(): v.strip() if v else '' for k, v in row.items() if k is not None}
 
-        # Skip total/summary rows
+        # Skip total/summary rows and money market cash positions
         if any(skip in norm_row.get('name', '').lower() for skip in ['account total', 'total', 'pending']):
             continue
         if any(skip in norm_row.get('name/initial purchase date', '').lower() for skip in ['account total', 'total']):
+            continue
+        if 'money market' in norm_row.get('description', '').lower():
             continue
 
         # Extract name - try multiple column names
@@ -157,7 +173,7 @@ def parse_fidelity_csv(text: str) -> list[dict]:
         asset_class = _classify_category(category_raw, asset_class_raw)
 
         # Determine if manual (no yfinance ticker)
-        is_manual = not bool(ticker) or ticker == name.upper()
+        is_manual = not _is_valid_ticker(ticker)
 
         if is_manual:
             # Generate a ticker code from the name
