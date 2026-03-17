@@ -3,9 +3,9 @@ import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, UploadFile, File, Query
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from pydantic import BaseModel
@@ -15,7 +15,7 @@ load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 from database import init_db, get_db
-from auth import verify_pin, create_token, require_auth
+from auth import verify_pin, verify_pin_async, create_token, require_auth, update_pin_hash
 from webauthn_routes import (
     webauthn_register_options,
     webauthn_register_verify,
@@ -173,6 +173,11 @@ class AlertCreate(BaseModel):
     threshold: float
 
 
+class ChangePinRequest(BaseModel):
+    current_pin: str
+    new_pin: str
+
+
 class WebAuthnCredential(BaseModel):
     credential: dict
 
@@ -182,7 +187,7 @@ class WebAuthnCredential(BaseModel):
 
 @app.post("/api/auth/login")
 async def login(req: LoginRequest):
-    if not verify_pin(req.pin):
+    if not await verify_pin_async(req.pin):
         raise HTTPException(status_code=401, detail="Invalid PIN")
     token = create_token()
     return {"token": token}
@@ -190,6 +195,17 @@ async def login(req: LoginRequest):
 
 @app.get("/api/auth/check")
 async def check_auth(_=Depends(require_auth)):
+    return {"status": "ok"}
+
+
+@app.post("/api/auth/change-pin")
+async def change_pin(req: ChangePinRequest, _=Depends(require_auth)):
+    """Change the user's PIN. Verifies current PIN first."""
+    if len(req.new_pin) < 4:
+        raise HTTPException(status_code=400, detail="New PIN must be at least 4 characters")
+    if not await verify_pin_async(req.current_pin):
+        raise HTTPException(status_code=401, detail="Current PIN is incorrect")
+    await update_pin_hash(req.new_pin)
     return {"status": "ok"}
 
 
@@ -488,6 +504,94 @@ async def update_settings(body: SettingsUpdate, _=Depends(require_auth)):
             await db.execute(
                 "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
                 (key, str(value)),
+            )
+        await db.commit()
+    return {"status": "ok"}
+
+
+# ── Export Route ──
+
+
+@app.get("/api/export")
+async def export_data(format: str = Query("csv", pattern="^(csv|json)$"), _=Depends(require_auth)):
+    """Export all holdings as CSV or JSON."""
+    async with get_db() as db:
+        cursor = await db.execute("SELECT * FROM holdings ORDER BY account_type, ticker")
+        rows = [dict(r) for r in await cursor.fetchall()]
+
+    # Calculate market_value and gain_loss for each row
+    for h in rows:
+        price = h["current_price"] or h["avg_cost"]
+        h["market_value"] = round(h["shares"] * price, 2)
+        h["gain_loss"] = round(h["market_value"] - h["shares"] * h["avg_cost"], 2)
+
+    if format == "json":
+        import json
+        content = json.dumps(rows, indent=2)
+        return Response(
+            content=content,
+            media_type="application/json",
+            headers={"Content-Disposition": "attachment; filename=portfolio.json"},
+        )
+
+    # CSV format
+    import csv
+    import io
+    columns = [
+        "ticker", "type", "shares", "avg_cost", "current_price", "market_value",
+        "gain_loss", "account_type", "asset_class", "purchase_date", "manual_name",
+    ]
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=columns, extrasaction="ignore")
+    writer.writeheader()
+    writer.writerows(rows)
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=portfolio.csv"},
+    )
+
+
+# ── Cache Clear Route ──
+
+
+@app.post("/api/cache/clear")
+async def clear_cache(_=Depends(require_auth)):
+    """Delete all cached price history and reset current prices."""
+    async with get_db() as db:
+        await db.execute("DELETE FROM price_history")
+        await db.execute(
+            "UPDATE holdings SET current_price = NULL, previous_close = NULL, last_updated = NULL"
+        )
+        await db.commit()
+    return {"status": "ok", "message": "Price cache cleared. Refresh prices to re-fetch."}
+
+
+# ── Data Reset Route ──
+
+
+@app.delete("/api/data/reset")
+async def reset_all_data(_=Depends(require_auth)):
+    """Delete all holdings, price history, and alerts. Reset settings to defaults."""
+    from database import DEFAULT_SETTINGS
+    async with get_db() as db:
+        await db.execute("DELETE FROM holdings")
+        await db.execute("DELETE FROM price_history")
+        await db.execute("DELETE FROM alerts")
+        # Reset settings but keep auth_pin_hash
+        cursor = await db.execute(
+            "SELECT value FROM settings WHERE key = 'auth_pin_hash'"
+        )
+        pin_row = await cursor.fetchone()
+        await db.execute("DELETE FROM settings")
+        for key, value in DEFAULT_SETTINGS.items():
+            await db.execute(
+                "INSERT INTO settings (key, value) VALUES (?, ?)", (key, value)
+            )
+        if pin_row:
+            await db.execute(
+                "INSERT INTO settings (key, value) VALUES ('auth_pin_hash', ?)",
+                (pin_row["value"],),
             )
         await db.commit()
     return {"status": "ok"}

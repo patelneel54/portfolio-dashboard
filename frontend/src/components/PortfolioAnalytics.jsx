@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis } from 'recharts';
 import { api } from '../hooks/useApi';
-import { C, MONO } from '../styles/theme';
+import { C, MONO, SANS } from '../styles/theme';
 import SectorDrillDown from './SectorDrillDown';
 import StockDeepDive from './StockDeepDive';
 import { InlineError } from './ErrorBoundary';
@@ -42,7 +42,7 @@ function HHIBadge({ hhi }) {
       <span style={{ fontSize: 10, color: C.textDim, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.6 }}>
         Sector HHI
       </span>
-      <span style={{ fontSize: 16, fontWeight: 700, fontFamily: MONO, color }}>{hhi.toFixed(0)}</span>
+      <span style={{ fontSize: 18, fontWeight: 700, fontFamily: MONO, color }}>{hhi.toFixed(0)}</span>
       <span style={{ fontSize: 10, color, fontWeight: 600 }}>{label}</span>
     </div>
   );
@@ -50,11 +50,11 @@ function HHIBadge({ hhi }) {
 
 const StatCard = ({ label, value, sub, color }) => (
   <div style={{
-    padding: '14px 18px', background: C.bg, borderRadius: 10,
+    padding: '14px 18px', background: C.bg, borderRadius: 12,
     border: `1px solid ${C.border}`, flex: 1, minWidth: 120,
   }}>
     <div style={{ fontSize: 10, color: C.textDim, textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: 600 }}>{label}</div>
-    <div style={{ fontSize: 20, fontWeight: 800, fontFamily: MONO, color: color || C.text, marginTop: 4 }}>{value}</div>
+    <div style={{ fontSize: 24, fontWeight: 700, fontFamily: MONO, color: color || C.text, marginTop: 4 }}>{value}</div>
     {sub && <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>{sub}</div>}
   </div>
 );
@@ -194,7 +194,7 @@ function ContributionsSubTab({ holdings, sectors }) {
             width={130}
           />
           <Tooltip
-            contentStyle={{ background: '#0f1729', border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 11, fontFamily: MONO }}
+            contentStyle={{ background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 11, fontFamily: MONO }}
             formatter={v => [`${v >= 0 ? '+' : ''}${v.toFixed(3)}%`, 'Contribution']}
           />
           <Bar dataKey="contrib" radius={[0, 4, 4, 0]}>
@@ -374,7 +374,7 @@ function RiskSubTab({ risk, sectors }) {
               {row.sub && <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{row.sub}</div>}
               <div style={{ fontSize: 10, color: row.statusColor, marginTop: 2 }}>{row.status}</div>
             </div>
-            <div style={{ fontSize: 20, fontWeight: 800, fontFamily: MONO, color: C.text }}>{row.value}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, fontFamily: MONO, color: C.text }}>{row.value}</div>
           </div>
         ))}
       </div>
@@ -463,7 +463,7 @@ export default function PortfolioAnalytics({ accountFilter }) {
   if (loading) {
     return (
       <div style={{
-        background: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+        background: C.card, borderRadius: 16, border: `1px solid ${C.border}`,
         padding: 40, textAlign: 'center',
       }}>
         <div style={{ color: C.textDim, fontSize: 12 }}>Loading analytics...</div>
@@ -477,8 +477,8 @@ export default function PortfolioAnalytics({ accountFilter }) {
 
   if (!analytics || !analytics.sectors_detail?.length) {
     return (
-      <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
-        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.textMuted }}>Portfolio Analytics</h3>
+      <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24 }}>
+        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.textMuted }}>Portfolio Analytics</h3>
         <div style={{ color: C.textDim, fontSize: 12, marginTop: 12 }}>No analytics data available yet.</div>
       </div>
     );
@@ -496,7 +496,7 @@ export default function PortfolioAnalytics({ accountFilter }) {
     : null;
 
   return (
-    <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
+    <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24 }}>
       {/* Breadcrumb */}
       <Breadcrumb drillView={drillView} onNavigate={setDrillView} />
 
@@ -536,7 +536,7 @@ export default function PortfolioAnalytics({ accountFilter }) {
                   cursor: 'pointer', whiteSpace: 'nowrap',
                   background: activeSubTab === tab.id ? C.accent : 'transparent',
                   color: activeSubTab === tab.id ? '#fff' : C.textMuted,
-                  transition: 'all 0.2s',
+                  transition: 'background 0.15s, color 0.15s, border-color 0.15s',
                 }}
               >
                 {tab.label}

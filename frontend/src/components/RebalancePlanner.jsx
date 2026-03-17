@@ -106,7 +106,7 @@ export default function RebalancePlanner({ holdings = [], totalValue = 0 }) {
         aria-expanded={isOpen}
         style={{
           width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '14px 20px', background: 'transparent', border: 'none',
+          padding: '14px 24px', background: 'transparent', border: 'none',
           cursor: 'pointer', minHeight: 44, gap: 8,
         }}
       >
@@ -120,7 +120,7 @@ export default function RebalancePlanner({ holdings = [], totalValue = 0 }) {
         overflow: 'hidden',
         transition: 'max-height 250ms ease',
       }}>
-        <div style={{ padding: '0 20px 20px' }}>
+        <div style={{ padding: '0 24px 24px' }}>
           {/* Controls */}
           <div style={{
             display: 'flex', gap: 12, marginBottom: 16,
@@ -160,7 +160,7 @@ export default function RebalancePlanner({ holdings = [], totalValue = 0 }) {
                       cursor: 'pointer', minHeight: 44, border: 'none',
                       background: active ? C.accent + '22' : 'transparent',
                       color: active ? C.accent : C.textMuted,
-                      transition: 'all 0.15s',
+                      transition: 'background 0.15s, color 0.15s',
                     }}
                   >
                     {opt.label}
@@ -286,7 +286,7 @@ export default function RebalancePlanner({ holdings = [], totalValue = 0 }) {
                   onClick={copyPlan}
                   style={{
                     padding: '8px 16px', borderRadius: 6, fontSize: 12, fontWeight: 600,
-                    cursor: 'pointer', minHeight: 36, transition: 'all 0.15s',
+                    cursor: 'pointer', minHeight: 36, transition: 'background 0.15s, color 0.15s',
                     background: copied ? C.green + '22' : 'transparent',
                     border: `1px solid ${copied ? C.green : C.accent}`,
                     color: copied ? C.green : C.accent,

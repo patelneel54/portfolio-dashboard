@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, ReferenceLine } from 'recharts';
-import { C, MONO } from '../styles/theme';
+import { C, MONO, SANS } from '../styles/theme';
 import { projectGrowth } from '../utils/projections';
 
 export default function ProjectionTab({ totalValue, settings, accountFilter }) {
@@ -51,9 +51,9 @@ export default function ProjectionTab({ totalValue, settings, accountFilter }) {
 
   return (
     <div>
-      <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 16 }}>
+      <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.textMuted }}>Portfolio Growth Projection ({years} Years)</h3>
+          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.textMuted }}>Portfolio Growth Projection ({years} Years)</h3>
           {showToggle && (
             <button
               onClick={() => setShow401k(v => !v)}
@@ -90,13 +90,13 @@ export default function ProjectionTab({ totalValue, settings, accountFilter }) {
                 <stop offset="100%" stopColor={C.amber} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
-            <XAxis dataKey="year" tick={{ fill: C.textDim, fontSize: 10 }} tickFormatter={y => `'${String(y).slice(-2)}`} />
-            <YAxis tick={{ fill: C.textDim, fontSize: 10 }} tickFormatter={v => v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${(v / 1000).toFixed(0)}k`} />
-            <Tooltip content={({ active, payload, label }) => {
+            <CartesianGrid strokeDasharray="4 4" stroke={C.chartGrid} vertical={false} />
+            <XAxis dataKey="year" tick={{ fill: C.textDim, fontSize: 12 }} tickFormatter={y => `'${String(y).slice(-2)}`} />
+            <YAxis tick={{ fill: C.textDim, fontSize: 12 }} tickFormatter={v => v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${(v / 1000).toFixed(0)}k`} />
+            <Tooltip cursor={{ stroke: C.chartCrosshair, strokeDasharray: '4 4' }} content={({ active, payload, label }) => {
               if (!active || !payload?.length) return null;
               return (
-                <div style={{ background: '#1e293b', border: `1px solid ${C.border}`, borderRadius: 8, padding: '10px 14px', fontSize: 12 }}>
+                <div style={{ background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 8, padding: '10px 14px', fontSize: 12 }}>
                   <div style={{ color: C.text, fontWeight: 700, marginBottom: 4 }}>Year {label} (Age {age + (label - startYear)})</div>
                   {payload.map((p, i) => (
                     <div key={i} style={{ color: p.color, marginTop: 2 }}>
@@ -123,10 +123,10 @@ export default function ProjectionTab({ totalValue, settings, accountFilter }) {
           const d = projectionData.find(p => p.year === startYear + m.yr);
           if (!d) return null;
           return (
-            <div key={m.yr} style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 16 }}>
+            <div key={m.yr} style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 20 }}>
               <div style={{ fontSize: 11, color: C.textMuted, fontWeight: 600 }}>{m.label} (Age {age + m.yr})</div>
               <div style={{ fontSize: 11, color: C.amber, marginTop: 8, fontFamily: MONO }}>Low: {fmtVal(d.conservative)}</div>
-              <div style={{ fontSize: 16, color: C.blue, fontWeight: 800, fontFamily: MONO }}>Mid: {fmtVal(d.moderate)}</div>
+              <div style={{ fontSize: 16, color: C.blue, fontWeight: 700, fontFamily: MONO }}>Mid: {fmtVal(d.moderate)}</div>
               <div style={{ fontSize: 11, color: C.green, marginTop: 2, fontFamily: MONO }}>High: {fmtVal(d.aggressive)}</div>
             </div>
           );

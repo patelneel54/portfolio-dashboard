@@ -152,10 +152,10 @@ export default function CryptoMarketContext({ holdings }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
         {/* Panel 1: Fear & Greed */}
-        <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
-          <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>Fear & Greed Index</h3>
+        <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24 }}>
+          <h3 style={{ margin: '0 0 14px', fontSize: 18, fontWeight: 700, color: C.textMuted }}>Fear & Greed Index</h3>
           <div style={{ textAlign: 'center', marginBottom: 12 }}>
-            <div style={{ fontSize: 56, fontWeight: 800, color: fngColor, fontFamily: MONO }}>{fngValue}</div>
+            <div style={{ fontSize: 56, fontWeight: 700, color: fngColor, fontFamily: MONO }}>{fngValue}</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: fngColor }}>{fngClass}</div>
             <div style={{ fontSize: 11, color: C.textDim, marginTop: 4 }}>30-day average: {fng30dAvg}</div>
             {/* Gauge bar */}
@@ -173,10 +173,10 @@ export default function CryptoMarketContext({ holdings }) {
                 <Area type="monotone" dataKey="value" stroke={fngColor} strokeWidth={1.5} fill={fngColor} fillOpacity={0.1} dot={false} />
                 <XAxis dataKey="date" hide />
                 <YAxis hide domain={[0, 100]} />
-                <Tooltip content={({ active, payload }) => {
+                <Tooltip cursor={{ stroke: C.chartCrosshair, strokeDasharray: '4 4' }} content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
                   return (
-                    <div style={{ background: '#1e293b', border: `1px solid ${C.border}`, borderRadius: 6, padding: '4px 8px', fontSize: 11, fontFamily: MONO }}>
+                    <div style={{ background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 6, padding: '4px 8px', fontSize: 11, fontFamily: MONO }}>
                       {payload[0].payload.date}: {payload[0].value}
                     </div>
                   );
@@ -187,10 +187,10 @@ export default function CryptoMarketContext({ holdings }) {
         </div>
 
         {/* Panel 2: BTC Dominance */}
-        <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
-          <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>BTC Dominance</h3>
+        <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24 }}>
+          <h3 style={{ margin: '0 0 14px', fontSize: 18, fontWeight: 700, color: C.textMuted }}>BTC Dominance</h3>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 42, fontWeight: 800, color: CRYPTO_ACCENT, fontFamily: MONO }}>{btcDom.toFixed(1)}%</div>
+            <div style={{ fontSize: 42, fontWeight: 700, color: CRYPTO_ACCENT, fontFamily: MONO }}>{btcDom.toFixed(1)}%</div>
             <div style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>{btcDomLabel}</div>
           </div>
           <InfoRow label="ETH Dominance" value={`${(globalData?.eth_dominance || 0).toFixed(1)}%`} />
@@ -198,10 +198,10 @@ export default function CryptoMarketContext({ holdings }) {
         </div>
 
         {/* Panel 3: Total Crypto Market Cap */}
-        <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
-          <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>Total Market Cap</h3>
+        <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24 }}>
+          <h3 style={{ margin: '0 0 14px', fontSize: 18, fontWeight: 700, color: C.textMuted }}>Total Market Cap</h3>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 32, fontWeight: 800, color: C.text, fontFamily: MONO }}>{formatMarketCap(globalData?.total_market_cap_usd)}</div>
+            <div style={{ fontSize: 32, fontWeight: 700, color: C.text, fontFamily: MONO }}>{formatMarketCap(globalData?.total_market_cap_usd)}</div>
             <div style={{
               fontSize: 12, marginTop: 4, fontFamily: MONO, fontWeight: 600,
               color: (globalData?.market_cap_change_24h_pct || 0) >= 0 ? C.green : C.red,
@@ -213,12 +213,12 @@ export default function CryptoMarketContext({ holdings }) {
         </div>
 
         {/* Panel 4: BTC Price + Key Levels */}
-        <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
-          <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>BTC Key Levels</h3>
+        <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24 }}>
+          <h3 style={{ margin: '0 0 14px', fontSize: 18, fontWeight: 700, color: C.textMuted }}>BTC Key Levels</h3>
           {btcTechnicals ? (
             <>
               <div style={{ textAlign: 'center', marginBottom: 12 }}>
-                <div style={{ fontSize: 28, fontWeight: 800, color: CRYPTO_ACCENT, fontFamily: MONO }}>{fmtPrice(btcTechnicals.price || 0)}</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: CRYPTO_ACCENT, fontFamily: MONO }}>{fmtPrice(btcTechnicals.price || 0)}</div>
                 <div style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>Trend: <span style={{ color: btcTechnicals.trend?.includes('Bullish') ? C.green : btcTechnicals.trend?.includes('Bearish') ? C.red : C.amber, fontWeight: 600 }}>{btcTechnicals.trend}</span></div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -234,8 +234,8 @@ export default function CryptoMarketContext({ holdings }) {
         </div>
 
         {/* Panel 5: Macro Snapshot */}
-        <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
-          <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>Macro Snapshot</h3>
+        <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24 }}>
+          <h3 style={{ margin: '0 0 14px', fontSize: 18, fontWeight: 700, color: C.textMuted }}>Macro Snapshot</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
             <div>
               <label style={{ fontSize: 10, color: C.textDim, fontWeight: 600 }}>Fed Rate</label>
@@ -261,8 +261,8 @@ export default function CryptoMarketContext({ holdings }) {
         </div>
 
         {/* Panel 6: Correlation vs BTC */}
-        <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
-          <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>Correlation vs BTC</h3>
+        <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24 }}>
+          <h3 style={{ margin: '0 0 14px', fontSize: 18, fontWeight: 700, color: C.textMuted }}>Correlation vs BTC</h3>
           <div style={{ marginBottom: 12 }}>
             <select value={selectedCoin} onChange={e => setSelectedCoin(e.target.value)}
               style={{ padding: '6px 10px', fontSize: 12, fontFamily: MONO, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, cursor: 'pointer', outline: 'none' }}>
@@ -273,7 +273,7 @@ export default function CryptoMarketContext({ holdings }) {
           </div>
           {correlation !== null ? (
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 42, fontWeight: 800, fontFamily: MONO, color: Math.abs(correlation) > 0.7 ? CRYPTO_ACCENT : C.textMuted }}>
+              <div style={{ fontSize: 42, fontWeight: 700, fontFamily: MONO, color: Math.abs(correlation) > 0.7 ? CRYPTO_ACCENT : C.textMuted }}>
                 {correlation.toFixed(2)}
               </div>
               <div style={{ fontSize: 12, color: C.textDim, marginTop: 4 }}>

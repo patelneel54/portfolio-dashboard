@@ -116,12 +116,12 @@ export default function DividendEventsTimeline({ accountFilter }) {
             key={f.id}
             onClick={() => setFilter(f.id)}
             style={{
-              padding: '6px 12px', borderRadius: 6, border: 'none',
+              padding: '6px 12px', borderRadius: 6,
               fontSize: 11, fontWeight: 600, cursor: 'pointer',
               background: filter === f.id ? C.accent + '22' : C.card,
               color: filter === f.id ? C.accent : C.textMuted,
               border: `1px solid ${filter === f.id ? C.accent : C.border}`,
-              minHeight: 44, transition: 'all 0.2s',
+              minHeight: 44, transition: 'background 0.15s, color 0.15s, border-color 0.15s',
             }}
           >
             {f.label}

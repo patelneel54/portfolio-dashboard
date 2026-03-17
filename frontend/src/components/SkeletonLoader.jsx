@@ -32,7 +32,7 @@ const baseStyle = {
 
 export function SkeletonCard({ height = 80, style: extra }) {
   return (
-    <div style={{ ...baseStyle, border: `1px solid ${C.border}`, borderRadius: 12, height, ...extra }}>
+    <div style={{ ...baseStyle, border: `1px solid ${C.border}`, borderRadius: 16, height, ...extra }}>
       <div style={shimmerOverlay} />
     </div>
   );
@@ -48,7 +48,7 @@ export function SkeletonText({ width = '60%', height = 12, style: extra }) {
 
 export function SkeletonChart({ height = 300, style: extra }) {
   return (
-    <div style={{ ...baseStyle, border: `1px solid ${C.border}`, borderRadius: 12, height, ...extra }}>
+    <div style={{ ...baseStyle, border: `1px solid ${C.border}`, borderRadius: 16, height, ...extra }}>
       <div style={{ padding: 20 }}>
         <SkeletonText width="30%" height={14} style={{ marginBottom: 12 }} />
         <SkeletonText width="50%" height={10} />
@@ -76,7 +76,7 @@ export default function SkeletonLoader() {
       {/* Stats row skeleton — 2x2 grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 16 }}>
         {[1, 2, 3, 4].map(i => (
-          <div key={i} style={{ ...baseStyle, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 14px' }}>
+          <div key={i} style={{ ...baseStyle, border: `1px solid ${C.border}`, borderRadius: 16, padding: '12px 14px' }}>
             <SkeletonText width="40%" height={10} style={{ marginBottom: 8 }} />
             <SkeletonText width="60%" height={20} style={{ marginBottom: 6 }} />
             <SkeletonText width="50%" height={10} />

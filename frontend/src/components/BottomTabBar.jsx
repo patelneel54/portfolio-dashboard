@@ -113,7 +113,7 @@ export default function BottomTabBar({ activeTab, onTabChange, accountFilter }) 
             style={tabButtonStyle(activeTab === tab.id)}
           >
             <Icon paths={ICONS[tab.icon]} color={activeTab === tab.id ? accentColor : C.textMuted} />
-            <span style={{ fontSize: 10, fontWeight: 600, lineHeight: 1 }}>{tab.label}</span>
+            <span style={{ fontSize: 10, fontWeight: 600, lineHeight: 1, fontFamily: "'DM Sans', sans-serif" }}>{tab.label}</span>
           </button>
         ))}
 
@@ -126,7 +126,7 @@ export default function BottomTabBar({ activeTab, onTabChange, accountFilter }) 
             style={tabButtonStyle(isOverflowActive)}
           >
             <Icon paths={ICONS.more} color={isOverflowActive ? accentColor : C.textMuted} />
-            <span style={{ fontSize: 10, fontWeight: 600, lineHeight: 1 }}>More</span>
+            <span style={{ fontSize: 10, fontWeight: 600, lineHeight: 1, fontFamily: "'DM Sans', sans-serif" }}>More</span>
           </button>
         )}
 
@@ -143,7 +143,7 @@ export default function BottomTabBar({ activeTab, onTabChange, accountFilter }) 
               marginBottom: 8,
               background: C.card,
               border: `1px solid ${C.border}`,
-              borderRadius: 12,
+              borderRadius: 16,
               padding: 6,
               minWidth: 160,
               zIndex: 950,

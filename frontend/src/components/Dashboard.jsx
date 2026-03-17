@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../hooks/useApi';
-import { C, MONO } from '../styles/theme';
+import { C, MONO, SANS } from '../styles/theme';
+import useCountUp from '../hooks/useCountUp';
 import { cardStyle, buttonPrimary, buttonSecondary, labelStyle, srOnly } from '../styles/shared';
 import OverviewTab from './OverviewTab';
 import AllocationTab from './AllocationTab';
@@ -30,10 +31,10 @@ function formatRefreshTime(date) {
   })}`;
 }
 
-const Stat = ({ label, value, sub, color }) => (
-  <div style={{ ...cardStyle, padding: '12px 14px', minWidth: 0, flex: 1 }}>
+const Stat = ({ label, value, sub, color, index }) => (
+  <div style={{ ...cardStyle, padding: '14px 18px', minWidth: 0, flex: 1, animation: 'fadeSlideUp 0.35s ease-out both', animationDelay: `${(index || 0) * 0.07}s` }}>
     <div style={labelStyle}>{label}</div>
-    <div style={{ fontSize: 20, fontWeight: 800, color: color || C.text, marginTop: 3, fontFamily: MONO }}>{value}</div>
+    <div style={{ fontSize: 28, fontWeight: 700, color: color || C.text, marginTop: 3, fontFamily: SANS, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
     {sub && <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{sub}</div>}
   </div>
 );
@@ -158,12 +159,11 @@ export default function Dashboard() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh} refreshing={refreshing}>
-    <style>{`@keyframes tabFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
     <div style={{ padding: '16px 12px', maxWidth: 1200, margin: '0 auto', paddingTop: 'max(16px, env(safe-area-inset-top))', paddingBottom: 'calc(72px + env(safe-area-inset-bottom))' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: -0.5, background: `linear-gradient(135deg, ${C.text}, ${C.accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: -0.5, background: `linear-gradient(135deg, ${C.text}, ${C.accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             Portfolio Command Center
           </h1>
           <p style={{ color: C.textMuted, fontSize: 12, margin: '2px 0 0' }}>
@@ -183,7 +183,7 @@ export default function Dashboard() {
               marginTop: 6, padding: '6px 12px', minHeight: 44,
               background: C.accent + '18', border: `1px solid ${C.accent}44`,
               borderRadius: 20, cursor: 'pointer', fontSize: 12, fontWeight: 600,
-              color: C.accent, transition: 'all 0.2s',
+              color: C.accent, transition: 'background 0.15s, border-color 0.15s, color 0.15s',
             }}
           >
             <span aria-hidden="true" style={{
@@ -237,10 +237,10 @@ export default function Dashboard() {
 
       {/* Stats Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 16 }}>
-        <Stat label="Total Value" value={fmtK(totalValue)} sub={`Cost: ${fmtK(totalCost)}`} />
-        <Stat label="Total Gain" value={<>{totalGL >= 0 ? '+' : ''}{fmtK(Math.abs(totalGL))}<span style={srOnly}>{totalGL >= 0 ? ' gain' : ' loss'}</span></>} sub={`${totalGLPct >= 0 ? '+' : ''}${totalGLPct.toFixed(1)}% return`} color={totalGL >= 0 ? C.green : C.red} />
-        <Stat label="Funds / Stock" value={`${totalValue ? ((etfTotal / totalValue) * 100).toFixed(0) : 0}% / ${totalValue ? ((stockTotal / totalValue) * 100).toFixed(0) : 0}%${cryptoTotal ? ' / ' + (totalValue ? ((cryptoTotal / totalValue) * 100).toFixed(0) : 0) + '%' : ''}`} sub={`${fmtK(etfTotal)} / ${fmtK(stockTotal)}${cryptoTotal ? ' / ' + fmtK(cryptoTotal) : ''}`} color={C.blue} />
-        <Stat label="Positions" value={holdings.length} sub={`${holdings.filter(h => h.type === 'ETF' || h.type === 'Fund').length} ETFs/Funds \u2022 ${holdings.filter(h => h.type === 'Stock').length} Stocks${holdings.filter(h => h.type === 'Crypto').length ? ' \u2022 ' + holdings.filter(h => h.type === 'Crypto').length + ' Crypto' : ''}`} color={C.purple} />
+        <Stat index={0} label="Total Value" value={fmtK(totalValue)} sub={`Cost: ${fmtK(totalCost)}`} />
+        <Stat index={1} label="Total Gain" value={<>{totalGL >= 0 ? '+' : ''}{fmtK(Math.abs(totalGL))}<span style={srOnly}>{totalGL >= 0 ? ' gain' : ' loss'}</span></>} sub={`${totalGLPct >= 0 ? '+' : ''}${totalGLPct.toFixed(1)}% return`} color={totalGL >= 0 ? C.green : C.red} />
+        <Stat index={2} label="Funds / Stock" value={`${totalValue ? ((etfTotal / totalValue) * 100).toFixed(0) : 0}% / ${totalValue ? ((stockTotal / totalValue) * 100).toFixed(0) : 0}%${cryptoTotal ? ' / ' + (totalValue ? ((cryptoTotal / totalValue) * 100).toFixed(0) : 0) + '%' : ''}`} sub={`${fmtK(etfTotal)} / ${fmtK(stockTotal)}${cryptoTotal ? ' / ' + fmtK(cryptoTotal) : ''}`} color={C.blue} />
+        <Stat index={3} label="Positions" value={holdings.length} sub={`${holdings.filter(h => h.type === 'ETF' || h.type === 'Fund').length} ETFs/Funds \u2022 ${holdings.filter(h => h.type === 'Stock').length} Stocks${holdings.filter(h => h.type === 'Crypto').length ? ' \u2022 ' + holdings.filter(h => h.type === 'Crypto').length + ' Crypto' : ''}`} color={C.purple} />
       </div>
 
       {/* Tab Content */}
@@ -256,13 +256,13 @@ export default function Dashboard() {
       ) : (
         <SwipeContainer tabs={tabOrder} activeTab={activeTab} onTabChange={(tab) => { haptic(); setActiveTab(tab); }}>
           {accountFilter === 'crypto' ? (
-            <div key={activeTab} role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`} style={{ animation: 'tabFadeIn 150ms ease-out' }}>
+            <div key={activeTab} role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`} style={{ animation: 'fadeSlideUp 0.3s ease-out' }}>
               <ErrorBoundary fallbackMessage="Crypto view encountered an error.">
                 <CryptoView holdings={holdings} totalValue={totalValue} activeTab={activeTab} />
               </ErrorBoundary>
             </div>
           ) : (
-            <div key={activeTab} role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`} style={{ animation: 'tabFadeIn 150ms ease-out' }}>
+            <div key={activeTab} role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`} style={{ animation: 'fadeSlideUp 0.3s ease-out' }}>
               {activeTab === 'overview' && <ErrorBoundary key="overview" fallbackMessage="Overview tab encountered an error."><OverviewTab holdings={holdings} totalValue={totalValue} accountFilter={accountFilter} /></ErrorBoundary>}
               {activeTab === 'allocation' && <ErrorBoundary key="allocation" fallbackMessage="Allocation tab encountered an error."><AllocationTab holdings={holdings} totalValue={totalValue} settings={settings} accountFilter={accountFilter} /></ErrorBoundary>}
               {activeTab === 'performance' && <ErrorBoundary key="performance" fallbackMessage="Performance tab encountered an error."><PerformanceTab holdings={holdings} accountFilter={accountFilter} /></ErrorBoundary>}

@@ -136,8 +136,8 @@ export default function CryptoTradeJournal({ holdings }) {
 
       {/* New Trade Form */}
       {showForm && (
-        <form onSubmit={handleAdd} style={{ background: C.card, borderRadius: 12, border: `1px solid ${CRYPTO_ACCENT}33`, padding: 20, marginBottom: 16 }}>
-          <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: CRYPTO_ACCENT }}>Log New Trade</h3>
+        <form onSubmit={handleAdd} style={{ background: C.card, borderRadius: 16, border: `1px solid ${CRYPTO_ACCENT}33`, padding: 24, marginBottom: 16 }}>
+          <h3 style={{ margin: '0 0 14px', fontSize: 18, fontWeight: 700, color: CRYPTO_ACCENT }}>Log New Trade</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 12 }}>
             <div>
               <label style={{ fontSize: 10, color: C.textDim, fontWeight: 600 }}>Date</label>
@@ -198,7 +198,7 @@ export default function CryptoTradeJournal({ holdings }) {
 
       {/* Trade List */}
       {filtered.length === 0 ? (
-        <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 40, textAlign: 'center' }}>
+        <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 40, textAlign: 'center' }}>
           <div style={{ fontSize: 14, color: C.textMuted, fontWeight: 600, marginBottom: 8 }}>No trades logged yet</div>
           <div style={{ fontSize: 12, color: C.textDim }}>Click "+ New Trade" to start your journal. Tracking every trade builds discipline.</div>
         </div>
@@ -346,9 +346,9 @@ export default function CryptoTradeJournal({ holdings }) {
 
 function StatCard({ label, value, color }) {
   return (
-    <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 14 }}>
+    <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 14 }}>
       <div style={{ fontSize: 10, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>{label}</div>
-      <div style={{ fontSize: 22, fontWeight: 800, color: color || C.text, fontFamily: MONO, marginTop: 4 }}>{value}</div>
+      <div style={{ fontSize: 22, fontWeight: 700, color: color || C.text, fontFamily: MONO, marginTop: 4 }}>{value}</div>
     </div>
   );
 }

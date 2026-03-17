@@ -12,12 +12,12 @@ const CRYPTO_ACCENT = '#F7931A';
 function CryptoStat({ label, value, sub, color }) {
   return (
     <div style={{
-      padding: '16px 20px', background: C.card, borderRadius: 12,
+      padding: '16px 20px', background: C.card, borderRadius: 16,
       border: `1px solid ${C.border}`, minWidth: 140, flex: 1,
       borderTop: `2px solid ${color || CRYPTO_ACCENT}`,
     }}>
       <div style={{ fontSize: 11, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1.2, fontWeight: 600 }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 800, color: color || C.text, marginTop: 4, fontFamily: MONO }}>{value}</div>
+      <div style={{ fontSize: 24, fontWeight: 700, color: color || C.text, marginTop: 4, fontFamily: MONO }}>{value}</div>
       {sub && <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>{sub}</div>}
     </div>
   );
@@ -92,12 +92,12 @@ export default function CryptoView({ holdings, totalValue, activeTab }) {
       {/* Crypto Header */}
       <div style={{
         background: `linear-gradient(135deg, ${C.card}, #1a1400)`,
-        borderRadius: 12, border: `1px solid ${CRYPTO_ACCENT}33`,
-        padding: '16px 20px', marginBottom: 16,
+        borderRadius: 16, border: `1px solid ${CRYPTO_ACCENT}33`,
+        padding: '16px 24px', marginBottom: 16,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <span style={{ fontSize: 18, fontWeight: 800, color: CRYPTO_ACCENT }}>&#8383;</span>
-          <span style={{ fontSize: 16, fontWeight: 800, color: C.text }}>Crypto Portfolio</span>
+          <span style={{ fontSize: 18, fontWeight: 700, color: CRYPTO_ACCENT }}>&#8383;</span>
+          <span style={{ fontSize: 16, fontWeight: 700, color: C.text }}>Crypto Portfolio</span>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>

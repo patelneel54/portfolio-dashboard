@@ -23,7 +23,7 @@ export default function App() {
   }, []);
 
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', color: C.text, fontFamily: "'Inter', -apple-system, sans-serif" }}>
+    <div style={{ background: C.bg, minHeight: '100vh', color: C.text, fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
       {showUpdateBanner && (
         <div style={{
           position: 'fixed',

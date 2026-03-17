@@ -16,7 +16,7 @@ function alertDescription(alert) {
 }
 
 /** @returns {JSX.Element} Alert management UI for creating and viewing price/drift alerts. */
-export default function AlertManager() {
+export default function AlertManager({ embedded = false }) {
   const [alerts, setAlerts] = useState([]);
   const [holdings, setHoldings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -68,8 +68,8 @@ export default function AlertManager() {
   if (loading) return null;
 
   return (
-    <div style={{ ...cardStyle, padding: 24, marginTop: 16 }}>
-      <h3 style={{ ...sectionTitle, margin: '0 0 16px' }}>Price Alerts</h3>
+    <div style={embedded ? {} : { ...cardStyle, padding: 24, marginTop: 16 }}>
+      {!embedded && <h3 style={{ ...sectionTitle, margin: '0 0 16px' }}>Price Alerts</h3>}
 
       <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
         <div>
@@ -140,7 +140,7 @@ export default function AlertManager() {
             {alerts.map(a => (
               <div key={a.id} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '10px 12px', background: '#0d1424', borderRadius: 8,
+                padding: '10px 12px', background: C.elevated, borderRadius: 8,
                 border: `1px solid ${C.border}`,
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>

@@ -76,20 +76,20 @@ function CoinCard({ holding, totalCryptoValue }) {
   const portfolioPct = totalCryptoValue ? ((holding.market_value / totalCryptoValue) * 100) : 0;
 
   return (
-    <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 16 }}>
+    <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, marginBottom: 16 }}>
       {/* Coin Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ width: 36, height: 36, borderRadius: 8, background: CRYPTO_ACCENT + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, color: CRYPTO_ACCENT, fontFamily: MONO }}>
+          <span style={{ width: 36, height: 36, borderRadius: 8, background: CRYPTO_ACCENT + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, color: CRYPTO_ACCENT, fontFamily: MONO }}>
             {coin.charAt(0)}
           </span>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 16, fontFamily: MONO }}>{coin}</div>
+            <div style={{ fontWeight: 700, fontSize: 16, fontFamily: MONO }}>{coin}</div>
             <div style={{ fontSize: 11, color: C.textMuted }}>{portfolioPct.toFixed(1)}% of portfolio</div>
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 20, fontWeight: 800, fontFamily: MONO }}>{fmtPrice(holding.current_price || 0)}</div>
+          <div style={{ fontSize: 20, fontWeight: 700, fontFamily: MONO }}>{fmtPrice(holding.current_price || 0)}</div>
           <div style={{ fontSize: 12, fontFamily: MONO, color: glPct >= 0 ? C.green : C.red }}>
             {glPct >= 0 ? '+' : ''}{glPct.toFixed(1)}% ({gl >= 0 ? '+' : ''}{fmtK(Math.abs(gl))})
           </div>
@@ -136,7 +136,7 @@ function CoinCard({ holding, totalCryptoValue }) {
                 <stop offset="100%" stopColor={gainColor} stopOpacity={0.02} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
+            <CartesianGrid strokeDasharray="4 4" stroke={C.chartGrid} vertical={false} />
             <XAxis
               dataKey="date" tick={{ fill: C.textDim, fontSize: 9 }}
               axisLine={{ stroke: C.border }} tickLine={false}
@@ -150,10 +150,11 @@ function CoinCard({ holding, totalCryptoValue }) {
               width={60}
             />
             <Tooltip
+              cursor={{ stroke: C.chartCrosshair, strokeDasharray: '4 4' }}
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
                 return (
-                  <div style={{ background: '#0f1729', border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px', fontSize: 11, fontFamily: MONO }}>
+                  <div style={{ background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px', fontSize: 11, fontFamily: MONO }}>
                     <div style={{ color: C.textDim, marginBottom: 4 }}>{formatDate(label)}</div>
                     <div style={{ color: C.text, fontWeight: 600 }}>{fmtPrice(payload[0].value)}</div>
                   </div>
@@ -164,7 +165,7 @@ function CoinCard({ holding, totalCryptoValue }) {
               type="monotone" dataKey="close"
               stroke={gainColor} strokeWidth={2}
               fill={`url(#grad-${holding.ticker})`}
-              dot={false} animationDuration={400}
+              dot={false} animationDuration={800}
             />
           </AreaChart>
         </ResponsiveContainer>

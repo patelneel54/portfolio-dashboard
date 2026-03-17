@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell, PieChart, Pie } from 'recharts';
-import { C, MONO } from '../styles/theme';
+import { C, MONO, SANS } from '../styles/theme';
 import { cardStyle, tableHeader, badge } from '../styles/shared';
 import { api } from '../hooks/useApi';
 import { SkeletonCard, SkeletonChart } from './SkeletonLoader';
@@ -104,7 +104,7 @@ export default function DividendIncomeSection({ accountFilter }) {
   if (!hasIncome) {
     return (
       <div style={cardStyle}>
-        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.textMuted }}>Dividend Income</h3>
+        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.textMuted }}>Dividend Income</h3>
         <div style={{ color: C.textDim, fontSize: 12, marginTop: 12 }}>No dividend-paying holdings in your portfolio.</div>
       </div>
     );
@@ -148,22 +148,22 @@ export default function DividendIncomeSection({ accountFilter }) {
       {/* Monthly Income Bar Chart */}
       {monthlyData.length > 0 && (
         <div style={{ ...cardStyle, marginBottom: 16 }}>
-          <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>
+          <h3 style={{ margin: '0 0 14px', fontSize: 18, fontWeight: 700, color: C.textMuted }}>
             Monthly Dividend Income
           </h3>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={monthlyData} margin={{ left: 10, right: 10, top: 5, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
+              <CartesianGrid strokeDasharray="4 4" stroke={C.chartGrid} vertical={false} />
               <XAxis dataKey="label" tick={{ fill: C.textDim, fontSize: 10 }} />
               <YAxis
                 tick={{ fill: C.textDim, fontSize: 10, fontFamily: MONO }}
                 tickFormatter={v => `$${v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v.toFixed(0)}`}
               />
-              <Tooltip content={({ active, payload }) => {
+              <Tooltip cursor={{ stroke: C.chartCrosshair, strokeDasharray: '4 4' }} content={({ active, payload }) => {
                 if (!active || !payload?.length) return null;
                 const d = payload[0].payload;
                 return (
-                  <div style={{ background: '#1e293b', border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px', fontSize: 12 }}>
+                  <div style={{ background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px', fontSize: 12 }}>
                     <div style={{ fontWeight: 700, color: C.text }}>{d.month}</div>
                     <div style={{ color: C.green, fontFamily: MONO }}>${d.total.toFixed(2)}</div>
                   </div>
@@ -182,7 +182,7 @@ export default function DividendIncomeSection({ accountFilter }) {
       {/* Sector Income Donut */}
       {incomeBySector.length > 0 && (
         <div style={{ ...cardStyle, marginBottom: 16 }}>
-          <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>
+          <h3 style={{ margin: '0 0 14px', fontSize: 18, fontWeight: 700, color: C.textMuted }}>
             Income by Sector
           </h3>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, flexWrap: 'wrap' }}>
@@ -201,13 +201,13 @@ export default function DividendIncomeSection({ accountFilter }) {
                     <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip content={({ active, payload }) => {
+                <Tooltip cursor={{ stroke: C.chartCrosshair, strokeDasharray: '4 4' }} content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
                   const d = payload[0].payload;
                   const total = incomeBySector.reduce((s, x) => s + x.income, 0);
                   const pct = total ? ((d.income / total) * 100).toFixed(1) : 0;
                   return (
-                    <div style={{ background: '#1e293b', border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px', fontSize: 12 }}>
+                    <div style={{ background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px', fontSize: 12 }}>
                       <div style={{ fontWeight: 700, color: C.text }}>{d.sector}</div>
                       <div style={{ color: C.green, fontFamily: MONO }}>${d.income.toFixed(2)}/yr ({pct}%)</div>
                     </div>
@@ -234,7 +234,7 @@ export default function DividendIncomeSection({ accountFilter }) {
       {dividendHoldings.length > 0 && (
         <div style={cardStyle}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.textMuted }}>
+            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.textMuted }}>
               Dividend Scorecard
             </h3>
             <div style={{ display: 'flex', gap: 4 }}>

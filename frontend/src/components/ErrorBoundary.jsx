@@ -24,7 +24,7 @@ export default class ErrorBoundary extends Component {
       return (
         <div style={{
           background: C.card,
-          borderRadius: 12,
+          borderRadius: 16,
           border: `1px solid ${C.red}33`,
           padding: 32,
           textAlign: 'center',
@@ -63,9 +63,9 @@ export function InlineError({ message, onRetry }) {
   return (
     <div style={{
       background: C.card,
-      borderRadius: 12,
+      borderRadius: 16,
       border: `1px solid ${C.red}33`,
-      padding: 20,
+      padding: 24,
       textAlign: 'center',
     }}>
       <div style={{ fontSize: 13, color: C.red, fontWeight: 600, marginBottom: onRetry ? 12 : 0 }}>

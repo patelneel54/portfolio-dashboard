@@ -6,7 +6,7 @@ const StatCard = ({ label, value, sub, color }) => (
     border: `1px solid ${C.border}`, flex: 1, minWidth: 120,
   }}>
     <div style={{ fontSize: 10, color: C.textDim, textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: 600 }}>{label}</div>
-    <div style={{ fontSize: 20, fontWeight: 800, fontFamily: MONO, color: color || C.text, marginTop: 4 }}>{value}</div>
+    <div style={{ fontSize: 20, fontWeight: 700, fontFamily: MONO, color: color || C.text, marginTop: 4 }}>{value}</div>
     {sub && <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>{sub}</div>}
   </div>
 );
@@ -24,7 +24,7 @@ export default function SectorDrillDown({ sectorData, onDrillToStock, onBack }) 
       {/* Sector header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
         <span style={{ width: 12, height: 12, borderRadius: 3, background: color, display: 'inline-block' }} />
-        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: C.text }}>{sector}</h3>
+        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.text }}>{sector}</h3>
         <span style={{ fontSize: 12, color: C.textMuted, fontFamily: MONO }}>{percentage.toFixed(1)}% of portfolio</span>
       </div>
 

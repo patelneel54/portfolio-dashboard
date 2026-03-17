@@ -214,6 +214,7 @@ export default function FundComparison({ holdings }) {
                   <YAxis tick={{ fontSize: 9, fill: C.textDim }} tickFormatter={v => `${v}%`} width={45} />
                   <Tooltip
                     contentStyle={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 11 }}
+                    cursor={{ stroke: C.chartCrosshair, strokeDasharray: '4 4' }}
                     formatter={(v, name) => [`${v}%`, getDisplayName(name)]}
                     labelFormatter={l => l}
                   />

@@ -106,7 +106,7 @@ export default function AllocationTab({ holdings, totalValue, settings, accountF
                     border: `1px solid ${active ? C.accent : C.border}`,
                     background: active ? C.accent + '22' : 'transparent',
                     color: active ? C.accent : C.textMuted,
-                    transition: 'all 0.15s',
+                    transition: 'background 0.15s, color 0.15s, border-color 0.15s',
                   }}
                 >
                   {opt.label}

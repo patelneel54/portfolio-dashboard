@@ -245,7 +245,7 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
             fontSize: 12, fontWeight: 700, cursor: 'pointer', minHeight: 44,
             background: activeAccount === tab.id ? tab.color : 'transparent',
             color: activeAccount === tab.id ? '#fff' : C.textMuted,
-            transition: 'all 0.2s',
+            transition: 'background 0.15s, color 0.15s',
           }}
         >
           {tab.label}
@@ -258,7 +258,7 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
     if (!confirmDelete) return null;
     return (
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setConfirmDelete(null)} onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); setConfirmDelete(null); } }}>
-        <div role="alertdialog" aria-modal="true" aria-label="Confirm deletion" style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 24, width: 320, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+        <div role="alertdialog" aria-modal="true" aria-label="Confirm deletion" style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, width: 320, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
           <p style={{ margin: '0 0 20px', fontSize: 14, color: C.text, fontWeight: 600 }}>
             Delete {confirmDelete.ticker}? This cannot be undone.
           </p>
@@ -279,7 +279,7 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
       <div ref={focusTrapRef} role="dialog" aria-modal="true" aria-label="Manage holdings" style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, width: '100%', maxWidth: 640, maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>Manage Holdings</h2>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Manage Holdings</h2>
           <button onClick={onClose} aria-label="Close manage holdings" style={{ background: 'none', border: 'none', color: C.textMuted, fontSize: 20, cursor: 'pointer', padding: '10px 14px', minHeight: 44, minWidth: 44 }}>&times;</button>
         </div>
 
@@ -389,7 +389,7 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
           <SearchInput value={searchQuery} onChange={setSearchQuery} />
         </div>
         {filteredHoldings.length === 0 ? (
-          <div style={{ padding: 24, textAlign: 'center', color: C.textDim, fontSize: 12, background: '#0d1424', borderRadius: 8, border: `1px solid ${C.border}` }}>
+          <div style={{ padding: 24, textAlign: 'center', color: C.textDim, fontSize: 12, background: C.elevated, borderRadius: 8, border: `1px solid ${C.border}` }}>
             {searchQuery.trim() ? `No holdings match '${searchQuery.trim()}'` : `No ${activeAccount} holdings yet. Add one above.`}
           </div>
         ) : (
@@ -398,7 +398,7 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
               const hIsBrokerage = (h.account_type || 'brokerage') === 'brokerage';
               const hIsCrypto = h.type === 'Crypto';
               return (
-                <div key={h.id} style={{ padding: '10px 14px', background: '#0d1424', borderRadius: 8, border: `1px solid ${C.border}` }}>
+                <div key={h.id} style={{ padding: '10px 14px', background: C.elevated, borderRadius: 8, border: `1px solid ${C.border}` }}>
                   {editingId === h.id ? (
                     <div style={{ display: 'grid', gridTemplateColumns: editGridCols, gap: 8, alignItems: 'center' }}>
                       <span style={{ fontWeight: 700, fontFamily: MONO, fontSize: 12 }}>{h.ticker}</span>
@@ -492,7 +492,7 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
 
             {/* Title + Close */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 16px 12px', borderBottom: `1px solid ${C.border}` }}>
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: C.text }}>Manage Holdings</h2>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.text }}>Manage Holdings</h2>
               <button
                 onClick={handleMobileClose}
                 aria-label="Close manage holdings"
@@ -628,7 +628,7 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
               <SearchInput value={searchQuery} onChange={setSearchQuery} />
             </div>
             {filteredHoldings.length === 0 ? (
-              <div style={{ padding: 24, textAlign: 'center', color: C.textDim, fontSize: 13, background: '#0d1424', borderRadius: 10, border: `1px solid ${C.border}` }}>
+              <div style={{ padding: 24, textAlign: 'center', color: C.textDim, fontSize: 13, background: C.elevated, borderRadius: 10, border: `1px solid ${C.border}` }}>
                 {searchQuery.trim() ? `No holdings match '${searchQuery.trim()}'` : `No ${activeAccount} holdings yet. Add one above.`}
               </div>
             ) : (
@@ -637,7 +637,7 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
                   const hIsBrokerage = (h.account_type || 'brokerage') === 'brokerage';
                   const hIsCrypto = h.type === 'Crypto';
                   return (
-                    <div key={h.id} style={{ padding: '14px 16px', background: '#0d1424', borderRadius: 10, border: `1px solid ${C.border}`, position: 'relative' }}>
+                    <div key={h.id} style={{ padding: '14px 16px', background: C.elevated, borderRadius: 10, border: `1px solid ${C.border}`, position: 'relative' }}>
                       {editingId === h.id ? (
                         /* Mobile edit form - stacked */
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

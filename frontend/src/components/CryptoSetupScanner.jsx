@@ -225,8 +225,8 @@ export default function CryptoSetupScanner({ holdings }) {
       </div>
 
       {/* Section 1: Active Setups (Held Coins) */}
-      <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 16 }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>Active Setups — Your Coins</h3>
+      <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, marginBottom: 16 }}>
+        <h3 style={{ margin: '0 0 12px', fontSize: 18, fontWeight: 700, color: C.textMuted }}>Active Setups — Your Coins</h3>
         {heldSetups.length === 0 ? (
           <div style={{ padding: 16, textAlign: 'center', color: C.textDim, fontSize: 12 }}>
             {scanning ? 'Scanning...' : 'No active setups detected for your holdings'}
@@ -267,8 +267,8 @@ export default function CryptoSetupScanner({ holdings }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16, marginBottom: 16 }}>
         {/* Section 2: Setup Rules */}
-        <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
-          <h3 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>Setup Rules</h3>
+        <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24 }}>
+          <h3 style={{ margin: '0 0 12px', fontSize: 18, fontWeight: 700, color: C.textMuted }}>Setup Rules</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {rules.map(r => (
               <div key={r.id} style={{
@@ -287,7 +287,7 @@ export default function CryptoSetupScanner({ holdings }) {
                 >
                   <span style={{
                     position: 'absolute', top: 3, width: 20, height: 20, borderRadius: '50%',
-                    background: '#fff', transition: 'left 0.2s',
+                    background: '#fff', transition: 'left 0.2s ease',
                     left: r.enabled ? 21 : 3,
                   }} />
                 </button>
@@ -304,8 +304,8 @@ export default function CryptoSetupScanner({ holdings }) {
         </div>
 
         {/* Section 3: Watchlist */}
-        <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
-          <h3 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>Watchlist Scanner</h3>
+        <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24 }}>
+          <h3 style={{ margin: '0 0 12px', fontSize: 18, fontWeight: 700, color: C.textMuted }}>Watchlist Scanner</h3>
           <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
             <input
               value={watchlistInput}
@@ -369,9 +369,9 @@ export default function CryptoSetupScanner({ holdings }) {
       </div>
 
       {/* Section 4: Signal Log */}
-      <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
+      <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.textMuted }}>Signal History</h3>
+          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.textMuted }}>Signal History</h3>
           {signalLog.length > 0 && (
             <button onClick={() => { setSignalLog([]); saveSignalLog([]); }} style={{
               padding: '10px 14px', borderRadius: 4, border: `1px solid ${C.border}`,

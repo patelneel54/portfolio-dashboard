@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from 'recharts';
 import { api } from '../hooks/useApi';
-import { C, MONO, TICKER_COLORS } from '../styles/theme';
+import { C, MONO, SANS, TICKER_COLORS } from '../styles/theme';
 import { SkeletonChart, SkeletonCard, SkeletonText } from './SkeletonLoader';
 
 /* ── Helper: RSI plain-English interpretation ── */
@@ -84,7 +84,7 @@ const PeriodSelector = ({ period, onPeriodChange }) => (
         fontSize: 11, fontWeight: 700, fontFamily: MONO, minHeight: 44,
         background: period === p ? C.accent + '33' : 'transparent',
         color: period === p ? C.accent : C.textDim,
-        transition: 'all 0.15s',
+        transition: 'background 0.15s, color 0.15s, border-color 0.15s',
       }}
         onMouseEnter={e => { if (period !== p) e.currentTarget.style.color = C.text; }}
         onMouseLeave={e => { if (period !== p) e.currentTarget.style.color = C.textDim; }}
@@ -159,7 +159,7 @@ const PriceHistoryChart = ({ data, support, resistance, sma50, sma200, price, pe
       {isLoading ? (
         <SkeletonChart height={380} />
       ) : (
-        <div style={{ height: 380, background: '#0d1424', borderRadius: 8, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ height: 380, background: C.elevated, borderRadius: 8, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <span style={{ fontSize: 11, color: C.textDim }}>No data</span>
         </div>
       )}
@@ -215,7 +215,7 @@ const PriceHistoryChart = ({ data, support, resistance, sma50, sma200, price, pe
               <stop offset="100%" stopColor={C.accent} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke={C.border} strokeOpacity={0.4} />
+          <CartesianGrid strokeDasharray="4 4" stroke={C.chartGrid} strokeOpacity={0.4} />
           <XAxis
             dataKey="date"
             tick={{ fill: C.textDim, fontSize: 11 }}
@@ -228,7 +228,7 @@ const PriceHistoryChart = ({ data, support, resistance, sma50, sma200, price, pe
             tickFormatter={v => `$${v.toFixed(0)}`}
             width={58}
           />
-          <Tooltip content={({ active, payload, label }) => {
+          <Tooltip cursor={{ stroke: C.chartCrosshair, strokeDasharray: '4 4' }} content={({ active, payload, label }) => {
             if (!active || !payload?.length) return null;
             const hovered = payload[0].value;
             const levels = [
@@ -239,9 +239,9 @@ const PriceHistoryChart = ({ data, support, resistance, sma50, sma200, price, pe
               { label: 'Current Price', value: price, color: C.amber },
             ].filter(Boolean);
             return (
-              <div style={{ background: '#1e293b', border: `1px solid ${C.border}`, borderRadius: 6, padding: '8px 12px', fontSize: 12, minWidth: 160 }}>
+              <div style={{ background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 6, padding: '8px 12px', fontSize: 12, minWidth: 160 }}>
                 <div style={{ color: C.textDim, marginBottom: 4 }}>{fmtDate(label)}</div>
-                <div style={{ color: C.text, fontWeight: 800, fontFamily: MONO, marginBottom: 6 }}>${hovered.toFixed(2)}</div>
+                <div style={{ color: C.text, fontWeight: 700, fontFamily: MONO, marginBottom: 6 }}>${hovered.toFixed(2)}</div>
                 <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
                   {levels.map(lvl => (
                     <div key={lvl.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
@@ -306,7 +306,7 @@ const NewsFeed = ({ articles, ticker, loading: isLoading }) => {
   if (!articles || articles.length === 0) return null;
 
   return (
-    <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginTop: 12 }}>
+    <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, marginTop: 12 }}>
       <div style={{ fontSize: 10, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, fontWeight: 600 }}>Recent News</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {articles.slice(0, 5).map((a, i) => {
@@ -316,7 +316,7 @@ const NewsFeed = ({ articles, ticker, loading: isLoading }) => {
           return (
             <a key={i} href={a.link} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
               <div style={{
-                padding: '8px 12px', background: '#0d1424', borderRadius: 6,
+                padding: '8px 12px', background: C.elevated, borderRadius: 6,
                 border: `1px solid ${C.border}`, cursor: 'pointer',
                 transition: 'border-color 0.15s',
               }}
@@ -361,13 +361,13 @@ const ValuationCard = ({ data, loading: isLoading }) => {
   const exDivStr = fmtCalDate(data.ex_dividend_date);
 
   return (
-    <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginTop: 12 }}>
+    <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, marginTop: 12 }}>
       <div style={{ fontSize: 10, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, fontWeight: 600 }}>
         Valuation{data.sector ? ` — ${data.sector}` : ''}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 8 }}>
         {metrics.map(m => (
-          <div key={m.label} style={{ background: '#0d1424', padding: '8px 10px', borderRadius: 6, border: `1px solid ${C.border}` }}>
+          <div key={m.label} style={{ background: C.elevated, padding: '8px 10px', borderRadius: 6, border: `1px solid ${C.border}` }}>
             <div style={{ fontSize: 9, color: C.textDim, fontWeight: 600, marginBottom: 2 }}>{m.label}</div>
             <div style={{ fontSize: 14, fontWeight: 700, fontFamily: MONO, color: C.text }}>{m.value}</div>
           </div>
@@ -406,7 +406,7 @@ const AlertsSummary = ({ techData, onSelectStock }) => {
 
   return (
     <div style={{
-      background: C.card, borderRadius: 12, border: `1px solid ${C.amber}33`,
+      background: C.card, borderRadius: 16, border: `1px solid ${C.amber}33`,
       padding: 12, marginBottom: 16,
     }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: C.amber, marginBottom: 8 }}>
@@ -416,7 +416,7 @@ const AlertsSummary = ({ techData, onSelectStock }) => {
         {grouped.map(({ ticker, alerts }) => (
           <div key={ticker} onClick={() => onSelectStock(ticker)} style={{
             padding: '6px 10px', borderRadius: 6, cursor: 'pointer',
-            background: '#0d1424', border: `1px solid ${C.border}`,
+            background: C.elevated, border: `1px solid ${C.border}`,
             transition: 'border-color 0.15s',
           }}
             onMouseEnter={e => e.currentTarget.style.borderColor = C.accent + '66'}
@@ -452,7 +452,7 @@ const PositionSummary = ({ holding }) => {
   const dayColor = day_change_pct >= 0 ? C.green : C.red;
 
   return (
-    <div style={{ background: '#0d1424', borderRadius: 8, padding: 16, marginBottom: 16, border: `1px solid ${C.border}` }}>
+    <div style={{ background: C.elevated, borderRadius: 8, padding: 16, marginBottom: 16, border: `1px solid ${C.border}` }}>
       <div style={{ fontSize: 10, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12, fontWeight: 600 }}>Your Position</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div>
@@ -501,11 +501,11 @@ const TechnicalCard = ({ data, holding, priceHistory, priceHistoryLoading, selec
   const rsiColor = rsi > 70 ? C.red : rsi < 30 ? C.green : C.amber;
 
   return (
-    <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 28, marginBottom: 12 }}>
+    <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 28, marginBottom: 12 }}>
       {/* Header: Ticker, Price, Trend + Reasoning */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
         <div>
-          <span style={{ fontSize: 22, fontWeight: 800, color: C.text, fontFamily: MONO }}>{ticker}</span>
+          <span style={{ fontSize: 22, fontWeight: 700, color: C.text, fontFamily: MONO }}>{ticker}</span>
           <span style={{ fontSize: 22, fontWeight: 700, color: C.text, marginLeft: 12, fontFamily: MONO }}>${price.toFixed(2)}</span>
         </div>
         <div style={{ textAlign: 'right' }}>
@@ -527,7 +527,7 @@ const TechnicalCard = ({ data, holding, priceHistory, priceHistoryLoading, selec
       {/* Actionable Summary */}
       {actionable_summary && (
         <div style={{
-          marginTop: 12, padding: '10px 14px', background: '#0d1424', borderRadius: 6,
+          marginTop: 12, padding: '10px 14px', background: C.elevated, borderRadius: 6,
           fontSize: 12, color: C.text, lineHeight: 1.6,
           borderLeft: `3px solid ${trendColor}`, fontWeight: 500,
         }}>
@@ -551,7 +551,7 @@ const TechnicalCard = ({ data, holding, priceHistory, priceHistoryLoading, selec
       {/* ─── RSI with zones and interpretation ─── */}
       <div style={{ marginTop: 24 }}>
         <div style={{ fontSize: 11, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10, fontWeight: 600 }}>RSI (14)</div>
-        <div style={{ position: 'relative', height: 40, background: '#0d1424', borderRadius: 6, overflow: 'hidden', border: `1px solid ${C.border}` }}>
+        <div style={{ position: 'relative', height: 40, background: C.elevated, borderRadius: 6, overflow: 'hidden', border: `1px solid ${C.border}` }}>
           <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '30%', background: C.green + '12' }} />
           <div style={{ position: 'absolute', left: '30%', top: 0, bottom: 0, width: '40%', background: C.amber + '08' }} />
           <div style={{ position: 'absolute', left: '70%', top: 0, bottom: 0, width: '30%', background: C.red + '12' }} />
@@ -571,7 +571,7 @@ const TechnicalCard = ({ data, holding, priceHistory, priceHistoryLoading, selec
           <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>0</span>
           <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>30</span>
           <span style={{
-            fontSize: 14, fontWeight: 800, color: rsiColor, fontFamily: MONO,
+            fontSize: 14, fontWeight: 700, color: rsiColor, fontFamily: MONO,
             background: rsiColor + '15', padding: '3px 12px', borderRadius: 4,
           }}>RSI {rsi.toFixed(0)}</span>
           <span style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>70</span>
@@ -590,7 +590,7 @@ const TechnicalCard = ({ data, holding, priceHistory, priceHistoryLoading, selec
         <div style={{ fontSize: 11, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10, fontWeight: 600 }}>Key Levels</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
           {sma50 && (
-            <div style={{ background: '#0d1424', padding: '12px 14px', borderRadius: 6, border: `1px solid ${C.border}` }}>
+            <div style={{ background: C.elevated, padding: '12px 14px', borderRadius: 6, border: `1px solid ${C.border}` }}>
               <div style={{ fontSize: 10, color: C.cyan, fontWeight: 600, marginBottom: 4 }}>50d SMA</div>
               <div style={{ fontSize: 16, fontWeight: 700, fontFamily: MONO, color: C.text }}>${sma50.toFixed(2)}</div>
               <div style={{ fontSize: 11, color: price > sma50 ? C.green : C.red, marginTop: 4 }}>
@@ -599,7 +599,7 @@ const TechnicalCard = ({ data, holding, priceHistory, priceHistoryLoading, selec
             </div>
           )}
           {sma200 && (
-            <div style={{ background: '#0d1424', padding: '12px 14px', borderRadius: 6, border: `1px solid ${C.border}` }}>
+            <div style={{ background: C.elevated, padding: '12px 14px', borderRadius: 6, border: `1px solid ${C.border}` }}>
               <div style={{ fontSize: 10, color: C.pink, fontWeight: 600, marginBottom: 4 }}>200d SMA</div>
               <div style={{ fontSize: 16, fontWeight: 700, fontFamily: MONO, color: C.text }}>${sma200.toFixed(2)}</div>
               <div style={{ fontSize: 11, color: price > sma200 ? C.green : C.red, marginTop: 4 }}>
@@ -608,7 +608,7 @@ const TechnicalCard = ({ data, holding, priceHistory, priceHistoryLoading, selec
             </div>
           )}
           {support?.[0] && (
-            <div style={{ background: '#0d1424', padding: '12px 14px', borderRadius: 6, border: `1px solid ${C.border}` }}>
+            <div style={{ background: C.elevated, padding: '12px 14px', borderRadius: 6, border: `1px solid ${C.border}` }}>
               <div style={{ fontSize: 10, color: C.green, fontWeight: 600, marginBottom: 4 }}>Nearest Support</div>
               <div style={{ fontSize: 16, fontWeight: 700, fontFamily: MONO, color: C.text }}>${support[0].toFixed(2)}</div>
               <div style={{ fontSize: 11, color: C.textDim, marginTop: 4 }}>
@@ -617,7 +617,7 @@ const TechnicalCard = ({ data, holding, priceHistory, priceHistoryLoading, selec
             </div>
           )}
           {resistance?.[0] && (
-            <div style={{ background: '#0d1424', padding: '12px 14px', borderRadius: 6, border: `1px solid ${C.border}` }}>
+            <div style={{ background: C.elevated, padding: '12px 14px', borderRadius: 6, border: `1px solid ${C.border}` }}>
               <div style={{ fontSize: 10, color: C.red, fontWeight: 600, marginBottom: 4 }}>Nearest Resistance</div>
               <div style={{ fontSize: 16, fontWeight: 700, fontFamily: MONO, color: C.text }}>${resistance[0].toFixed(2)}</div>
               <div style={{ fontSize: 11, color: C.textDim, marginTop: 4 }}>
@@ -633,7 +633,7 @@ const TechnicalCard = ({ data, holding, priceHistory, priceHistoryLoading, selec
 
       {/* ─── Technical Note ─── */}
       {note && (
-        <div style={{ marginTop: 16, padding: '10px 14px', background: '#0d1424', borderRadius: 6, fontSize: 12, color: C.textMuted, lineHeight: 1.6, borderLeft: `3px solid ${trendColor}` }}>
+        <div style={{ marginTop: 16, padding: '10px 14px', background: C.elevated, borderRadius: 6, fontSize: 12, color: C.textMuted, lineHeight: 1.6, borderLeft: `3px solid ${trendColor}` }}>
           {note}
         </div>
       )}
@@ -646,7 +646,7 @@ const TechnicalCard = ({ data, holding, priceHistory, priceHistoryLoading, selec
    ══════════════════════════════════════════════════════════════════════ */
 const QuickScanCard = ({ tech, isSelected, onClick, isLoading }) => {
   if (!tech) return (
-    <div style={{ padding: '10px 14px', background: '#0d1424', borderRadius: 8, border: `1px solid ${C.border}` }}>
+    <div style={{ padding: '10px 14px', background: C.elevated, borderRadius: 8, border: `1px solid ${C.border}` }}>
       <span style={{ fontWeight: 700, fontSize: 13, fontFamily: MONO }}>{isLoading ? '' : ''}</span>
       <div style={{ fontSize: 10, color: C.textDim, marginTop: 4 }}>{isLoading ? 'Loading...' : 'No data'}</div>
     </div>
@@ -658,9 +658,9 @@ const QuickScanCard = ({ tech, isSelected, onClick, isLoading }) => {
 
   return (
     <div onClick={onClick} style={{
-      padding: '10px 14px', background: '#0d1424', borderRadius: 8, cursor: 'pointer',
+      padding: '10px 14px', background: C.elevated, borderRadius: 8, cursor: 'pointer',
       border: `1px solid ${isSelected ? C.accent + '66' : hasAlerts ? C.amber + '44' : C.border}`,
-      transition: 'all 0.2s',
+      transition: 'background 0.15s, color 0.15s, border-color 0.15s',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -736,7 +736,7 @@ const ComparisonChart = ({ compareTickers, priceHistoryData, selectedPeriod, onP
 
   if (compareTickers.length < 2) {
     return (
-      <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 40, textAlign: 'center', marginBottom: 16 }}>
+      <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 40, textAlign: 'center', marginBottom: 16 }}>
         <div style={{ fontSize: 14, color: C.textMuted, marginBottom: 8 }}>Select at least 2 holdings to compare.</div>
         <div style={{ fontSize: 11, color: C.textDim }}>Tap tickers above to add them (max 3).</div>
       </div>
@@ -761,7 +761,7 @@ const ComparisonChart = ({ compareTickers, priceHistoryData, selectedPeriod, onP
   });
 
   if (!commonDates || commonDates.size === 0) return (
-    <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 40, textAlign: 'center', marginBottom: 16 }}>
+    <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 40, textAlign: 'center', marginBottom: 16 }}>
       <span style={{ fontSize: 12, color: C.textDim }}>No overlapping price data for selected tickers.</span>
     </div>
   );
@@ -775,7 +775,7 @@ const ComparisonChart = ({ compareTickers, priceHistoryData, selectedPeriod, onP
   });
 
   return (
-    <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 16 }}>
+    <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, marginBottom: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div style={{ fontSize: 11, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>
           Normalized % Change — {selectedPeriod}
@@ -784,14 +784,14 @@ const ComparisonChart = ({ compareTickers, priceHistoryData, selectedPeriod, onP
       </div>
       <ResponsiveContainer width="100%" height={380}>
         <LineChart data={chartData} margin={{ top: 12, right: 16, left: 8, bottom: 4 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke={C.border} strokeOpacity={0.4} />
+          <CartesianGrid strokeDasharray="4 4" stroke={C.chartGrid} strokeOpacity={0.4} />
           <XAxis dataKey="date" tick={{ fill: C.textDim, fontSize: 11 }} tickFormatter={fmtDate} interval="preserveStartEnd" />
           <YAxis tick={{ fill: C.textDim, fontSize: 11, fontFamily: MONO }} tickFormatter={v => `${v.toFixed(1)}%`} width={58} />
           <ReferenceLine y={0} stroke={C.textDim} strokeDasharray="4 4" strokeOpacity={0.5} />
-          <Tooltip content={({ active, payload, label }) => {
+          <Tooltip cursor={{ stroke: C.chartCrosshair, strokeDasharray: '4 4' }} content={({ active, payload, label }) => {
             if (!active || !payload?.length) return null;
             return (
-              <div style={{ background: '#1e293b', border: `1px solid ${C.border}`, borderRadius: 6, padding: '8px 12px', fontSize: 12, minWidth: 140 }}>
+              <div style={{ background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 6, padding: '8px 12px', fontSize: 12, minWidth: 140 }}>
                 <div style={{ color: C.textDim, marginBottom: 6 }}>{fmtDate(label)}</div>
                 {payload.map(p => (
                   <div key={p.dataKey} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 2 }}>
@@ -893,10 +893,10 @@ const ComparisonTable = ({ compareTickers, techData, tickers }) => {
     },
   ];
 
-  const cellBg = '#0d1424';
+  const cellBg = C.elevated;
 
   return (
-    <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 16 }}>
+    <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, marginBottom: 16 }}>
       <div style={{ fontSize: 11, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600, marginBottom: 14 }}>
         Side-by-Side Technicals
       </div>
@@ -1120,7 +1120,7 @@ export default function TechnicalsTab({ holdings }) {
             background: compareMode ? C.accent + '22' : C.card,
             color: compareMode ? C.accent : C.textMuted,
             fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: MONO,
-            transition: 'all 0.15s',
+            transition: 'background 0.15s, color 0.15s, border-color 0.15s',
           }}
         >
           {compareMode ? 'Compare ✓' : 'Compare'}
@@ -1177,16 +1177,16 @@ export default function TechnicalsTab({ holdings }) {
             <SkeletonCard height={80} />
           </div>
         ) : selectedStock ? (
-          <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 40, textAlign: 'center', color: C.textMuted }}>
+          <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 40, textAlign: 'center', color: C.textMuted }}>
             No technical data for {selectedStock} yet. Price history is still being fetched.
           </div>
         ) : null
       )}
 
       {/* Quick Scan Grid */}
-      <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginTop: 16 }}>
+      <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, marginTop: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.textMuted }}>Quick Scan — All Stocks</h3>
+          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.textMuted }}>Quick Scan — All Stocks</h3>
           {alertCount > 0 && (
             <span style={{ fontSize: 10, color: C.amber, fontWeight: 600 }}>⚠ {alertCount} alert{alertCount > 1 ? 's' : ''}</span>
           )}

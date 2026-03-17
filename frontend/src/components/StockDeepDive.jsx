@@ -9,7 +9,7 @@ const StatCard = ({ label, value, sub, color }) => (
     border: `1px solid ${C.border}`, flex: 1, minWidth: 120,
   }}>
     <div style={{ fontSize: 10, color: C.textDim, textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: 600 }}>{label}</div>
-    <div style={{ fontSize: 20, fontWeight: 800, fontFamily: MONO, color: color || C.text, marginTop: 4 }}>{value}</div>
+    <div style={{ fontSize: 20, fontWeight: 700, fontFamily: MONO, color: color || C.text, marginTop: 4 }}>{value}</div>
     {sub && <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>{sub}</div>}
   </div>
 );
@@ -90,7 +90,7 @@ export default function StockDeepDive({ holdingDetail, portfolioBeta, totalValue
     <div>
       {/* Stock header */}
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 16 }}>
-        <h3 style={{ margin: 0, fontSize: 22, fontWeight: 800, fontFamily: MONO, color: C.accent }}>{h.ticker}</h3>
+        <h3 style={{ margin: 0, fontSize: 22, fontWeight: 700, fontFamily: MONO, color: C.accent }}>{h.ticker}</h3>
         <span style={{ fontSize: 14, fontWeight: 700, fontFamily: MONO, color: C.text }}>
           ${h.current_price?.toFixed(2)}
         </span>
@@ -147,7 +147,7 @@ export default function StockDeepDive({ holdingDetail, portfolioBeta, totalValue
                   <stop offset="100%" stopColor={C.accent} stopOpacity={0.02} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
+              <CartesianGrid strokeDasharray="4 4" stroke={C.chartGrid} vertical={false} />
               <XAxis
                 dataKey="date" tick={{ fill: C.textDim, fontSize: 9 }}
                 axisLine={{ stroke: C.border }} tickLine={false}
@@ -160,12 +160,12 @@ export default function StockDeepDive({ holdingDetail, portfolioBeta, totalValue
                 tickFormatter={v => `$${v.toFixed(0)}`}
                 width={48}
               />
-              <Tooltip content={<PriceTooltip />} />
+              <Tooltip content={<PriceTooltip />} cursor={{ stroke: C.chartCrosshair, strokeDasharray: '4 4' }} />
               <Area
                 type="monotone" dataKey="close"
                 stroke={C.accent} strokeWidth={2}
                 fill={`url(#stockGrad_${ticker})`}
-                dot={false} animationDuration={600}
+                dot={false} animationDuration={800}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -278,11 +278,11 @@ export default function StockDeepDive({ holdingDetail, portfolioBeta, totalValue
             {portfolioBeta != null && betaWithout != null ? (
               <>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                  <span style={{ fontSize: 18, fontWeight: 800, fontFamily: MONO, color: C.text }}>
+                  <span style={{ fontSize: 18, fontWeight: 700, fontFamily: MONO, color: C.text }}>
                     {portfolioBeta.toFixed(3)}
                   </span>
                   <span style={{ fontSize: 14, color: C.textDim }}>→</span>
-                  <span style={{ fontSize: 18, fontWeight: 800, fontFamily: MONO, color: C.text }}>
+                  <span style={{ fontSize: 18, fontWeight: 700, fontFamily: MONO, color: C.text }}>
                     {betaWithout.toFixed(3)}
                   </span>
                   <span style={{
@@ -311,7 +311,7 @@ export default function StockDeepDive({ holdingDetail, portfolioBeta, totalValue
             <div style={{ fontSize: 10, color: C.textDim, textTransform: 'uppercase', marginBottom: 6 }}>Return Contribution</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
               <span style={{
-                fontSize: 18, fontWeight: 800, fontFamily: MONO,
+                fontSize: 18, fontWeight: 700, fontFamily: MONO,
                 color: h.return_contribution >= 0 ? C.green : C.red,
               }}>
                 {h.return_contribution >= 0 ? '+' : ''}{h.return_contribution?.toFixed(3)}%
@@ -326,7 +326,7 @@ export default function StockDeepDive({ holdingDetail, portfolioBeta, totalValue
           <div style={{ padding: '12px 16px', background: C.card, borderRadius: 8, border: `1px solid ${C.border}` }}>
             <div style={{ fontSize: 10, color: C.textDim, textTransform: 'uppercase', marginBottom: 6 }}>Position Significance</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-              <span style={{ fontSize: 18, fontWeight: 800, fontFamily: MONO, color: C.text }}>
+              <span style={{ fontSize: 18, fontWeight: 700, fontFamily: MONO, color: C.text }}>
                 {h.weight?.toFixed(1)}%
               </span>
               <span style={{ fontSize: 11, color: C.textDim }}>of portfolio</span>

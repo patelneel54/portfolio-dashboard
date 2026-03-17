@@ -120,7 +120,7 @@ export default function Login() {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: 20 }}>
       <div style={{ ...cardStyle, borderRadius: 16, padding: 40, width: '100%', maxWidth: 360, textAlign: 'center' }}>
         <div style={{ fontSize: 48, marginBottom: 8 }}>&#128200;</div>
-        <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 4px', background: `linear-gradient(135deg, ${C.text}, ${C.accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 4px', background: `linear-gradient(135deg, ${C.text}, ${C.accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
           Portfolio Command Center
         </h1>
         <p style={{ color: C.textMuted, fontSize: 13, margin: '0 0 32px' }}>Enter your PIN to unlock</p>

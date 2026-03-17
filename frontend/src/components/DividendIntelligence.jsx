@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
-import { C, MONO } from '../styles/theme';
+import { C, MONO, SANS } from '../styles/theme';
 
 function StatCell({ label, value, sub, color }) {
   return (
@@ -40,16 +40,16 @@ export default function DividendIntelligence({ dividends }) {
 
   if (!holdings.length) {
     return (
-      <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
-        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.textMuted }}>Dividend Intelligence</h3>
+      <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24 }}>
+        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.textMuted }}>Dividend Intelligence</h3>
         <div style={{ color: C.textDim, fontSize: 12, marginTop: 12 }}>No dividend data available yet.</div>
       </div>
     );
   }
 
   return (
-    <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
-      <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>
+    <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24 }}>
+      <h3 style={{ margin: '0 0 14px', fontSize: 18, fontWeight: 700, color: C.textMuted }}>
         Dividend Intelligence
       </h3>
 
@@ -88,7 +88,7 @@ export default function DividendIntelligence({ dividends }) {
           </div>
           <ResponsiveContainer width="100%" height={Math.max(100, incomeBySector.length * 28)}>
             <BarChart data={incomeBySector} layout="vertical" margin={{ left: 4, right: 20, top: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={C.border} horizontal={false} />
+              <CartesianGrid strokeDasharray="4 4" stroke={C.chartGrid} horizontal={false} />
               <XAxis
                 type="number"
                 tick={{ fill: C.textDim, fontSize: 10, fontFamily: MONO }}
@@ -100,11 +100,12 @@ export default function DividendIntelligence({ dividends }) {
                 width={100}
               />
               <Tooltip
+                cursor={{ stroke: C.chartCrosshair, strokeDasharray: '4 4' }}
                 content={({ active, payload }) => {
                   if (!active || !payload?.length) return null;
                   const d = payload[0].payload;
                   return (
-                    <div style={{ background: '#1e293b', border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px', fontSize: 12 }}>
+                    <div style={{ background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px', fontSize: 12 }}>
                       <div style={{ fontWeight: 700, color: C.text }}>{d.sector}</div>
                       <div style={{ color: C.green, fontFamily: MONO }}>${d.income.toLocaleString(undefined, { maximumFractionDigits: 2 })}/yr</div>
                     </div>

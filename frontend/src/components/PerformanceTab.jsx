@@ -33,7 +33,7 @@ export default function PerformanceTab({ holdings, accountFilter }) {
               fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
               background: activeSubTab === tab.id ? C.accent : 'transparent',
               color: activeSubTab === tab.id ? '#fff' : C.textMuted,
-              transition: 'all 0.2s', minHeight: 44,
+              transition: 'background 0.15s, color 0.15s', minHeight: 44,
             }}
           >
             {tab.label}

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { api } from '../hooks/useApi';
-import { C, MONO } from '../styles/theme';
+import { C, MONO, SANS } from '../styles/theme';
 
 const TIMEFRAMES = [
   { key: '1D', label: '1D', days: 1 },
@@ -54,8 +54,8 @@ const ChartTooltip = ({ active, payload, label, showBenchmark, timeframe, startV
 
   return (
     <div style={{
-      background: '#0f1729', border: `1px solid ${C.border}`, borderRadius: 8,
-      padding: '10px 14px', fontSize: 11, fontFamily: MONO, minWidth: 160,
+      background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 10,
+      padding: '10px 14px', fontSize: 11, fontFamily: SANS, minWidth: 160,
     }}>
       <div style={{ color: C.textDim, marginBottom: 6 }}>
         {formatDate(label, timeframe)}
@@ -63,7 +63,7 @@ const ChartTooltip = ({ active, payload, label, showBenchmark, timeframe, startV
       {pVal != null && (
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 3 }}>
           <span style={{ color: C.textMuted }}>Portfolio</span>
-          <span style={{ color: C.text, fontWeight: 600 }}>
+          <span style={{ color: C.text, fontWeight: 600, fontFamily: MONO }}>
             ${pVal.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </span>
         </div>
@@ -71,7 +71,7 @@ const ChartTooltip = ({ active, payload, label, showBenchmark, timeframe, startV
       {pctChange != null && (
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 3 }}>
           <span style={{ color: C.textMuted }}>Change</span>
-          <span style={{ color: pctChange >= 0 ? C.green : C.red, fontWeight: 600 }}>
+          <span style={{ color: pctChange >= 0 ? C.green : C.red, fontWeight: 600, fontFamily: MONO }}>
             {pctChange >= 0 ? '+' : ''}{pctChange.toFixed(2)}%
           </span>
         </div>
@@ -79,7 +79,7 @@ const ChartTooltip = ({ active, payload, label, showBenchmark, timeframe, startV
       {showBenchmark && benchEntry?.value != null && (
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
           <span style={{ color: C.textMuted }}>S&P 500</span>
-          <span style={{ color: C.amber, fontWeight: 600 }}>
+          <span style={{ color: C.amber, fontWeight: 600, fontFamily: MONO }}>
             {(benchEntry.value - 100).toFixed(2)}%
           </span>
         </div>
@@ -159,7 +159,7 @@ export default function PortfolioPerformanceChart({ compact = false, accountFilt
 
   if (loading) {
     return (
-      <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
+      <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24 }}>
         <div style={{ height: chartHeight, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: 12 }}>
           Loading performance data...
         </div>
@@ -169,7 +169,7 @@ export default function PortfolioPerformanceChart({ compact = false, accountFilt
 
   if (error || !chartData.length) {
     return (
-      <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
+      <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24 }}>
         <div style={{ height: compact ? 120 : 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: 12 }}>
           {error || 'No performance history yet. Data builds as prices are tracked.'}
         </div>
@@ -183,15 +183,15 @@ export default function PortfolioPerformanceChart({ compact = false, accountFilt
   const xTicks = chartData.filter((_, i) => i % step === 0 || i === chartData.length - 1).map(d => d.date);
 
   return (
-    <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
+    <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24 }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
         <div>
-          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.textMuted }}>
+          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.textMuted }}>
             Portfolio Performance
           </h3>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 6 }}>
-            <span style={{ fontSize: 22, fontWeight: 800, fontFamily: MONO, color: gainColor }}>
+            <span style={{ fontSize: 36, fontWeight: 700, fontFamily: SANS, fontVariantNumeric: 'tabular-nums', color: gainColor }}>
               {periodReturn >= 0 ? '+' : ''}{periodReturn.toFixed(2)}%
             </span>
             {periodStartDate && (
@@ -217,7 +217,7 @@ export default function PortfolioPerformanceChart({ compact = false, accountFilt
                   fontWeight: 600,
                   fontFamily: MONO,
                   cursor: 'pointer',
-                  transition: 'all 0.2s',
+                  transition: 'background 0.15s, color 0.15s, border-color 0.15s',
                   minHeight: 44,
                   background: timeframe === tf.key ? gainColor : 'transparent',
                   color: timeframe === tf.key ? '#fff' : C.textDim,
@@ -243,7 +243,7 @@ export default function PortfolioPerformanceChart({ compact = false, accountFilt
                 fontSize: 11, minHeight: 44,
                 fontWeight: 600,
                 cursor: 'pointer',
-                transition: 'all 0.2s',
+                transition: 'background 0.15s, color 0.15s, border-color 0.15s',
               }}
             >
               <span style={{
@@ -267,31 +267,31 @@ export default function PortfolioPerformanceChart({ compact = false, accountFilt
                 <stop offset="100%" stopColor={gainColor} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
+            <CartesianGrid strokeDasharray="4 4" stroke={C.chartGrid} vertical={false} />
             <XAxis
-              dataKey="date" tick={{ fill: C.textDim, fontSize: 9 }}
-              axisLine={{ stroke: C.border }} tickLine={false}
+              dataKey="date" tick={{ fill: C.textMuted, fontSize: 12, fontFamily: "'DM Sans', sans-serif" }}
+              axisLine={false} tickLine={false}
               ticks={xTicks}
               tickFormatter={d => formatDate(d, timeframe)}
             />
             <YAxis
-              tick={{ fill: C.textDim, fontSize: 9, fontFamily: MONO }}
+              tick={{ fill: C.textDim, fontSize: 12, fontFamily: MONO }}
               axisLine={false} tickLine={false}
               domain={['auto', 'auto']}
               tickFormatter={v => `${v.toFixed(0)}`}
               width={36}
             />
-            <Tooltip content={<ChartTooltip showBenchmark={showBenchmark} timeframe={timeframe} startValue={startValue} />} />
+            <Tooltip cursor={{ stroke: C.chartCrosshair, strokeDasharray: '4 4' }} content={<ChartTooltip showBenchmark={showBenchmark} timeframe={timeframe} startValue={startValue} />} />
             <Line
               type="monotone" dataKey="portfolioNorm" name="Portfolio"
               stroke={gainColor} strokeWidth={2} dot={false}
-              animationDuration={600} animationEasing="ease-out"
+              animationDuration={800} animationEasing="ease-out"
             />
             <Line
               type="monotone" dataKey="benchmarkNorm" name="S&P 500"
               stroke={C.amber} strokeWidth={1.5} dot={false}
               strokeDasharray="4 3" connectNulls
-              animationDuration={600} animationEasing="ease-out"
+              animationDuration={800} animationEasing="ease-out"
             />
           </LineChart>
         ) : (
@@ -302,27 +302,27 @@ export default function PortfolioPerformanceChart({ compact = false, accountFilt
                 <stop offset="100%" stopColor={gainColor} stopOpacity={0.02} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
+            <CartesianGrid strokeDasharray="4 4" stroke={C.chartGrid} vertical={false} />
             <XAxis
-              dataKey="date" tick={{ fill: C.textDim, fontSize: 9 }}
-              axisLine={{ stroke: C.border }} tickLine={false}
+              dataKey="date" tick={{ fill: C.textMuted, fontSize: 12, fontFamily: "'DM Sans', sans-serif" }}
+              axisLine={false} tickLine={false}
               ticks={xTicks}
               tickFormatter={d => formatDate(d, timeframe)}
             />
             <YAxis
-              tick={{ fill: C.textDim, fontSize: 9, fontFamily: MONO }}
+              tick={{ fill: C.textDim, fontSize: 12, fontFamily: MONO }}
               axisLine={false} tickLine={false}
               domain={['dataMin - 200', 'dataMax + 200']}
               tickFormatter={v => `$${(v / 1000).toFixed(1)}k`}
               width={48}
             />
-            <Tooltip content={<ChartTooltip showBenchmark={false} timeframe={timeframe} startValue={startValue} />} />
+            <Tooltip cursor={{ stroke: C.chartCrosshair, strokeDasharray: '4 4' }} content={<ChartTooltip showBenchmark={false} timeframe={timeframe} startValue={startValue} />} />
             <Area
               type="monotone" dataKey="portfolio" name="Portfolio"
               stroke={gainColor} strokeWidth={2}
               fill="url(#portfolioAreaGrad)"
               dot={false}
-              animationDuration={600} animationEasing="ease-out"
+              animationDuration={800} animationEasing="ease-out"
             />
           </AreaChart>
         )}
@@ -344,6 +344,16 @@ export default function PortfolioPerformanceChart({ compact = false, accountFilt
           </span>
         </div>
       )}
+
+      {/* Hypothetical disclaimer */}
+      <div style={{
+        marginTop: 12, padding: '8px 12px', borderRadius: 8,
+        background: C.amber + '0A', border: `1px solid ${C.amber}22`,
+        fontSize: 10, color: C.textDim, lineHeight: 1.5,
+      }}>
+        Hypothetical performance — shows how your current holdings would have performed at historical prices.
+        Does not reflect actual buy/sell timing or past portfolio changes. Short timeframes (1D–3M) are more accurate.
+      </div>
     </div>
   );
 }

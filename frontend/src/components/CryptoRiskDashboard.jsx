@@ -187,17 +187,17 @@ export default function CryptoRiskDashboard({ holdings, totalCryptoValue }) {
   return (
     <div>
       {/* Overall Risk Score */}
-      <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${scoreColor}33`, padding: 20, marginBottom: 16, textAlign: 'center' }}>
+      <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${scoreColor}33`, padding: 24, marginBottom: 16, textAlign: 'center' }}>
         <div style={{ fontSize: 10, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600, marginBottom: 8 }}>Portfolio Risk Score</div>
-        <div style={{ fontSize: 48, fontWeight: 800, color: scoreColor, fontFamily: MONO }}>{riskScore}</div>
+        <div style={{ fontSize: 48, fontWeight: 700, color: scoreColor, fontFamily: MONO }}>{riskScore}</div>
         <div style={{ fontSize: 13, color: scoreColor, fontWeight: 600 }}>{scoreLabel}</div>
         <div style={{ fontSize: 11, color: C.textDim, marginTop: 4 }}>Based on concentration, drawdown, and volatility</div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16 }}>
         {/* Section 1: Concentration Risk */}
-        <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
-          <h3 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>Concentration Risk</h3>
+        <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24 }}>
+          <h3 style={{ margin: '0 0 12px', fontSize: 18, fontWeight: 700, color: C.textMuted }}>Concentration Risk</h3>
           {concRisk !== 'OK' && (
             <div style={{
               padding: '8px 12px', borderRadius: 6, marginBottom: 12, fontSize: 12, fontWeight: 600,
@@ -210,14 +210,14 @@ export default function CryptoRiskDashboard({ holdings, totalCryptoValue }) {
           )}
           <ResponsiveContainer width="100%" height={Math.max(120, concData.length * 32)}>
             <BarChart data={concData} layout="vertical" margin={{ left: 40, right: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={C.border} horizontal={false} />
+              <CartesianGrid strokeDasharray="4 4" stroke={C.chartGrid} horizontal={false} />
               <XAxis type="number" tick={{ fill: C.textDim, fontSize: 10 }} tickFormatter={v => `${v.toFixed(0)}%`} domain={[0, 100]} />
               <YAxis type="category" dataKey="coin" tick={{ fill: C.text, fontSize: 11, fontWeight: 600, fontFamily: MONO }} width={40} />
-              <Tooltip content={({ active, payload }) => {
+              <Tooltip cursor={{ stroke: C.chartCrosshair, strokeDasharray: '4 4' }} content={({ active, payload }) => {
                 if (!active || !payload?.length) return null;
                 const d = payload[0].payload;
                 return (
-                  <div style={{ background: '#1e293b', border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px', fontSize: 12 }}>
+                  <div style={{ background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px', fontSize: 12 }}>
                     <div style={{ fontWeight: 700, color: CRYPTO_ACCENT }}>{d.coin}</div>
                     <div style={{ fontFamily: MONO, color: C.text }}>{d.pct.toFixed(1)}% — {fmtK(d.value)}</div>
                   </div>
@@ -233,8 +233,8 @@ export default function CryptoRiskDashboard({ holdings, totalCryptoValue }) {
         </div>
 
         {/* Section 2: Drawdown Analysis */}
-        <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
-          <h3 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>Drawdown Analysis</h3>
+        <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24 }}>
+          <h3 style={{ margin: '0 0 12px', fontSize: 18, fontWeight: 700, color: C.textMuted }}>Drawdown Analysis</h3>
           {drawdown ? (
             <>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
@@ -256,10 +256,10 @@ export default function CryptoRiskDashboard({ holdings, totalCryptoValue }) {
                     <ReferenceLine y={drawdown.peak} stroke={C.green} strokeDasharray="3 3" strokeWidth={1} />
                     <XAxis dataKey="date" hide />
                     <YAxis hide domain={['dataMin', 'dataMax']} />
-                    <Tooltip content={({ active, payload }) => {
+                    <Tooltip cursor={{ stroke: C.chartCrosshair, strokeDasharray: '4 4' }} content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
                       return (
-                        <div style={{ background: '#1e293b', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 10px', fontSize: 11, fontFamily: MONO }}>
+                        <div style={{ background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 10px', fontSize: 11, fontFamily: MONO }}>
                           {fmtK(payload[0].value)}
                         </div>
                       );
@@ -275,12 +275,12 @@ export default function CryptoRiskDashboard({ holdings, totalCryptoValue }) {
       </div>
 
       {/* Section 3: Position Sizing Calculator */}
-      <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginTop: 16 }}>
-        <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>Position Sizing Calculator</h3>
+      <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, marginTop: 16 }}>
+        <h3 style={{ margin: '0 0 14px', fontSize: 18, fontWeight: 700, color: C.textMuted }}>Position Sizing Calculator</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 14 }}>
           <div>
             <label style={{ fontSize: 10, color: C.textDim, fontWeight: 600, textTransform: 'uppercase' }}>Portfolio Value</label>
-            <div style={{ fontSize: 18, fontWeight: 800, color: CRYPTO_ACCENT, fontFamily: MONO, marginTop: 4 }}>{fmtK(totalCryptoValue)}</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: CRYPTO_ACCENT, fontFamily: MONO, marginTop: 4 }}>{fmtK(totalCryptoValue)}</div>
           </div>
           <div>
             <label style={{ fontSize: 10, color: C.textDim, fontWeight: 600, textTransform: 'uppercase' }}>Risk per Trade: {riskPerTrade}%</label>
@@ -306,20 +306,20 @@ export default function CryptoRiskDashboard({ holdings, totalCryptoValue }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <div style={{ background: C.bg, borderRadius: 8, padding: 12, border: `1px solid ${C.border}` }}>
             <div style={{ fontSize: 10, color: C.textDim, textTransform: 'uppercase', fontWeight: 600 }}>Max Position Size</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: CRYPTO_ACCENT, fontFamily: MONO, marginTop: 4 }}>{fmtK(maxPositionUSD)}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: CRYPTO_ACCENT, fontFamily: MONO, marginTop: 4 }}>{fmtK(maxPositionUSD)}</div>
             <div style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>Risk: ${(totalCryptoValue * riskPerTrade / 100).toFixed(0)} on this trade</div>
           </div>
           <div style={{ background: C.bg, borderRadius: 8, padding: 12, border: `1px solid ${C.border}` }}>
             <div style={{ fontSize: 10, color: C.textDim, textTransform: 'uppercase', fontWeight: 600 }}>Max Coins to Buy</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: C.text, fontFamily: MONO, marginTop: 4 }}>{maxCoins.toFixed(4)}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: C.text, fontFamily: MONO, marginTop: 4 }}>{maxCoins.toFixed(4)}</div>
             <div style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>{displayCoin(selectedCoin)} @ {fmtPrice(currentPrice)}</div>
           </div>
         </div>
       </div>
 
       {/* Section 4: Risk Classification */}
-      <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginTop: 16 }}>
-        <h3 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>Risk Classification</h3>
+      <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, marginTop: 16 }}>
+        <h3 style={{ margin: '0 0 12px', fontSize: 18, fontWeight: 700, color: C.textMuted }}>Risk Classification</h3>
         <div data-no-swipe style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
@@ -363,7 +363,7 @@ function MetricBox({ label, value, color }) {
   return (
     <div style={{ padding: '8px 10px', background: C.bg, borderRadius: 6, border: `1px solid ${C.border}` }}>
       <div style={{ fontSize: 9, color: C.textDim, textTransform: 'uppercase', letterSpacing: 0.6, fontWeight: 600 }}>{label}</div>
-      <div style={{ fontSize: 16, fontWeight: 800, color: color || C.text, fontFamily: MONO, marginTop: 2 }}>{value}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: color || C.text, fontFamily: MONO, marginTop: 2 }}>{value}</div>
     </div>
   );
 }

@@ -48,7 +48,7 @@ export default function CryptoPositions({ holdings, totalCryptoValue, totalCrypt
 
           return (
             <div key={h.id} style={{
-              background: C.card, borderRadius: 12,
+              background: C.card, borderRadius: 16,
               border: `1px solid ${gl >= 0 ? C.green : C.red}33`,
               overflow: 'hidden',
             }}>
@@ -66,7 +66,7 @@ export default function CryptoPositions({ holdings, totalCryptoValue, totalCrypt
                     width: 32, height: 32, borderRadius: 8,
                     background: CRYPTO_ACCENT + '22',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 14, fontWeight: 800, color: CRYPTO_ACCENT, fontFamily: MONO,
+                    fontSize: 14, fontWeight: 700, color: CRYPTO_ACCENT, fontFamily: MONO,
                   }}>
                     {coin.charAt(0)}
                   </span>
@@ -82,7 +82,7 @@ export default function CryptoPositions({ holdings, totalCryptoValue, totalCrypt
                       {gl >= 0 ? '+' : ''}{fmtK(Math.abs(gl))} ({glPct >= 0 ? '+' : ''}{glPct.toFixed(1)}%)
                     </div>
                   </div>
-                  <span style={{ color: C.textDim, fontSize: 12, transition: 'transform 0.2s', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0)' }}>
+                  <span style={{ color: C.textDim, fontSize: 12, transition: 'transform 0.2s ease', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0)' }}>
                     &#9660;
                   </span>
                 </div>
@@ -146,9 +146,9 @@ export default function CryptoPositions({ holdings, totalCryptoValue, totalCrypt
 
 function SummaryCard({ label, value, sub, color }) {
   return (
-    <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 14 }}>
+    <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 14 }}>
       <div style={{ fontSize: 10, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>{label}</div>
-      <div style={{ fontSize: 22, fontWeight: 800, color: color || C.text, fontFamily: MONO, marginTop: 4 }}>{value}</div>
+      <div style={{ fontSize: 22, fontWeight: 700, color: color || C.text, fontFamily: MONO, marginTop: 4 }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{sub}</div>}
     </div>
   );

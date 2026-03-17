@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell } from 'recharts';
-import { C, MONO } from '../styles/theme';
+import { C, MONO, SANS } from '../styles/theme';
 import { cardStyle, tableHeader } from '../styles/shared';
 import { api } from '../hooks/useApi';
 import { SkeletonCard } from './SkeletonLoader';
@@ -72,7 +72,7 @@ export default function PerformanceReturnsSection({ holdings, accountFilter }) {
       {/* Bar Chart */}
       <div style={cardStyle}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.textMuted }}>
+          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.textMuted }}>
             {showCagr ? 'Annualized Return (CAGR)' : 'Unrealized Gain/Loss'} - All Positions
           </h3>
           <button
@@ -83,7 +83,7 @@ export default function PerformanceReturnsSection({ holdings, accountFilter }) {
               color: showCagr ? C.cyan : C.textMuted,
               borderRadius: 6, padding: '5px 10px', fontSize: 11,
               fontWeight: 600, cursor: 'pointer', minHeight: 44,
-              transition: 'all 0.2s',
+              transition: 'background 0.15s, color 0.15s, border-color 0.15s',
             }}
           >
             {showCagr ? 'Show G/L' : 'Show CAGR'}
@@ -91,7 +91,7 @@ export default function PerformanceReturnsSection({ holdings, accountFilter }) {
         </div>
         <ResponsiveContainer width="100%" height={Math.max(300, gainLossData.length * 28)}>
           <BarChart data={gainLossData} layout="vertical" margin={{ left: 50, right: 40 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke={C.border} horizontal={false} />
+            <CartesianGrid strokeDasharray="4 4" stroke={C.chartGrid} horizontal={false} />
             <XAxis
               type="number"
               tick={{ fill: C.textDim, fontSize: 10 }}
@@ -101,12 +101,12 @@ export default function PerformanceReturnsSection({ holdings, accountFilter }) {
               }
             />
             <YAxis type="category" dataKey="ticker" tick={{ fill: C.text, fontSize: 11, fontWeight: 600, fontFamily: MONO }} width={50} />
-            <Tooltip content={({ active, payload }) => {
+            <Tooltip cursor={{ stroke: C.chartCrosshair, strokeDasharray: '4 4' }} content={({ active, payload }) => {
               if (!active || !payload?.length) return null;
               const d = payload[0].payload;
               const cagr = d.cagr;
               return (
-                <div style={{ background: '#1e293b', border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px', fontSize: 12 }}>
+                <div style={{ background: C.elevated, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px', fontSize: 12 }}>
                   <div style={{ fontWeight: 700, color: C.text }}>{d.ticker}</div>
                   <div style={{ color: d.gain >= 0 ? C.green : C.red }}>${d.gain.toLocaleString()} ({d.pct}%)</div>
                   {cagr !== null && (
@@ -132,19 +132,19 @@ export default function PerformanceReturnsSection({ holdings, accountFilter }) {
 
       {/* Summary Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginTop: 16 }}>
-        <div style={{ background: C.greenBg, borderRadius: 12, padding: 16, border: `1px solid ${C.green}33` }}>
+        <div style={{ background: C.greenBg, borderRadius: 16, padding: 16, border: `1px solid ${C.green}33` }}>
           <div style={{ fontSize: 10, color: C.green, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Winners</div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: C.green, fontFamily: MONO, marginTop: 4 }}>{winners.length}</div>
+          <div style={{ fontSize: 24, fontWeight: 700, color: C.green, fontFamily: MONO, marginTop: 4 }}>{winners.length}</div>
           <div style={{ fontSize: 11, color: C.green + 'aa', marginTop: 2 }}>+${totalWins.toLocaleString()}</div>
         </div>
-        <div style={{ background: C.redBg, borderRadius: 12, padding: 16, border: `1px solid ${C.red}33` }}>
+        <div style={{ background: C.redBg, borderRadius: 16, padding: 16, border: `1px solid ${C.red}33` }}>
           <div style={{ fontSize: 10, color: C.red, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Losers</div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: C.red, fontFamily: MONO, marginTop: 4 }}>{losers.length}</div>
+          <div style={{ fontSize: 24, fontWeight: 700, color: C.red, fontFamily: MONO, marginTop: 4 }}>{losers.length}</div>
           <div style={{ fontSize: 11, color: C.red + 'aa', marginTop: 2 }}>-${totalLosses.toLocaleString()}</div>
         </div>
-        <div style={{ background: C.card, borderRadius: 12, padding: 16, border: `1px solid ${C.border}` }}>
+        <div style={{ background: C.card, borderRadius: 16, padding: 16, border: `1px solid ${C.border}` }}>
           <div style={{ fontSize: 10, color: C.textMuted, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Win Rate</div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: C.amber, fontFamily: MONO, marginTop: 4 }}>
+          <div style={{ fontSize: 24, fontWeight: 700, color: C.amber, fontFamily: MONO, marginTop: 4 }}>
             {gainLossData.length ? ((winners.length / gainLossData.length) * 100).toFixed(0) : 0}%
           </div>
           <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{winners.length} of {gainLossData.length} positions</div>
@@ -153,7 +153,7 @@ export default function PerformanceReturnsSection({ holdings, accountFilter }) {
 
       {/* Return Attribution Table */}
       <div style={{ ...cardStyle, marginTop: 16 }}>
-        <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>
+        <h3 style={{ margin: '0 0 14px', fontSize: 18, fontWeight: 700, color: C.textMuted }}>
           Return Attribution
         </h3>
         {analyticsLoading ? (

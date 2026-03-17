@@ -46,16 +46,16 @@ export default function SectorAllocation({ sectors, sectorHhi, sectorHhiLabel })
 
   if (!sectors?.length) {
     return (
-      <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
-        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.textMuted }}>Sector Allocation</h3>
+      <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24 }}>
+        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.textMuted }}>Sector Allocation</h3>
         <div style={{ color: C.textDim, fontSize: 12, marginTop: 12 }}>No sector data available yet.</div>
       </div>
     );
   }
 
   return (
-    <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
-      <h3 style={{ margin: '0 0 14px', fontSize: 14, fontWeight: 700, color: C.textMuted }}>
+    <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24 }}>
+      <h3 style={{ margin: '0 0 14px', fontSize: 18, fontWeight: 700, color: C.textMuted }}>
         Sector Allocation
       </h3>
 

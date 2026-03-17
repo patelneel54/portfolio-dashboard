@@ -129,6 +129,31 @@ export const api = {
       return res.json();
     });
   },
+  // Settings management
+  /** @param {string} currentPin @param {string} newPin @returns {Promise<{status: string}>} */
+  changePin: (currentPin, newPin) => apiFetch('/auth/change-pin', { method: 'POST', body: JSON.stringify({ current_pin: currentPin, new_pin: newPin }) }),
+  /** @param {'csv'|'json'} format @returns {Promise<Blob>} */
+  exportData: async (format) => {
+    const token = localStorage.getItem('auth_token');
+    const res = await fetch(`${API_BASE}/export?format=${format}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (res.status === 401) { localStorage.removeItem('auth_token'); window.location.href = '/login'; throw new Error('Unauthorized'); }
+    if (!res.ok) throw new Error('Export failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `portfolio.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  },
+  /** @returns {Promise<{status: string, message: string}>} */
+  clearPriceCache: () => apiFetch('/cache/clear', { method: 'POST' }),
+  /** @returns {Promise<{status: string}>} */
+  resetAllData: () => apiFetch('/data/reset', { method: 'DELETE' }),
   // WebAuthn
   webauthnRegisterOptions: () => apiFetch('/webauthn/register-options', { method: 'POST' }),
   webauthnRegisterVerify: (credential) => apiFetch('/webauthn/register-verify', { method: 'POST', body: JSON.stringify({ credential }) }),
