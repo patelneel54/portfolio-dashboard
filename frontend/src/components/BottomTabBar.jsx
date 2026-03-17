@@ -28,6 +28,7 @@ const ICONS = {
   globe: ['M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z', 'M2 12h20', 'M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z'],
   crosshair: ['M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z', 'M22 12h-4', 'M6 12H2', 'M12 6V2', 'M12 22v-4'],
   more: ['M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z', 'M19 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z', 'M5 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z'],
+  sliders: ['M4 21V14', 'M4 10V3', 'M12 21V12', 'M12 8V3', 'M20 21V16', 'M20 12V3', 'M1 14h6', 'M9 8h6', 'M17 16h6'],
 };
 
 export const STOCK_TABS = [
@@ -35,7 +36,11 @@ export const STOCK_TABS = [
   { id: 'allocation', label: 'Allocation', icon: 'pieChart' },
   { id: 'performance', label: 'Performance', icon: 'trendingUp' },
   { id: 'projection', label: 'Projections', icon: 'target' },
+];
+
+export const STOCK_OVERFLOW = [
   { id: 'technicals', label: 'Technicals', icon: 'activity' },
+  { id: 'options', label: 'Options', icon: 'sliders' },
 ];
 
 export const CRYPTO_PRIMARY = [
@@ -56,8 +61,9 @@ export default function BottomTabBar({ activeTab, onTabChange, accountFilter }) 
   const isCrypto = accountFilter === 'crypto';
   const accentColor = isCrypto ? '#F7931A' : C.accent;
   const primaryTabs = isCrypto ? CRYPTO_PRIMARY : STOCK_TABS;
-  const overflowIds = CRYPTO_OVERFLOW.map(t => t.id);
-  const isOverflowActive = isCrypto && overflowIds.includes(activeTab);
+  const overflowTabs = isCrypto ? CRYPTO_OVERFLOW : STOCK_OVERFLOW;
+  const overflowIds = overflowTabs.map(t => t.id);
+  const isOverflowActive = overflowIds.includes(activeTab);
 
   const handleTabPress = (tabId) => {
     onTabChange(tabId);
@@ -117,7 +123,7 @@ export default function BottomTabBar({ activeTab, onTabChange, accountFilter }) 
           </button>
         ))}
 
-        {isCrypto && (
+        {overflowTabs.length > 0 && (
           <button
             onClick={() => setShowMore(prev => !prev)}
             aria-haspopup="true"
@@ -149,7 +155,7 @@ export default function BottomTabBar({ activeTab, onTabChange, accountFilter }) 
               zIndex: 950,
               boxShadow: '0 -4px 20px rgba(0,0,0,0.4)',
             }}>
-              {CRYPTO_OVERFLOW.map(tab => (
+              {overflowTabs.map(tab => (
                 <button
                   key={tab.id}
                   role="tab"

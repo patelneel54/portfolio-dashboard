@@ -9,10 +9,11 @@ import AllocationTab from './AllocationTab';
 import PerformanceTab from './PerformanceTab';
 import ProjectionTab from './ProjectionTab';
 import TechnicalsTab from './TechnicalsTab';
+import OptionsTab from './OptionsTab';
 import ManageHoldings from './ManageHoldings';
 import CryptoView from './CryptoView';
 import ErrorBoundary from './ErrorBoundary';
-import BottomTabBar, { STOCK_TABS, CRYPTO_PRIMARY, CRYPTO_OVERFLOW } from './BottomTabBar';
+import BottomTabBar, { STOCK_TABS, STOCK_OVERFLOW, CRYPTO_PRIMARY, CRYPTO_OVERFLOW } from './BottomTabBar';
 import SwipeContainer from './SwipeContainer';
 import AccountFilterSheet from './AccountFilterSheet';
 import SkeletonLoader from './SkeletonLoader';
@@ -155,7 +156,7 @@ export default function Dashboard() {
   const isStale = lastRefreshedAt && (Date.now() - lastRefreshedAt.getTime() > 24 * 60 * 60 * 1000);
   const tabOrder = accountFilter === 'crypto'
     ? [...CRYPTO_PRIMARY, ...CRYPTO_OVERFLOW].map(t => t.id)
-    : STOCK_TABS.map(t => t.id);
+    : [...STOCK_TABS, ...STOCK_OVERFLOW].map(t => t.id);
 
   return (
     <PullToRefresh onRefresh={handleRefresh} refreshing={refreshing}>
@@ -268,6 +269,7 @@ export default function Dashboard() {
               {activeTab === 'performance' && <ErrorBoundary key="performance" fallbackMessage="Performance tab encountered an error."><PerformanceTab holdings={holdings} accountFilter={accountFilter} /></ErrorBoundary>}
               {activeTab === 'projection' && <ErrorBoundary key="projection" fallbackMessage="Projections tab encountered an error."><ProjectionTab totalValue={totalValue} settings={settings} accountFilter={accountFilter} /></ErrorBoundary>}
               {activeTab === 'technicals' && <ErrorBoundary key="technicals" fallbackMessage="Technicals tab encountered an error."><TechnicalsTab holdings={holdings} /></ErrorBoundary>}
+              {activeTab === 'options' && <ErrorBoundary key="options" fallbackMessage="Options simulator encountered an error."><OptionsTab holdings={holdings} /></ErrorBoundary>}
             </div>
           )}
         </SwipeContainer>
