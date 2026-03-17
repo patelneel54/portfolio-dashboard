@@ -149,3 +149,55 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+// ── Push Notification Handler ──
+
+self.addEventListener('push', (event) => {
+  let data = { title: 'Portfolio Alert', body: 'You have a new alert.', url: '/' };
+  try {
+    if (event.data) {
+      data = { ...data, ...event.data.json() };
+    }
+  } catch (e) {
+    // fallback to defaults
+  }
+
+  const options = {
+    body: data.body,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    vibrate: [100, 50, 100],
+    data: { url: data.url || '/' },
+    actions: [
+      { action: 'open', title: 'View Portfolio' },
+      { action: 'dismiss', title: 'Dismiss' },
+    ],
+    tag: 'portfolio-alert',
+    renotify: true,
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  if (event.action === 'dismiss') return;
+
+  const urlToOpen = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Focus existing window if possible
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Otherwise open new window
+      return self.clients.openWindow(urlToOpen);
+    })
+  );
+});

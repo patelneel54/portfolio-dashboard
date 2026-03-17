@@ -45,6 +45,8 @@ from stock_service import (
 from fidelity_csv import parse_fidelity_csv
 
 VALID_ACCOUNT_TYPES = ("brokerage", "401k", "crypto")
+VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "")
+VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "")
 
 scheduler = AsyncIOScheduler()
 
@@ -91,6 +93,33 @@ async def check_alerts():
                     (aid,),
                 )
             await db.commit()
+
+        # Send push notification for triggered alerts
+        triggered_alerts = [a for a in alerts if a["id"] in triggered_ids]
+        descriptions = []
+        for a in triggered_alerts:
+            if a["alert_type"] == "price_below":
+                h = holdings_by_ticker.get(a["ticker"])
+                price_str = f"${h['current_price']:.2f}" if h and h["current_price"] else ""
+                descriptions.append(f"{a['ticker']} dropped below ${a['threshold']:.2f} {price_str}")
+            elif a["alert_type"] == "price_above":
+                h = holdings_by_ticker.get(a["ticker"])
+                price_str = f"${h['current_price']:.2f}" if h and h["current_price"] else ""
+                descriptions.append(f"{a['ticker']} rose above ${a['threshold']:.2f} {price_str}")
+            elif a["alert_type"] == "drift_above":
+                descriptions.append(f"Portfolio drift exceeded {a['threshold']:.1f}%")
+
+        body = " | ".join(descriptions[:3])
+        if len(descriptions) > 3:
+            body += f" (+{len(descriptions) - 3} more)"
+        try:
+            await send_push_notifications(
+                f"{len(triggered_ids)} Alert{'s' if len(triggered_ids) > 1 else ''} Triggered",
+                body,
+                "/",
+            )
+        except Exception:
+            pass  # Don't let push failures affect alert processing
 
 
 async def daily_refresh_and_check():
@@ -176,6 +205,11 @@ class AlertCreate(BaseModel):
 class ChangePinRequest(BaseModel):
     current_pin: str
     new_pin: str
+
+
+class PushSubscription(BaseModel):
+    endpoint: str
+    keys: dict
 
 
 class WebAuthnCredential(BaseModel):
@@ -920,6 +954,96 @@ async def crypto_global_endpoint(_=Depends(require_auth)):
         return await get_crypto_global()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Global crypto data unavailable: {e}")
+
+
+# ── Push Notification Routes ──
+
+
+async def send_push_notifications(title: str, body: str, url: str = "/"):
+    """Send push notifications to all registered subscriptions."""
+    if not VAPID_PRIVATE_KEY or not VAPID_PUBLIC_KEY:
+        return  # Push not configured
+
+    try:
+        from pywebpush import webpush, WebPushException
+    except ImportError:
+        return  # pywebpush not installed
+
+    async with get_db() as db:
+        cursor = await db.execute("SELECT endpoint, p256dh, auth FROM push_subscriptions")
+        subs = [dict(r) for r in await cursor.fetchall()]
+
+    if not subs:
+        return
+
+    import json
+    payload = json.dumps({"title": title, "body": body, "url": url})
+    stale_endpoints = []
+
+    for sub in subs:
+        sub_info = {
+            "endpoint": sub["endpoint"],
+            "keys": {"p256dh": sub["p256dh"], "auth": sub["auth"]},
+        }
+        try:
+            webpush(
+                subscription_info=sub_info,
+                data=payload,
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims={"sub": "mailto:portfolio@localhost"},
+            )
+        except Exception:
+            # Subscription may have expired — mark for cleanup
+            stale_endpoints.append(sub["endpoint"])
+
+    # Clean up stale subscriptions
+    if stale_endpoints:
+        async with get_db() as db:
+            for ep in stale_endpoints:
+                await db.execute("DELETE FROM push_subscriptions WHERE endpoint = ?", (ep,))
+            await db.commit()
+
+
+@app.get("/api/push/vapid-key")
+async def get_vapid_key(_=Depends(require_auth)):
+    """Return the VAPID public key for push subscription."""
+    return {"publicKey": VAPID_PUBLIC_KEY}
+
+
+@app.post("/api/push/subscribe")
+async def push_subscribe(sub: PushSubscription, _=Depends(require_auth)):
+    """Register a push notification subscription."""
+    async with get_db() as db:
+        await db.execute(
+            """INSERT OR REPLACE INTO push_subscriptions (endpoint, p256dh, auth)
+               VALUES (?, ?, ?)""",
+            (sub.endpoint, sub.keys.get("p256dh", ""), sub.keys.get("auth", "")),
+        )
+        await db.commit()
+    return {"status": "ok"}
+
+
+@app.delete("/api/push/unsubscribe")
+async def push_unsubscribe(sub: PushSubscription, _=Depends(require_auth)):
+    """Remove a push notification subscription."""
+    async with get_db() as db:
+        await db.execute(
+            "DELETE FROM push_subscriptions WHERE endpoint = ?",
+            (sub.endpoint,),
+        )
+        await db.commit()
+    return {"status": "ok"}
+
+
+@app.post("/api/push/test")
+async def push_test(_=Depends(require_auth)):
+    """Send a test push notification."""
+    await send_push_notifications(
+        "Portfolio Command Center",
+        "Push notifications are working! You'll be notified when alerts trigger.",
+        "/",
+    )
+    return {"status": "ok"}
 
 
 # ── Static File Serving (production) ──

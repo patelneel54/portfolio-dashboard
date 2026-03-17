@@ -1,12 +1,13 @@
 {
   "name": "Portfolio Command Center",
   "short_name": "Portfolio CC",
-  "description": "Stock portfolio tracker and analyzer",
+  "description": "Stock portfolio tracker and analyzer with real-time alerts",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0e17",
-  "theme_color": "#0a0e17",
+  "background_color": "#0B0B0F",
+  "theme_color": "#0B0B0F",
   "orientation": "any",
+  "categories": ["finance", "productivity"],
   "icons": [
     {
       "src": "/icon.svg",

@@ -114,6 +114,15 @@ export const api = {
     const params = accountType && accountType !== 'all' ? `?account_type=${accountType}` : '';
     return apiFetch(`/rebalance-suggestions${params}`);
   },
+  // Push notifications
+  /** @returns {Promise<{publicKey: string}>} */
+  getVapidKey: () => apiFetch('/push/vapid-key'),
+  /** @param {{endpoint: string, keys: Object}} data @returns {Promise<{status: string}>} */
+  pushSubscribe: (data) => apiFetch('/push/subscribe', { method: 'POST', body: JSON.stringify(data) }),
+  /** @param {{endpoint: string, keys: Object}} data @returns {Promise<{status: string}>} */
+  pushUnsubscribe: (data) => apiFetch('/push/unsubscribe', { method: 'DELETE', body: JSON.stringify(data) }),
+  /** @returns {Promise<{status: string}>} */
+  pushTest: () => apiFetch('/push/test', { method: 'POST' }),
   // Fidelity CSV import
   /** @param {File} file @returns {Promise<{added: number, updated: number, errors: Array}>} */
   importFidelityCSV: (file) => {

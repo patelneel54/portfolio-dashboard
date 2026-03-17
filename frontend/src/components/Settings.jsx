@@ -5,6 +5,7 @@ import { C, MONO, SANS } from '../styles/theme';
 import { cardStyle, inputStyle, buttonPrimary, buttonSecondary, sectionTitle, labelStyle, dangerButton, inputGroupWrapper, inputAddon } from '../styles/shared';
 import { isWebAuthnSupported, startRegistration } from '../utils/webauthn';
 import AlertManager from './AlertManager';
+import { isPushSupported, getPermissionState, subscribeToPush, unsubscribeFromPush, isSubscribed, sendTestNotification } from '../utils/pushNotifications';
 
 // ── Inline Sub-components ──
 
@@ -97,6 +98,7 @@ function ConfirmButton({ label, confirmLabel, onConfirm, style }) {
 const TABS = [
   { id: 'projections', label: 'Projections' },
   { id: 'alerts', label: 'Alerts' },
+  { id: 'notifications', label: 'Notifications' },
   { id: 'security', label: 'Security' },
   { id: 'data', label: 'Data' },
   { id: 'about', label: 'About' },
@@ -139,6 +141,13 @@ export default function Settings() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
 
+  // Notifications
+  const [pushSupported] = useState(isPushSupported());
+  const [pushSubscribed, setPushSubscribed] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [pushError, setPushError] = useState('');
+  const [pushTestSent, setPushTestSent] = useState(false);
+
   // About
   const [holdingsCount, setHoldingsCount] = useState(0);
   const [alertsCount, setAlertsCount] = useState(0);
@@ -171,6 +180,11 @@ export default function Settings() {
 
     if (navigator.storage?.estimate) {
       navigator.storage.estimate().then(est => setStorageEstimate(est)).catch(() => {});
+    }
+
+    // Check push subscription state
+    if (pushSupported) {
+      isSubscribed().then(setPushSubscribed);
     }
   }, []);
 
@@ -379,6 +393,102 @@ export default function Settings() {
   const renderAlerts = () => (
     <div style={{ animation: 'fadeSlideUp 0.3s ease-out' }}>
       <AlertManager embedded />
+    </div>
+  );
+
+  const handlePushToggle = async () => {
+    setPushLoading(true);
+    setPushError('');
+    setPushTestSent(false);
+    try {
+      if (pushSubscribed) {
+        const result = await unsubscribeFromPush();
+        if (result.success) setPushSubscribed(false);
+        else setPushError(result.error);
+      } else {
+        const result = await subscribeToPush();
+        if (result.success) setPushSubscribed(true);
+        else setPushError(result.error);
+      }
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
+  const handlePushTest = async () => {
+    setPushTestSent(false);
+    const result = await sendTestNotification();
+    if (result.success) setPushTestSent(true);
+    else setPushError(result.error || 'Test failed');
+  };
+
+  const renderNotifications = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, animation: 'fadeSlideUp 0.3s ease-out' }}>
+      <div style={{ ...cardStyle, padding: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>Push Notifications</div>
+            <div style={{ fontSize: 11, color: C.textDim, marginTop: 2 }}>
+              Get alerts when price targets hit or portfolio drifts
+            </div>
+          </div>
+          {pushSupported ? (
+            <ToggleSwitch enabled={pushSubscribed} onChange={handlePushToggle} loading={pushLoading} />
+          ) : (
+            <span style={{ fontSize: 11, color: C.textDim }}>Not supported</span>
+          )}
+        </div>
+        {pushError && <div style={{ fontSize: 11, color: C.red, marginTop: 8 }}>{pushError}</div>}
+        {!pushSupported && (
+          <div style={{ fontSize: 11, color: C.amber, marginTop: 8, lineHeight: 1.5 }}>
+            Push notifications require iOS 16.4+ with the app added to your home screen, or a modern desktop browser.
+          </div>
+        )}
+      </div>
+
+      {pushSubscribed && (
+        <div style={{ ...cardStyle, padding: 24 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 8 }}>Test Notification</div>
+          <div style={{ fontSize: 11, color: C.textDim, marginBottom: 12 }}>
+            Send a test push notification to verify everything is working.
+          </div>
+          <button
+            onClick={handlePushTest}
+            style={{ ...buttonSecondary, background: C.accent + '22', border: `1px solid ${C.accent}`, color: C.accent }}
+          >
+            Send Test
+          </button>
+          {pushTestSent && <div style={{ fontSize: 11, color: C.green, marginTop: 8 }}>Test notification sent! Check your device.</div>}
+        </div>
+      )}
+
+      <div style={{ ...cardStyle, padding: 24 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 8 }}>When Will I Get Notified?</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[
+            { label: 'Price Alerts', desc: 'When a stock hits your price target (above or below)', color: C.green },
+            { label: 'Drift Alerts', desc: 'When portfolio allocation drifts beyond your threshold', color: C.amber },
+            { label: 'Daily Check', desc: 'Alerts are checked after the daily price refresh at market close', color: C.blue },
+          ].map(item => (
+            <div key={item.label} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <span style={{ width: 6, height: 6, borderRadius: 3, background: item.color, marginTop: 6, flexShrink: 0 }} />
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{item.label}</div>
+                <div style={{ fontSize: 11, color: C.textDim }}>{item.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ fontSize: 10, color: C.textDim, textAlign: 'center', paddingTop: 8 }}>
+        Notifications are sent via Web Push. Set up alerts in the Alerts tab to receive notifications.
+        {getPermissionState() === 'denied' && (
+          <div style={{ color: C.red, marginTop: 4 }}>
+            Notification permission was denied. To re-enable, update your browser/OS notification settings for this site.
+          </div>
+        )}
+      </div>
     </div>
   );
 
@@ -592,6 +702,7 @@ export default function Settings() {
   const tabContent = {
     projections: renderProjections,
     alerts: renderAlerts,
+    notifications: renderNotifications,
     security: renderSecurity,
     data: renderData,
     about: renderAbout,

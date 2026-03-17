@@ -10,6 +10,7 @@ import PerformanceTab from './PerformanceTab';
 import ProjectionTab from './ProjectionTab';
 import TechnicalsTab from './TechnicalsTab';
 import OptionsTab from './OptionsTab';
+import BondsTab from './BondsTab';
 import ManageHoldings from './ManageHoldings';
 import CryptoView from './CryptoView';
 import ErrorBoundary from './ErrorBoundary';
@@ -19,6 +20,7 @@ import AccountFilterSheet from './AccountFilterSheet';
 import SkeletonLoader from './SkeletonLoader';
 import PullToRefresh from './PullToRefresh';
 import { haptic } from '../utils/haptics';
+import { isPushSupported, isSubscribed, subscribeToPush } from '../utils/pushNotifications';
 
 function formatRefreshTime(date) {
   const diffMs = Date.now() - date.getTime();
@@ -54,6 +56,7 @@ export default function Dashboard() {
   const [fetchError, setFetchError] = useState(null);
   const [lastRefreshedAt, setLastRefreshedAt] = useState(null);
   const [triggeredAlerts, setTriggeredAlerts] = useState([]);
+  const [showPushPrompt, setShowPushPrompt] = useState(false);
   const navigate = useNavigate();
 
   const fetchData = useCallback(async () => {
@@ -81,6 +84,10 @@ export default function Dashboard() {
   useEffect(() => {
     if (data) {
       api.getAlerts(true).then(setTriggeredAlerts).catch(() => {});
+      // Show push prompt if supported but not subscribed and not dismissed
+      if (isPushSupported() && !localStorage.getItem('push_prompt_dismissed')) {
+        isSubscribed().then(sub => { if (!sub) setShowPushPrompt(true); });
+      }
     }
   }, [data]);
 
@@ -210,6 +217,48 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Push Notification Prompt */}
+      {showPushPrompt && (
+        <div style={{
+          background: C.accent + '14', border: `1px solid ${C.accent}33`,
+          borderRadius: 10, padding: '10px 14px', marginBottom: 12,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10,
+          animation: 'fadeSlideUp 0.3s ease-out',
+        }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: C.accent }}>Enable Notifications</div>
+            <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>Get alerts when your stocks hit price targets</div>
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              onClick={async () => {
+                const result = await subscribeToPush();
+                if (result.success) {
+                  setShowPushPrompt(false);
+                  localStorage.setItem('push_prompt_dismissed', '1');
+                }
+              }}
+              style={{
+                background: C.accent, color: '#fff', border: 'none',
+                borderRadius: 6, padding: '6px 12px', fontSize: 11, fontWeight: 600,
+                cursor: 'pointer', minHeight: 32,
+              }}
+            >
+              Enable
+            </button>
+            <button
+              onClick={() => { setShowPushPrompt(false); localStorage.setItem('push_prompt_dismissed', '1'); }}
+              style={{
+                background: 'none', border: 'none', color: C.textDim,
+                cursor: 'pointer', padding: '6px 8px', fontSize: 11, minHeight: 32,
+              }}
+            >
+              Later
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Triggered Alerts Banner */}
       {triggeredAlerts.length > 0 && (
         <div role="alert" style={{
@@ -270,6 +319,7 @@ export default function Dashboard() {
               {activeTab === 'projection' && <ErrorBoundary key="projection" fallbackMessage="Projections tab encountered an error."><ProjectionTab totalValue={totalValue} settings={settings} accountFilter={accountFilter} /></ErrorBoundary>}
               {activeTab === 'technicals' && <ErrorBoundary key="technicals" fallbackMessage="Technicals tab encountered an error."><TechnicalsTab holdings={holdings} /></ErrorBoundary>}
               {activeTab === 'options' && <ErrorBoundary key="options" fallbackMessage="Options simulator encountered an error."><OptionsTab holdings={holdings} /></ErrorBoundary>}
+              {activeTab === 'bonds' && <ErrorBoundary key="bonds" fallbackMessage="Bond analysis encountered an error."><BondsTab holdings={holdings} /></ErrorBoundary>}
             </div>
           )}
         </SwipeContainer>

@@ -29,6 +29,7 @@ const ICONS = {
   crosshair: ['M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z', 'M22 12h-4', 'M6 12H2', 'M12 6V2', 'M12 22v-4'],
   more: ['M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z', 'M19 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z', 'M5 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z'],
   sliders: ['M4 21V14', 'M4 10V3', 'M12 21V12', 'M12 8V3', 'M20 21V16', 'M20 12V3', 'M1 14h6', 'M9 8h6', 'M17 16h6'],
+  briefcase: ['M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z', 'M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2'],
 };
 
 export const STOCK_TABS = [
@@ -41,6 +42,7 @@ export const STOCK_TABS = [
 export const STOCK_OVERFLOW = [
   { id: 'technicals', label: 'Technicals', icon: 'activity' },
   { id: 'options', label: 'Options', icon: 'sliders' },
+  { id: 'bonds', label: 'Bonds', icon: 'briefcase' },
 ];
 
 export const CRYPTO_PRIMARY = [
