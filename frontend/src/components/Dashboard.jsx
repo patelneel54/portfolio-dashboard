@@ -52,7 +52,7 @@ export default function Dashboard() {
   const [showManage, setShowManage] = useState(false);
   const [showFilterSheet, setShowFilterSheet] = useState(false);
 
-  const [accountFilter, setAccountFilter] = useState('all');
+  const [accountFilter, setAccountFilter] = useState('brokerage');
   const [fetchError, setFetchError] = useState(null);
   const [lastRefreshedAt, setLastRefreshedAt] = useState(null);
   const [triggeredAlerts, setTriggeredAlerts] = useState([]);
