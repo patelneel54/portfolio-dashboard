@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { C, MONO } from '../styles/theme';
 import { api } from '../hooks/useApi';
 import { cardStyle, buttonSecondary, badge, labelStyle } from '../styles/shared';
@@ -195,7 +196,7 @@ function DayDetailSheet({ isOpen, onClose, day, month, events, isMobile }) {
       ? 'transform 250ms cubic-bezier(0.32, 0.72, 0, 1)'
       : 'transform 200ms ease-out, opacity 200ms ease-out';
 
-  return (
+  return createPortal(
     <div
       onClick={handleClose}
       style={{
@@ -353,7 +354,8 @@ function DayDetailSheet({ isOpen, onClose, day, month, events, isMobile }) {
           ))}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
