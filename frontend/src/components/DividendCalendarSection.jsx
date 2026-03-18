@@ -16,6 +16,10 @@ function getPrevMonth(monthStr) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
+function formatShortDate(dateStr) {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 export default function DividendCalendarSection({ accountFilter }) {
   const [currentData, setCurrentData] = useState(null);
   const [prevData, setPrevData] = useState(null);
@@ -109,27 +113,39 @@ export default function DividendCalendarSection({ accountFilter }) {
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {upcomingEvents.map((ev, i) => {
-              const isPayment = ev.type === 'payment';
-              const evColor = isPayment ? C.green : C.amber;
-              const dateLabel = new Date(ev.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+              const evColor = C.amber;
+              const dateLabel = formatShortDate(ev.date);
               return (
                 <div key={`${ev.ticker}-${ev.date}-${i}`} style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '8px 12px', background: C.bg, borderRadius: 8,
+                  padding: '10px 12px', background: C.bg, borderRadius: 10,
                   border: `1px solid ${C.border}`,
+                  WebkitTapHighlightColor: 'transparent',
                 }}>
-                  <span style={{ fontSize: 12, color: C.textMuted, fontFamily: MONO, minWidth: 50, fontWeight: 600 }}>
-                    {dateLabel}
-                  </span>
-                  <span style={{ fontSize: 13, fontWeight: 700, fontFamily: MONO, color: C.text, minWidth: 50 }}>
-                    {ev.ticker}
-                  </span>
-                  <span style={badge(evColor)}>
-                    {isPayment ? 'Payment' : 'Ex-Div'}
-                  </span>
-                  <span style={{ marginLeft: 'auto', fontFamily: MONO, fontWeight: 700, fontSize: 13, color: evColor }}>
-                    ${ev.estimated_income.toFixed(2)}
-                  </span>
+                  {/* Main row */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 12, color: C.textMuted, fontFamily: MONO, minWidth: 50, fontWeight: 600 }}>
+                      {dateLabel}
+                    </span>
+                    <span style={{ fontSize: 13, fontWeight: 700, fontFamily: MONO, color: C.text, minWidth: 50 }}>
+                      {ev.ticker}
+                    </span>
+                    <span style={badge(evColor)}>Ex-Div</span>
+                    {ev.estimated && <span style={badge(C.textDim)}>Est.</span>}
+                    <span style={{ marginLeft: 'auto', fontFamily: MONO, fontWeight: 700, fontSize: 13, color: C.green }}>
+                      ${ev.estimated_income.toFixed(2)}
+                    </span>
+                  </div>
+                  {/* Payment date annotation */}
+                  {ev.estimated_payment_date && (
+                    <div style={{ marginTop: 5, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke={C.cyan} strokeWidth={2} strokeLinecap="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+                      </svg>
+                      <span style={{ fontSize: 10, color: C.cyan, fontWeight: 600 }}>
+                        Pay ~{formatShortDate(ev.estimated_payment_date)}
+                      </span>
+                    </div>
+                  )}
                 </div>
               );
             })}

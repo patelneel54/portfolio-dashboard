@@ -385,14 +385,17 @@ async def get_portfolio_performance(account_type: str | None = None) -> dict:
         # 1. Get current holdings (ticker + shares)
         if account_type:
             cursor = await db.execute(
-                "SELECT ticker, shares FROM holdings WHERE account_type = ?",
+                "SELECT ticker, shares, is_manual FROM holdings WHERE account_type = ?",
                 (account_type,),
             )
         else:
-            cursor = await db.execute("SELECT ticker, shares FROM holdings")
+            cursor = await db.execute("SELECT ticker, shares, is_manual FROM holdings")
         # Aggregate shares per ticker (same ticker may appear in multiple accounts)
+        # Skip manual holdings (CUSIPs, money market codes) — they have no price history
         holdings: dict[str, float] = {}
         for r in await cursor.fetchall():
+            if r["is_manual"]:
+                continue
             holdings[r["ticker"]] = holdings.get(r["ticker"], 0) + r["shares"]
 
         if not holdings:
@@ -793,12 +796,12 @@ async def get_portfolio_intelligence(account_type: str | None = None) -> dict:
     async with get_db() as db:
         if account_type:
             cursor = await db.execute(
-                "SELECT id, ticker, type, shares, avg_cost, current_price, account_type FROM holdings WHERE account_type = ?",
+                "SELECT id, ticker, type, shares, avg_cost, current_price, is_manual, account_type FROM holdings WHERE account_type = ?",
                 (account_type,),
             )
         else:
             cursor = await db.execute(
-                "SELECT id, ticker, type, shares, avg_cost, current_price, account_type FROM holdings"
+                "SELECT id, ticker, type, shares, avg_cost, current_price, is_manual, account_type FROM holdings"
             )
         rows = await cursor.fetchall()
 
@@ -813,10 +816,11 @@ async def get_portfolio_intelligence(account_type: str | None = None) -> dict:
 
     holdings = [dict(r) for r in rows]
 
-    # Fetch fundamentals for each ticker (uses 24hr cache)
+    # Fetch fundamentals only for non-manual holdings (skip CUSIPs/money market codes)
     fundamentals = {}
     for h in holdings:
-        fundamentals[h["ticker"]] = await get_fundamentals(h["ticker"])
+        if not h.get("is_manual"):
+            fundamentals[h["ticker"]] = await get_fundamentals(h["ticker"])
 
     total_value = sum(
         h["shares"] * (h["current_price"] or h["avg_cost"]) for h in holdings
@@ -956,6 +960,17 @@ def _infer_dividend_frequency(dividends_series) -> int:
     return 1
 
 
+def _estimate_payment_date(ex_date: datetime) -> str:
+    """Estimate payment date as ex-date + 15 business days (typical US stock settlement)."""
+    bdays = 0
+    current = ex_date
+    while bdays < 15:
+        current += timedelta(days=1)
+        if current.weekday() < 5:  # Mon-Fri
+            bdays += 1
+    return current.strftime("%Y-%m-%d")
+
+
 def _fetch_dividend_events_sync(ticker: str, year: int, month: int) -> list[dict]:
     """Fetch dividend events for a ticker in a given month. Runs on thread."""
     try:
@@ -969,16 +984,18 @@ def _fetch_dividend_events_sync(ticker: str, year: int, month: int) -> list[dict
         else:
             month_end = datetime(year, month + 1, 1)
 
-        # Historical payment events from dividends series
+        # Historical ex-dividend events from dividends series
+        # Note: yfinance .dividends is indexed by ex-dividend date, not payment date
         if divs is not None and len(divs) > 0:
             for dt_idx, amount in divs.items():
                 dt_naive = dt_idx.to_pydatetime().replace(tzinfo=None)
                 if month_start <= dt_naive < month_end:
                     events.append({
                         "date": dt_naive.strftime("%Y-%m-%d"),
-                        "type": "payment",
+                        "type": "ex-dividend",
                         "amount_per_share": round(float(amount), 4),
                         "estimated": False,
+                        "estimated_payment_date": _estimate_payment_date(dt_naive),
                     })
 
         # Fetch .info separately — it can be slow/fail for some tickers
@@ -1011,6 +1028,7 @@ def _fetch_dividend_events_sync(ticker: str, year: int, month: int) -> list[dict
                         "type": "ex-dividend",
                         "amount_per_share": per_share,
                         "estimated": False,
+                        "estimated_payment_date": _estimate_payment_date(ex_dt),
                     })
 
         # Future projections for months beyond known data
@@ -1029,9 +1047,10 @@ def _fetch_dividend_events_sync(ticker: str, year: int, month: int) -> list[dict
                     if not any(e["date"] == proj_str for e in events):
                         events.append({
                             "date": proj_str,
-                            "type": "payment",
+                            "type": "ex-dividend",
                             "amount_per_share": per_share_est,
                             "estimated": True,
+                            "estimated_payment_date": _estimate_payment_date(projected),
                         })
 
         return events
@@ -1055,19 +1074,22 @@ async def get_dividend_calendar(month: str, account_type: str | None = None) -> 
     async with get_db() as db:
         if account_type:
             cursor = await db.execute(
-                "SELECT id, ticker, shares, account_type FROM holdings WHERE account_type = ?",
+                "SELECT id, ticker, shares, is_manual, account_type FROM holdings WHERE account_type = ?",
                 (account_type,),
             )
         else:
             cursor = await db.execute(
-                "SELECT id, ticker, shares, account_type FROM holdings"
+                "SELECT id, ticker, shares, is_manual, account_type FROM holdings"
             )
         rows = await cursor.fetchall()
 
     if not rows:
         return {"month": month, "events": [], "total_estimated_income": 0}
 
-    holdings = [dict(r) for r in rows]
+    # Filter out manual holdings (CUSIPs/money market) — no dividend data on Yahoo
+    holdings = [dict(r) for r in rows if not r["is_manual"]]
+    if not holdings:
+        return {"month": month, "events": [], "total_estimated_income": 0}
     all_events = []
     now = time.time()
 
@@ -1119,10 +1141,16 @@ async def get_dividend_calendar(month: str, account_type: str | None = None) -> 
     all_events.sort(key=lambda e: e["date"])
     total = sum(e["estimated_income"] for e in all_events)
 
+    # Calculate days in month for daily estimate
+    import calendar as _cal
+    days_in_month = _cal.monthrange(year, mo)[1]
+
     return {
         "month": month,
         "events": all_events,
         "total_estimated_income": round(total, 2),
+        "annual_income_estimate": round(total * 12, 2),
+        "daily_income_estimate": round(total / days_in_month, 2) if days_in_month else 0,
     }
 
 
@@ -1177,19 +1205,22 @@ async def get_dividend_history(
     async with get_db() as db:
         if account_type:
             cursor = await db.execute(
-                "SELECT id, ticker, shares, account_type FROM holdings WHERE account_type = ?",
+                "SELECT id, ticker, shares, is_manual, account_type FROM holdings WHERE account_type = ?",
                 (account_type,),
             )
         else:
             cursor = await db.execute(
-                "SELECT id, ticker, shares, account_type FROM holdings"
+                "SELECT id, ticker, shares, is_manual, account_type FROM holdings"
             )
         rows = await cursor.fetchall()
 
     if not rows:
         return {"months": []}
 
-    holdings = [dict(r) for r in rows]
+    # Filter out manual holdings (CUSIPs/money market) — no dividend data on Yahoo
+    holdings = [dict(r) for r in rows if not r["is_manual"]]
+    if not holdings:
+        return {"months": []}
 
     # Fetch dividend history for each unique ticker in parallel
     ticker_shares: dict[str, float] = {}
@@ -1241,6 +1272,146 @@ async def get_dividend_history(
     return result
 
 
+# --- Dividend Yearly Comparison ---
+
+_dividend_yearly_cache: dict[str, dict] = {}
+DIVIDEND_YEARLY_CACHE_TTL = 3600  # 1 hour
+
+
+def _fetch_dividend_yearly_sync(ticker: str, years: list[int]) -> dict:
+    """Fetch yearly dividend totals for a ticker. Runs on thread."""
+    try:
+        t = yf.Ticker(ticker)
+        divs = t.dividends
+        yearly: dict[int, float] = {y: 0.0 for y in years}
+        if divs is not None and len(divs) > 0:
+            for dt_idx, amount in divs.items():
+                yr = dt_idx.year
+                if yr in yearly:
+                    yearly[yr] += float(amount)
+        return {y: round(v, 4) for y, v in yearly.items()}
+    except Exception:
+        return {y: 0.0 for y in years}
+
+
+async def get_dividend_yearly_comparison(
+    account_type: str | None = None,
+) -> dict:
+    """Compare dividend income across years with growth rates."""
+    import calendar as _cal
+
+    now = time.time()
+    cache_key = f"yearly:{account_type or 'all'}"
+    cached = _dividend_yearly_cache.get(cache_key)
+    if cached and (now - cached["timestamp"]) < DIVIDEND_YEARLY_CACHE_TTL:
+        return cached["data"]
+
+    current_year = datetime.now().year
+    years = list(range(current_year - 3, current_year + 1))  # e.g. [2023, 2024, 2025, 2026]
+
+    async with get_db() as db:
+        if account_type:
+            cursor = await db.execute(
+                "SELECT ticker, shares, is_manual FROM holdings WHERE account_type = ?",
+                (account_type,),
+            )
+        else:
+            cursor = await db.execute("SELECT ticker, shares, is_manual FROM holdings")
+        rows = await cursor.fetchall()
+
+    if not rows:
+        return {"years": [], "growth_rates": {}, "per_ticker_growth": []}
+
+    holdings = [dict(r) for r in rows if not r["is_manual"]]
+    if not holdings:
+        return {"years": [], "growth_rates": {}, "per_ticker_growth": []}
+
+    # Aggregate shares per ticker
+    ticker_shares: dict[str, float] = {}
+    for h in holdings:
+        ticker_shares[h["ticker"]] = ticker_shares.get(h["ticker"], 0) + h["shares"]
+
+    # Fetch yearly dividend data per ticker in parallel
+    async def _fetch_one(ticker):
+        try:
+            return ticker, await asyncio.to_thread(_fetch_dividend_yearly_sync, ticker, years)
+        except Exception:
+            return ticker, {y: 0.0 for y in years}
+
+    results = await asyncio.gather(*[_fetch_one(t) for t in ticker_shares.keys()])
+
+    # Build per-ticker growth data
+    per_ticker_growth = []
+    yearly_totals: dict[int, float] = {y: 0.0 for y in years}
+
+    for ticker, yearly_per_share in results:
+        shares = ticker_shares[ticker]
+        ticker_years = {}
+        for y in years:
+            income = round(yearly_per_share.get(y, 0) * shares, 2)
+            ticker_years[str(y)] = income
+            yearly_totals[y] += income
+
+        # Calculate growth from first non-zero year to latest
+        vals = [ticker_years[str(y)] for y in years]
+        non_zero = [(y, v) for y, v in zip(years, vals) if v > 0]
+        growth_pct = None
+        if len(non_zero) >= 2:
+            first_val = non_zero[0][1]
+            last_val = non_zero[-1][1]
+            if first_val > 0:
+                growth_pct = round(((last_val - first_val) / first_val) * 100, 1)
+
+        per_ticker_growth.append({
+            "ticker": ticker,
+            "years": ticker_years,
+            "per_share_by_year": {str(y): round(yearly_per_share.get(y, 0), 4) for y in years},
+            "growth_pct": growth_pct,
+        })
+
+    # Sort by latest year income descending
+    per_ticker_growth.sort(
+        key=lambda x: x["years"].get(str(current_year), 0), reverse=True
+    )
+
+    # Build year summaries
+    year_summaries = []
+    for y in years:
+        by_ticker = []
+        for ptg in per_ticker_growth:
+            amt = ptg["years"].get(str(y), 0)
+            if amt > 0:
+                by_ticker.append({
+                    "ticker": ptg["ticker"],
+                    "total": amt,
+                    "per_share_total": ptg["per_share_by_year"].get(str(y), 0),
+                })
+        year_summaries.append({
+            "year": y,
+            "total_income": round(yearly_totals[y], 2),
+            "by_ticker": sorted(by_ticker, key=lambda x: x["total"], reverse=True),
+        })
+
+    # Growth rates between consecutive years
+    growth_rates = {}
+    for i in range(len(years) - 1):
+        prev_total = yearly_totals[years[i]]
+        curr_total = yearly_totals[years[i + 1]]
+        key = f"{years[i]}_to_{years[i+1]}"
+        if prev_total > 0:
+            growth_rates[key] = round(((curr_total - prev_total) / prev_total) * 100, 1)
+        else:
+            growth_rates[key] = None
+
+    result = {
+        "years": year_summaries,
+        "growth_rates": growth_rates,
+        "per_ticker_growth": per_ticker_growth,
+    }
+    _dividend_yearly_cache[cache_key] = {"timestamp": now, "data": result}
+    return result
+
+
 # --- Portfolio Analytics (enriched 3-level drill-down data) ---
 
 
@@ -1249,13 +1420,13 @@ async def get_portfolio_analytics(account_type: str | None = None) -> dict:
     async with get_db() as db:
         if account_type:
             cursor = await db.execute(
-                "SELECT id, ticker, type, shares, avg_cost, current_price, previous_close, account_type "
+                "SELECT id, ticker, type, shares, avg_cost, current_price, previous_close, is_manual, account_type "
                 "FROM holdings WHERE account_type = ?",
                 (account_type,),
             )
         else:
             cursor = await db.execute(
-                "SELECT id, ticker, type, shares, avg_cost, current_price, previous_close, account_type "
+                "SELECT id, ticker, type, shares, avg_cost, current_price, previous_close, is_manual, account_type "
                 "FROM holdings"
             )
         rows = await cursor.fetchall()
@@ -1272,10 +1443,11 @@ async def get_portfolio_analytics(account_type: str | None = None) -> dict:
 
     holdings = [dict(r) for r in rows]
 
-    # Fetch fundamentals for each ticker (uses 24hr cache)
+    # Fetch fundamentals only for non-manual holdings (skip CUSIPs/money market codes)
     fundamentals = {}
     for h in holdings:
-        fundamentals[h["ticker"]] = await get_fundamentals(h["ticker"])
+        if not h.get("is_manual"):
+            fundamentals[h["ticker"]] = await get_fundamentals(h["ticker"])
 
     total_value = sum(
         h["shares"] * (h["current_price"] or h["avg_cost"]) for h in holdings

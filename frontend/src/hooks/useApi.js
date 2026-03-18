@@ -85,6 +85,11 @@ export const api = {
     return apiFetch(`/dividend-history${params}`);
   },
   /** @param {string} [accountType] @returns {Promise<Object>} */
+  getDividendYearlyComparison: (accountType) => {
+    const params = accountType && accountType !== 'all' ? `?account_type=${accountType}` : '';
+    return apiFetch(`/dividend-yearly-comparison${params}`);
+  },
+  /** @param {string} [accountType] @returns {Promise<Object>} */
   getPortfolioAnalytics: (accountType) => {
     const params = accountType && accountType !== 'all' ? `?account_type=${accountType}` : '';
     return apiFetch(`/portfolio-analytics${params}`);

@@ -39,6 +39,7 @@ from stock_service import (
     get_crypto_global,
     get_dividend_calendar,
     get_dividend_history,
+    get_dividend_yearly_comparison,
     get_bond_metrics,
     get_rebalance_suggestions,
 )
@@ -917,6 +918,19 @@ async def dividend_history_endpoint(
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Dividend history unavailable: {e}"
+        )
+
+
+@app.get("/api/dividend-yearly-comparison")
+async def dividend_yearly_comparison_endpoint(
+    account_type: str | None = None, _=Depends(require_auth)
+):
+    """Compare dividend income across years with growth rates."""
+    try:
+        return await get_dividend_yearly_comparison(account_type=account_type)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Yearly comparison unavailable: {e}"
         )
 
 
