@@ -5,11 +5,11 @@ import { C, MONO } from '../styles/theme';
 
 const StatCard = ({ label, value, sub, color }) => (
   <div style={{
-    padding: '14px 18px', background: C.bg, borderRadius: 10,
-    border: `1px solid ${C.border}`, flex: 1, minWidth: 120,
+    padding: '12px 14px', background: C.bg, borderRadius: 10,
+    border: `1px solid ${C.border}`,
   }}>
-    <div style={{ fontSize: 10, color: C.textDim, textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: 600 }}>{label}</div>
-    <div style={{ fontSize: 20, fontWeight: 700, fontFamily: MONO, color: color || C.text, marginTop: 4 }}>{value}</div>
+    <div style={{ fontSize: 9, color: C.textDim, textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: 600 }}>{label}</div>
+    <div style={{ fontSize: 18, fontWeight: 700, fontFamily: MONO, color: color || C.text, marginTop: 4 }}>{value}</div>
     {sub && <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>{sub}</div>}
   </div>
 );
@@ -87,9 +87,9 @@ export default function StockDeepDive({ holdingDetail, portfolioBeta, totalValue
   const betaDelta = portfolioBeta != null && betaWithout != null ? betaWithout - portfolioBeta : null;
 
   return (
-    <div>
+    <div style={{ maxWidth: '100%', overflow: 'hidden' }}>
       {/* Stock header */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         <h3 style={{ margin: 0, fontSize: 22, fontWeight: 700, fontFamily: MONO, color: C.accent }}>{h.ticker}</h3>
         <span style={{ fontSize: 14, fontWeight: 700, fontFamily: MONO, color: C.text }}>
           ${h.current_price?.toFixed(2)}
@@ -101,7 +101,7 @@ export default function StockDeepDive({ holdingDetail, portfolioBeta, totalValue
       </div>
 
       {/* Key metrics */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 20 }}>
         <StatCard label="P/E Ratio" value={h.trailing_pe?.toFixed(1) || 'N/A'} sub={h.forward_pe ? `Fwd: ${h.forward_pe.toFixed(1)}` : null} />
         <StatCard label="Beta" value={h.beta?.toFixed(2) || 'N/A'} color={h.beta && h.beta > 1.2 ? C.amber : C.text} />
         <StatCard label="Earnings Growth" value={fmtPct(h.earnings_growth)} color={h.earnings_growth > 0 ? C.green : h.earnings_growth < 0 ? C.red : C.text} />
@@ -183,7 +183,7 @@ export default function StockDeepDive({ holdingDetail, portfolioBeta, totalValue
           padding: 16, marginBottom: 20,
         }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, display: 'block', marginBottom: 12 }}>Technical Indicators</span>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
             <div>
               <div style={{ fontSize: 10, color: C.textDim, textTransform: 'uppercase' }}>RSI (14)</div>
               <div style={{
@@ -245,7 +245,7 @@ export default function StockDeepDive({ holdingDetail, portfolioBeta, totalValue
         padding: 16, marginBottom: 20,
       }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, display: 'block', marginBottom: 12 }}>Position Sizing</span>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
           <StatCard label="Shares" value={h.shares} />
           <StatCard label="Avg Cost" value={`$${h.avg_cost?.toFixed(2)}`} />
           <StatCard label="Market Value" value={`$${h.market_value?.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} />
@@ -271,7 +271,7 @@ export default function StockDeepDive({ holdingDetail, portfolioBeta, totalValue
         <span style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, display: 'block', marginBottom: 12 }}>
           Risk Impact — What If Removed?
         </span>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {/* Beta impact */}
           <div style={{ padding: '12px 16px', background: C.card, borderRadius: 8, border: `1px solid ${C.border}` }}>
             <div style={{ fontSize: 10, color: C.textDim, textTransform: 'uppercase', marginBottom: 6 }}>Portfolio Beta Impact</div>

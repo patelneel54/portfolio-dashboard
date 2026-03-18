@@ -257,8 +257,8 @@ function FactorsSubTab({ factors }) {
     : [{ label: 'Growth', pct: 35, color: C.purple }, { label: 'Blend', pct: 45, color: C.accent }, { label: 'Value', pct: 20, color: C.green }];
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-      {/* Left: Radar */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* Radar */}
       <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: C.textDim, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 }}>
           Factor Exposure
@@ -272,7 +272,7 @@ function FactorsSubTab({ factors }) {
         </ResponsiveContainer>
       </div>
 
-      {/* Right: Cap + Style bars */}
+      {/* Cap + Style bars */}
       <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: C.textDim, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 12 }}>
           Market Cap Breakdown
@@ -354,8 +354,8 @@ function RiskSubTab({ risk, sectors }) {
   ];
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-      {/* Left: Risk Engine */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* Risk Engine */}
       <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: C.textDim, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 12 }}>
           Risk Engine
@@ -369,17 +369,17 @@ function RiskSubTab({ risk, sectors }) {
               borderBottom: i < riskRows.length - 1 ? `1px solid ${C.border}` : 'none',
             }}
           >
-            <div>
+            <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 2 }}>{row.label}</div>
-              {row.sub && <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO }}>{row.sub}</div>}
+              {row.sub && <div style={{ fontSize: 10, color: C.textDim, fontFamily: MONO, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.sub}</div>}
               <div style={{ fontSize: 10, color: row.statusColor, marginTop: 2 }}>{row.status}</div>
             </div>
-            <div style={{ fontSize: 20, fontWeight: 700, fontFamily: MONO, color: C.text }}>{row.value}</div>
+            <div style={{ fontSize: 18, fontWeight: 700, fontFamily: MONO, color: C.text, flexShrink: 0, marginLeft: 12 }}>{row.value}</div>
           </div>
         ))}
       </div>
 
-      {/* Right: Sector concentration bars */}
+      {/* Sector concentration bars */}
       <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: C.textDim, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 12 }}>
           Sector Concentration
@@ -387,8 +387,8 @@ function RiskSubTab({ risk, sectors }) {
         {sortedSectors.map(s => (
           <div key={s.sector} style={{ marginBottom: 10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-              <span style={{ fontSize: 11, color: C.textMuted }}>{s.sector}</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: 11, color: C.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{s.sector}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
                 <span style={{ fontSize: 11, fontFamily: MONO, color: s.percentage > 25 ? C.red : C.textDim }}>
                   {s.percentage.toFixed(1)}%
                 </span>
@@ -496,7 +496,7 @@ export default function PortfolioAnalytics({ accountFilter }) {
     : null;
 
   return (
-    <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24 }}>
+    <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 16, maxWidth: '100%', overflow: 'hidden' }}>
       {/* Breadcrumb */}
       <Breadcrumb drillView={drillView} onNavigate={setDrillView} />
 
