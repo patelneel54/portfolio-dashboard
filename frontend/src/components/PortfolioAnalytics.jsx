@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis } from 'recharts';
 import { api } from '../hooks/useApi';
 import { C, MONO, SANS } from '../styles/theme';
+import { useIsMobile } from '../hooks/useMediaQuery';
 import SectorDrillDown from './SectorDrillDown';
 import StockDeepDive from './StockDeepDive';
 import { InlineError } from './ErrorBoundary';
@@ -96,6 +97,7 @@ function Breadcrumb({ drillView, onNavigate }) {
 // ── Sub-tab: Sectors ──
 
 function SectorsSubTab({ sectors, onDrill }) {
+  const isMobile = useIsMobile();
   const [hoveredSector, setHoveredSector] = useState(null);
 
   return (
@@ -105,12 +107,12 @@ function SectorsSubTab({ sectors, onDrill }) {
         {sectors.map((s) => (
           <div
             key={s.sector}
-            onMouseEnter={() => setHoveredSector(s.sector)}
-            onMouseLeave={() => setHoveredSector(null)}
+            onMouseEnter={isMobile ? undefined : () => setHoveredSector(s.sector)}
+            onMouseLeave={isMobile ? undefined : () => setHoveredSector(null)}
             onClick={() => onDrill({ type: 'sector', name: s.sector })}
             style={{
               width: `${s.percentage}%`, background: s.color,
-              opacity: hoveredSector && hoveredSector !== s.sector ? 0.35 : 1,
+              opacity: !isMobile && hoveredSector && hoveredSector !== s.sector ? 0.35 : 1,
               transition: 'opacity 0.15s', minWidth: s.percentage > 2 ? 2 : 0,
               cursor: 'pointer',
             }}
@@ -131,8 +133,8 @@ function SectorsSubTab({ sectors, onDrill }) {
               borderRadius: 8, border: `1px solid ${C.border}`,
               cursor: 'pointer', transition: 'background 0.15s',
             }}
-            onMouseEnter={() => setHoveredSector(s.sector)}
-            onMouseLeave={() => setHoveredSector(null)}
+            onMouseEnter={isMobile ? undefined : () => setHoveredSector(s.sector)}
+            onMouseLeave={isMobile ? undefined : () => setHoveredSector(null)}
           >
             <span style={{ width: 8, height: 8, borderRadius: 2, background: s.color, flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>

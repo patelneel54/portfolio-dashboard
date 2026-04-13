@@ -63,6 +63,21 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
     auth TEXT NOT NULL,
     created_at TEXT DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    account_type TEXT NOT NULL,
+    institution TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS account_targets (
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    ticker TEXT NOT NULL,
+    target_allocation REAL NOT NULL DEFAULT 0,
+    PRIMARY KEY (account_id, ticker)
+);
 """
 
 DEFAULT_SETTINGS = {
@@ -96,6 +111,21 @@ async def init_db():
             "ALTER TABLE holdings ADD COLUMN is_manual INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE holdings ADD COLUMN manual_name TEXT DEFAULT NULL",
             "ALTER TABLE holdings ADD COLUMN benchmark_ticker TEXT DEFAULT NULL",
+            # Multi-brokerage / named-account support
+            "ALTER TABLE holdings ADD COLUMN account_id INTEGER REFERENCES accounts(id)",
+            "INSERT OR IGNORE INTO accounts (name, account_type) "
+            "SELECT DISTINCT 'Default ' || account_type, account_type FROM holdings",
+            "UPDATE holdings SET account_id = ("
+            "  SELECT id FROM accounts "
+            "  WHERE accounts.account_type = holdings.account_type "
+            "    AND accounts.name = 'Default ' || holdings.account_type"
+            ") WHERE account_id IS NULL",
+            "DROP INDEX IF EXISTS idx_holdings_ticker_account",
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_holdings_ticker_account_id "
+            "ON holdings(ticker, account_id)",
+            "INSERT OR IGNORE INTO account_targets (account_id, ticker, target_allocation) "
+            "SELECT account_id, ticker, target_allocation FROM holdings "
+            "WHERE target_allocation > 0 AND account_id IS NOT NULL",
         ]
         for migration in migrations:
             try:

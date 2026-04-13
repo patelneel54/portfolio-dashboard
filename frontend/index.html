@@ -22,8 +22,9 @@
     <link rel="apple-touch-startup-image" href="/splash.svg" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" />
 
     <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { background: #0B0B0F; color: #F0F0F5; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+      * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      body { background: #0B0B0F; color: #F0F0F5; overscroll-behavior: none; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+      input, textarea, [contenteditable] { -webkit-user-select: text; user-select: text; }
       html { overflow-x: hidden; }
       /* Safe area padding for notched iPhones */
       @supports (padding-top: env(safe-area-inset-top)) {

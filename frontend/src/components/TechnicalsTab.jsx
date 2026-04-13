@@ -676,7 +676,7 @@ const ComparisonTable = ({ compareTickers, techData, tickers }) => {
   return (
     <div style={{ ...cardStyle, padding: 16 }}>
       <div style={{ ...labelSt, marginBottom: 12 }}>Side-by-Side Comparison</div>
-      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+      <div data-no-swipe style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
         <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 4px', minWidth: compareTickers.length * 100 + 100 }}>
           <thead>
             <tr>
@@ -995,7 +995,7 @@ export default function TechnicalsTab({ holdings }) {
       )}
 
       {/* ── 2. Stock Selector ─────────────────────────────── */}
-      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 2 }}>
+      <div data-no-swipe style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 2 }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'nowrap', minWidth: 'max-content' }}>
           {tickers.map((t, i) => {
             const hasAlert = techData[t]?.alerts?.length > 0;

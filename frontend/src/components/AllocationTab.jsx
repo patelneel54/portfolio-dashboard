@@ -8,7 +8,20 @@ import AssetClassBreakdown from './AssetClassBreakdown';
 import FundComparison from './FundComparison';
 import HoldingCard from './HoldingCard';
 import SearchInput from './SearchInput';
+import ErrorBoundary from './ErrorBoundary';
 import useMediaQuery from '../hooks/useMediaQuery';
+import { fmtPct, fmtCurrency } from '../utils/format';
+
+function BrokerageOnlyNote({ title }) {
+  return (
+    <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 140 }}>
+      <div style={{ textAlign: 'center', color: C.textMuted, fontSize: 12, maxWidth: 260 }}>
+        <div style={{ fontWeight: 700, color: C.textMuted, marginBottom: 6, fontSize: 13 }}>{title}</div>
+        Only applies to taxable brokerage holdings. Switch the account filter to Brokerage or All to view.
+      </div>
+    </div>
+  );
+}
 
 const SORT_OPTIONS = [
   { key: 'drift', label: 'Drift' },
@@ -57,23 +70,40 @@ export default function AllocationTab({ holdings, totalValue, settings, accountF
     <div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16, marginBottom: 16 }}>
-        {/* Position Concentration */}
-        <PositionConcentration holdings={holdings} totalValue={totalValue} />
+        <ErrorBoundary fallbackMessage="Couldn't load concentration data">
+          <PositionConcentration holdings={holdings} totalValue={totalValue} />
+        </ErrorBoundary>
 
-        {/* Asset Class Breakdown + Suggestions */}
-        <AssetClassBreakdown holdings={holdings} totalValue={totalValue} accountFilter={accountFilter} />
+        <ErrorBoundary fallbackMessage="Couldn't load asset class breakdown">
+          <AssetClassBreakdown holdings={holdings} totalValue={totalValue} accountFilter={accountFilter} />
+        </ErrorBoundary>
 
-        {/* Drift Analysis — only for brokerage */}
-        {showTargetDrift && <DriftAnalysis holdings={holdings} totalValue={totalValue} settings={settings} />}
+        {showTargetDrift ? (
+          <ErrorBoundary fallbackMessage="Couldn't load drift analysis">
+            <DriftAnalysis holdings={holdings} totalValue={totalValue} settings={settings} />
+          </ErrorBoundary>
+        ) : (
+          <BrokerageOnlyNote title="Drift Analysis" />
+        )}
       </div>
 
       {/* Fund Comparison — when 2+ funds share an asset class */}
       <div style={{ marginBottom: 16 }}>
-        <FundComparison holdings={holdings} />
+        <ErrorBoundary fallbackMessage="Couldn't load fund comparison">
+          <FundComparison holdings={holdings} />
+        </ErrorBoundary>
       </div>
 
       {/* Rebalance Planner — only for brokerage */}
-      {showTargetDrift && <RebalancePlanner holdings={holdings} totalValue={totalValue} />}
+      {showTargetDrift ? (
+        <ErrorBoundary fallbackMessage="Couldn't load rebalance planner">
+          <RebalancePlanner holdings={holdings} totalValue={totalValue} />
+        </ErrorBoundary>
+      ) : (
+        <div style={{ marginBottom: 16 }}>
+          <BrokerageOnlyNote title="Rebalance Planner" />
+        </div>
+      )}
 
       {isMobile ? (
         /* ── Mobile: Card List ── */
@@ -168,23 +198,23 @@ export default function AllocationTab({ holdings, totalValue, settings, accountF
                       <td style={{ padding: '8px 10px', fontSize: 10, color: C.textMuted }}>{ASSET_CLASS_LABELS[h.asset_class] || '—'}</td>
                       <td style={{ padding: '8px 10px' }}>
                         <span style={badge(h.account_type === '401k' ? C.purple : h.account_type === 'crypto' ? '#F7931A' : C.blue)}>
-                          {h.account_type || 'brokerage'}
+                          {h.account_name || h.account_type || 'brokerage'}
                         </span>
                       </td>
                       <td style={{ padding: '8px 10px', fontFamily: MONO, color: C.textMuted }}>{h.shares}</td>
-                      <td style={{ padding: '8px 10px', fontFamily: MONO, color: C.textMuted }}>${(h.avg_cost || 0).toFixed(0)}</td>
-                      <td style={{ padding: '8px 10px', fontFamily: MONO }}>${(h.current_price || h.avg_cost || 0).toFixed(0)}</td>
-                      <td style={{ padding: '8px 10px', fontFamily: MONO }}>${(h.market_value || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                      <td style={{ padding: '8px 10px', fontFamily: MONO, color: (h.gain_loss || 0) >= 0 ? C.green : C.red }}><span style={srOnly}>{(h.gain_loss || 0) >= 0 ? 'gain ' : 'loss '}</span>{(h.gain_loss || 0) >= 0 ? '+' : ''}${(h.gain_loss || 0).toFixed(0)}</td>
-                      <td style={{ padding: '8px 10px', fontFamily: MONO, color: (h.gain_loss_pct || 0) >= 0 ? C.green : C.red }}><span style={srOnly}>{(h.gain_loss_pct || 0) >= 0 ? 'gain ' : 'loss '}</span>{(h.gain_loss_pct || 0) >= 0 ? '+' : ''}{(h.gain_loss_pct || 0).toFixed(1)}%</td>
-                      <td style={{ padding: '8px 10px', fontFamily: MONO }}>{(h.actual_allocation || 0).toFixed(1)}%</td>
+                      <td style={{ padding: '8px 10px', fontFamily: MONO, color: C.textMuted }}>{fmtCurrency(h.avg_cost || 0, { digits: 0 })}</td>
+                      <td style={{ padding: '8px 10px', fontFamily: MONO }}>{fmtCurrency(h.current_price || h.avg_cost || 0, { digits: 0 })}</td>
+                      <td style={{ padding: '8px 10px', fontFamily: MONO }}>{fmtCurrency(h.market_value || 0, { digits: 0 })}</td>
+                      <td style={{ padding: '8px 10px', fontFamily: MONO, color: (h.gain_loss || 0) >= 0 ? C.green : C.red }}><span style={srOnly}>{(h.gain_loss || 0) >= 0 ? 'gain ' : 'loss '}</span>{fmtCurrency(h.gain_loss || 0, { digits: 0, signed: true })}</td>
+                      <td style={{ padding: '8px 10px', fontFamily: MONO, color: (h.gain_loss_pct || 0) >= 0 ? C.green : C.red }}><span style={srOnly}>{(h.gain_loss_pct || 0) >= 0 ? 'gain ' : 'loss '}</span>{fmtPct(h.gain_loss_pct || 0, { signed: true, digits: 1 })}</td>
+                      <td style={{ padding: '8px 10px', fontFamily: MONO }}>{fmtPct(h.actual_allocation || 0, { digits: 1 })}</td>
                       {showTargetDrift && (
                         <>
                           <td style={{ padding: '8px 10px', fontFamily: MONO, color: C.textMuted }}>
-                            {isAllAccounts && !hIsBrokerage ? '-' : `${(h.target_allocation || 0).toFixed(1)}%`}
+                            {isAllAccounts && !hIsBrokerage ? '-' : fmtPct(h.target_allocation || 0, { digits: 1 })}
                           </td>
                           <td style={{ padding: '8px 10px', fontFamily: MONO, fontWeight: 700, color: isAllAccounts && !hIsBrokerage ? C.textDim : Math.abs(h.drift || 0) < 0.5 ? C.textDim : (h.drift || 0) > 0 ? C.red : C.green }}>
-                            {isAllAccounts && !hIsBrokerage ? '-' : <><span style={srOnly}>{(h.drift || 0) > 0 ? 'overweight ' : 'underweight '}</span>{`${(h.drift || 0) > 0 ? '+' : ''}${(h.drift || 0).toFixed(1)}%`}</>}
+                            {isAllAccounts && !hIsBrokerage ? '-' : <><span style={srOnly}>{(h.drift || 0) > 0 ? 'overweight ' : 'underweight '}</span>{fmtPct(h.drift || 0, { signed: true, digits: 1 })}</>}
                           </td>
                         </>
                       )}

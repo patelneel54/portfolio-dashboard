@@ -12,10 +12,13 @@ const ACCOUNT_OPTIONS = [
  * @param {Object} props
  * @param {boolean} props.isOpen - Whether the sheet is visible
  * @param {() => void} props.onClose - Close callback
- * @param {string} props.accountFilter - Currently selected filter
- * @param {(id: string) => void} props.onSelect - Callback when an account is selected
+ * @param {string} props.accountFilter - Currently selected category filter
+ * @param {number|null} [props.activeAccountId] - Currently selected named account id, if any
+ * @param {Array} [props.accounts] - Named accounts from /api/accounts
+ * @param {(id: string) => void} props.onSelect - Callback when a category is selected
+ * @param {(account: Object) => void} [props.onSelectAccount] - Callback when a named account is selected
  */
-export default function AccountFilterSheet({ isOpen, onClose, accountFilter, onSelect }) {
+export default function AccountFilterSheet({ isOpen, onClose, accountFilter, activeAccountId, accounts = [], onSelect, onSelectAccount }) {
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -54,6 +57,11 @@ export default function AccountFilterSheet({ isOpen, onClose, accountFilter, onS
     onSelect(id);
     handleClose();
   }, [onSelect, handleClose]);
+
+  const handleSelectAccount = useCallback((acct) => {
+    if (onSelectAccount) onSelectAccount(acct);
+    handleClose();
+  }, [onSelectAccount, handleClose]);
 
   // Touch drag handlers
   const onTouchStart = useCallback((e) => {
@@ -123,30 +131,74 @@ export default function AccountFilterSheet({ isOpen, onClose, accountFilter, onS
           Select Account
         </div>
 
-        {/* Options */}
-        {ACCOUNT_OPTIONS.map(opt => (
-          <button
-            key={opt.id}
-            onClick={() => handleSelect(opt.id)}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              width: '100%', padding: '14px 20px', border: 'none', minHeight: 44,
-              background: accountFilter === opt.id ? C.accent + '18' : 'transparent',
-              color: accountFilter === opt.id ? C.text : C.textMuted,
-              fontSize: 15, fontWeight: 600, cursor: 'pointer',
-              borderBottom: `1px solid ${C.border}`,
-              transition: 'background 0.15s',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 10, height: 10, borderRadius: 5, background: opt.color }} />
-              {opt.label}
+        {/* Category options */}
+        {ACCOUNT_OPTIONS.map(opt => {
+          const isActive = accountFilter === opt.id && activeAccountId == null;
+          return (
+            <button
+              key={opt.id}
+              onClick={() => handleSelect(opt.id)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                width: '100%', padding: '14px 20px', border: 'none', minHeight: 44,
+                background: isActive ? C.accent + '18' : 'transparent',
+                color: isActive ? C.text : C.textMuted,
+                fontSize: 15, fontWeight: 600, cursor: 'pointer',
+                borderBottom: `1px solid ${C.border}`,
+                transition: 'background 0.15s',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 10, height: 10, borderRadius: 5, background: opt.color }} />
+                {opt.label}
+              </div>
+              {isActive && (
+                <span style={{ color: C.accent, fontSize: 18 }}>&#10003;</span>
+              )}
+            </button>
+          );
+        })}
+
+        {/* Named accounts */}
+        {accounts.length > 0 && (
+          <>
+            <div style={{ padding: '14px 20px 6px', fontSize: 11, fontWeight: 700, color: C.textDim, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              Specific Accounts
             </div>
-            {accountFilter === opt.id && (
-              <span style={{ color: C.accent, fontSize: 18 }}>&#10003;</span>
-            )}
-          </button>
-        ))}
+            {accounts.map(acct => {
+              const isActive = activeAccountId === acct.id;
+              const catColor = ACCOUNT_OPTIONS.find(o => o.id === acct.account_type)?.color || C.accent;
+              return (
+                <button
+                  key={acct.id}
+                  onClick={() => handleSelectAccount(acct)}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    width: '100%', padding: '12px 20px', border: 'none', minHeight: 44,
+                    background: isActive ? C.accent + '18' : 'transparent',
+                    color: isActive ? C.text : C.textMuted,
+                    fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                    borderBottom: `1px solid ${C.border}`,
+                    transition: 'background 0.15s',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: 4, background: catColor }} />
+                    <div style={{ textAlign: 'left' }}>
+                      <div>{acct.name}</div>
+                      <div style={{ fontSize: 11, color: C.textDim, fontWeight: 400 }}>
+                        {acct.holding_count} holding{acct.holding_count === 1 ? '' : 's'}
+                      </div>
+                    </div>
+                  </div>
+                  {isActive && (
+                    <span style={{ color: C.accent, fontSize: 18 }}>&#10003;</span>
+                  )}
+                </button>
+              );
+            })}
+          </>
+        )}
 
         {/* Bottom spacing */}
         <div style={{ height: 16 }} />

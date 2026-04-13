@@ -5,6 +5,7 @@ import { C, MONO, SANS } from '../styles/theme';
 import { cardStyle, inputStyle, buttonPrimary, buttonSecondary, sectionTitle, labelStyle, dangerButton, inputGroupWrapper, inputAddon } from '../styles/shared';
 import { isWebAuthnSupported, startRegistration } from '../utils/webauthn';
 import AlertManager from './AlertManager';
+import AccountManager from './AccountManager';
 import { isPushSupported, getPermissionState, subscribeToPush, unsubscribeFromPush, isSubscribed, sendTestNotification } from '../utils/pushNotifications';
 
 // ── Inline Sub-components ──
@@ -97,6 +98,7 @@ function ConfirmButton({ label, confirmLabel, onConfirm, style }) {
 
 const TABS = [
   { id: 'projections', label: 'Projections' },
+  { id: 'accounts', label: 'Accounts' },
   { id: 'alerts', label: 'Alerts' },
   { id: 'notifications', label: 'Notifications' },
   { id: 'security', label: 'Security' },
@@ -125,6 +127,7 @@ export default function Settings() {
   const [biometricSupported, setBiometricSupported] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricLoading, setBiometricLoading] = useState(false);
+  const [biometricError, setBiometricError] = useState('');
   const [showPinChange, setShowPinChange] = useState(false);
   const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
@@ -137,6 +140,7 @@ export default function Settings() {
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState(null);
   const [exporting, setExporting] = useState(null);
+  const [exportAccountType, setExportAccountType] = useState('');
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
@@ -147,6 +151,11 @@ export default function Settings() {
   const [pushLoading, setPushLoading] = useState(false);
   const [pushError, setPushError] = useState('');
   const [pushTestSent, setPushTestSent] = useState(false);
+
+  // Cache clear
+  const [cacheClearing, setCacheClearing] = useState(false);
+  const [cacheError, setCacheError] = useState('');
+  const [cacheCleared, setCacheCleared] = useState(false);
 
   // About
   const [holdingsCount, setHoldingsCount] = useState(0);
@@ -160,10 +169,12 @@ export default function Settings() {
       api.getHoldings(),
       api.getAlerts(),
     ]).then(([settingsData, holdingsData, alertsData]) => {
-      // Convert rate fields from decimal to percentage for display
+      // Convert rate fields from decimal (stored) to percentage (display).
+      // Missing/blank/NaN values coerce to 0 so the UI never renders "NaN".
       const display = { ...settingsData };
       for (const key of RATE_FIELDS) {
-        if (display[key]) display[key] = (parseFloat(display[key]) * 100).toFixed(1);
+        const n = Number(display[key]);
+        display[key] = (Number.isFinite(n) ? n * 100 : 0).toFixed(1);
       }
       setSettings(display);
       setSavedSettings(display);
@@ -200,11 +211,13 @@ export default function Settings() {
     try {
       const toSave = { ...settings };
       for (const key of RATE_FIELDS) {
-        if (toSave[key]) toSave[key] = (parseFloat(toSave[key]) / 100).toFixed(4);
+        const n = Number(toSave[key]);
+        toSave[key] = (Number.isFinite(n) ? n / 100 : 0).toFixed(4);
       }
       await api.updateSettings(toSave);
       setSavedSettings({ ...settings });
       setSaved(true);
+      window.dispatchEvent(new CustomEvent('settings-updated'));
       setTimeout(() => setSaved(false), 2000);
     } finally {
       setSaving(false);
@@ -219,6 +232,7 @@ export default function Settings() {
 
   const handleBiometricToggle = async () => {
     setBiometricLoading(true);
+    setBiometricError('');
     try {
       if (biometricEnabled) {
         await api.webauthnDeleteCredential();
@@ -233,6 +247,12 @@ export default function Settings() {
       }
     } catch (err) {
       console.error('Biometric toggle failed:', err);
+      const name = err?.name || '';
+      if (name === 'NotAllowedError' || name === 'AbortError') {
+        setBiometricError('Cancelled. Try again when you are ready.');
+      } else {
+        setBiometricError(err?.message || 'Biometric setup failed.');
+      }
     } finally {
       setBiometricLoading(false);
     }
@@ -273,7 +293,7 @@ export default function Settings() {
   const handleExport = async (format) => {
     setExporting(format);
     try {
-      await api.exportData(format);
+      await api.exportData(format, exportAccountType || undefined);
     } finally {
       setExporting(null);
     }
@@ -288,7 +308,12 @@ export default function Settings() {
       setImportResult(result);
       setImportFile(null);
     } catch (err) {
-      setImportResult({ error: err.message });
+      // Preserve row-level errors returned in the 400 detail object.
+      const structured = err.detail && typeof err.detail === 'object' ? err.detail : null;
+      setImportResult({
+        error: err.message,
+        errors: structured?.errors || [],
+      });
     } finally {
       setImporting(false);
     }
@@ -297,6 +322,22 @@ export default function Settings() {
   const handleResetData = async () => {
     await api.resetAllData();
     navigate('/');
+  };
+
+  const handleClearCache = async () => {
+    setCacheClearing(true);
+    setCacheError('');
+    setCacheCleared(false);
+    try {
+      await api.clearPriceCache();
+      setLastRefreshed(null);
+      setCacheCleared(true);
+      setTimeout(() => setCacheCleared(false), 2000);
+    } catch (err) {
+      setCacheError(err?.message || 'Failed to clear cache.');
+    } finally {
+      setCacheClearing(false);
+    }
   };
 
   // Parse JWT for session info
@@ -503,6 +544,11 @@ export default function Settings() {
             </div>
             <ToggleSwitch enabled={biometricEnabled} onChange={handleBiometricToggle} loading={biometricLoading} />
           </div>
+          {biometricError && (
+            <div role="alert" style={{ marginTop: 12, color: C.red, fontSize: 12 }}>
+              {biometricError}
+            </div>
+          )}
         </div>
       )}
 
@@ -580,7 +626,25 @@ export default function Settings() {
       <div style={{ ...cardStyle, padding: 24 }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 4 }}>Export Portfolio</div>
         <div style={{ fontSize: 11, color: C.textDim, marginBottom: 16 }}>Download your holdings data</div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <select
+            value={exportAccountType}
+            onChange={e => setExportAccountType(e.target.value)}
+            disabled={!!exporting}
+            style={{
+              padding: '10px 12px',
+              borderRadius: 8,
+              border: `1px solid ${C.border}`,
+              background: C.bgCard,
+              color: C.text,
+              fontSize: 13,
+            }}
+          >
+            <option value="">All accounts</option>
+            <option value="brokerage">Brokerage only</option>
+            <option value="401k">401(k) only</option>
+            <option value="crypto">Crypto only</option>
+          </select>
           <button onClick={() => handleExport('csv')} disabled={!!exporting} style={{ ...buttonSecondary, padding: '10px 20px', opacity: exporting ? 0.6 : 1 }}>
             {exporting === 'csv' ? 'Downloading...' : 'Export CSV'}
           </button>
@@ -607,10 +671,28 @@ export default function Settings() {
           )}
         </div>
         {importResult && (
-          <div style={{ marginTop: 12, fontSize: 12, color: importResult.error ? C.red : C.green }}>
-            {importResult.error
-              ? importResult.error
-              : `Added ${importResult.added}, updated ${importResult.updated}${importResult.errors?.length ? `, ${importResult.errors.length} errors` : ''}`}
+          <div style={{ marginTop: 12, fontSize: 12 }}>
+            <div style={{ color: importResult.error ? C.red : C.green }}>
+              {importResult.error
+                ? importResult.error
+                : `Added ${importResult.added}, updated ${importResult.updated}${importResult.errors?.length ? `, ${importResult.errors.length} errors` : ''}`}
+            </div>
+            {Array.isArray(importResult.errors) && importResult.errors.length > 0 && (
+              <details style={{ marginTop: 8, color: C.textMuted }}>
+                <summary style={{ cursor: 'pointer', color: C.red }}>
+                  Show {importResult.errors.length} row error{importResult.errors.length === 1 ? '' : 's'}
+                </summary>
+                <ul style={{ margin: '6px 0 0 16px', padding: 0, fontFamily: MONO, fontSize: 11, lineHeight: 1.5 }}>
+                  {importResult.errors.slice(0, 20).map((e, i) => (
+                    <li key={i}>
+                      {e.row ? `Row ${e.row}` : e.ticker || '—'}
+                      {e.name ? ` (${e.name})` : ''}: {e.error}
+                    </li>
+                  ))}
+                  {importResult.errors.length > 20 && <li>…and {importResult.errors.length - 20} more</li>}
+                </ul>
+              </details>
+            )}
           </div>
         )}
       </div>
@@ -621,11 +703,17 @@ export default function Settings() {
           Removes cached price history. Prices will be re-fetched on next refresh.
         </div>
         <ConfirmButton
-          label="Clear Cache"
+          label={cacheClearing ? 'Clearing...' : 'Clear Cache'}
           confirmLabel="Confirm Clear?"
-          onConfirm={() => api.clearPriceCache()}
-          style={{ ...dangerButton, padding: '10px 20px' }}
+          onConfirm={handleClearCache}
+          style={{ ...dangerButton, padding: '10px 20px', opacity: cacheClearing ? 0.6 : 1 }}
         />
+        {cacheError && (
+          <div role="alert" style={{ marginTop: 10, color: C.red, fontSize: 12 }}>{cacheError}</div>
+        )}
+        {cacheCleared && (
+          <div role="status" style={{ marginTop: 10, color: C.green, fontSize: 12 }}>Cache cleared.</div>
+        )}
       </div>
     </div>
   );
@@ -633,7 +721,9 @@ export default function Settings() {
   const renderAbout = () => (
     <div style={{ ...cardStyle, padding: 24, animation: 'fadeSlideUp 0.3s ease-out' }}>
       <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 4 }}>Portfolio Command Center</div>
-      <div style={{ fontSize: 12, color: C.textDim, marginBottom: 20 }}>v1.0.0</div>
+      <div style={{ fontSize: 12, color: C.textDim, marginBottom: 20 }}>
+        v{__APP_VERSION__}{__APP_COMMIT__ ? ` · ${__APP_COMMIT__}` : ''}
+      </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '10px 0', borderBottom: `1px solid ${C.border}` }}>
@@ -701,6 +791,7 @@ export default function Settings() {
 
   const tabContent = {
     projections: renderProjections,
+    accounts: () => <AccountManager />,
     alerts: renderAlerts,
     notifications: renderNotifications,
     security: renderSecurity,

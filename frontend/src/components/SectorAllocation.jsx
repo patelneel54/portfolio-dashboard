@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { C, MONO } from '../styles/theme';
+import { useIsMobile } from '../hooks/useMediaQuery';
 
 function RiskBadge({ risk }) {
   if (risk === 'normal') return null;
@@ -42,6 +43,7 @@ function HHIBadge({ hhi, label }) {
 }
 
 export default function SectorAllocation({ sectors, sectorHhi, sectorHhiLabel }) {
+  const isMobile = useIsMobile();
   const [hoveredSector, setHoveredSector] = useState(null);
 
   if (!sectors?.length) {
@@ -64,12 +66,12 @@ export default function SectorAllocation({ sectors, sectorHhi, sectorHhiLabel })
         {sectors.map((s) => (
           <div
             key={s.sector}
-            onMouseEnter={() => setHoveredSector(s.sector)}
-            onMouseLeave={() => setHoveredSector(null)}
+            onMouseEnter={isMobile ? undefined : () => setHoveredSector(s.sector)}
+            onMouseLeave={isMobile ? undefined : () => setHoveredSector(null)}
             style={{
               width: `${s.percentage}%`,
               background: s.color,
-              opacity: hoveredSector && hoveredSector !== s.sector ? 0.35 : 1,
+              opacity: !isMobile && hoveredSector && hoveredSector !== s.sector ? 0.35 : 1,
               transition: 'opacity 0.15s, width 0.4s ease',
               minWidth: s.percentage > 2 ? 2 : 0,
               cursor: 'default',
@@ -110,8 +112,8 @@ export default function SectorAllocation({ sectors, sectorHhi, sectorHhiLabel })
             {sectors.map((s) => (
               <tr
                 key={s.sector}
-                onMouseEnter={() => setHoveredSector(s.sector)}
-                onMouseLeave={() => setHoveredSector(null)}
+                onMouseEnter={isMobile ? undefined : () => setHoveredSector(s.sector)}
+                onMouseLeave={isMobile ? undefined : () => setHoveredSector(null)}
                 style={{
                   borderBottom: `1px solid ${C.border}22`,
                   background: hoveredSector === s.sector ? C.border + '44' : 'transparent',

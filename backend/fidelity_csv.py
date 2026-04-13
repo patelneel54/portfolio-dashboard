@@ -84,16 +84,25 @@ def _parse_money(value: str) -> float:
     return float(cleaned) if cleaned else 0.0
 
 
-def parse_fidelity_csv(text: str) -> list[dict]:
-    """Parse Fidelity 401k CSV export text into a list of holding dicts.
+def parse_fidelity_csv(text: str) -> tuple[list[dict], list[dict]]:
+    """Parse Fidelity 401k CSV export text.
+
+    Returns (holdings, parse_errors). Each parse_error is
+    {"row": <1-based row index>, "name": <best-effort name>, "error": <str>}.
+    Rows that are deliberately skipped (summary rows, money market, etc.)
+    are NOT reported as errors. Only rows that look like real positions
+    but fail to parse become errors.
 
     Supports multiple Fidelity export formats:
     - Balance Overview format: Name, Asset Class, Category, % Invested, Balance, Cost Basis
     - Position format: Name/Description, Symbol, Quantity, Price, Value, Cost Basis
     """
+    holdings: list[dict] = []
+    errors: list[dict] = []
+
     lines = text.strip().splitlines()
     if not lines:
-        return []
+        return holdings, errors
 
     # Skip any header lines before the actual CSV data
     start = 0
@@ -106,113 +115,119 @@ def parse_fidelity_csv(text: str) -> list[dict]:
     reader = csv.DictReader(io.StringIO(csv_text))
 
     if not reader.fieldnames:
-        return []
+        return holdings, errors
 
-    # Normalize field names (lowercase, strip whitespace)
-    fields = {f.strip().lower(): f for f in reader.fieldnames}
+    for row_index, row in enumerate(reader, start=1):
+        try:
+            # Normalize row keys (skip None keys from trailing commas)
+            norm_row = {k.strip().lower(): v.strip() if v else '' for k, v in row.items() if k is not None}
 
-    holdings = []
+            # Skip total/summary rows and money market cash positions
+            if any(skip in norm_row.get('name', '').lower() for skip in ['account total', 'total', 'pending']):
+                continue
+            if any(skip in norm_row.get('name/initial purchase date', '').lower() for skip in ['account total', 'total']):
+                continue
+            if 'money market' in norm_row.get('description', '').lower():
+                continue
 
-    for row in reader:
-        # Normalize row keys (skip None keys from trailing commas)
-        norm_row = {k.strip().lower(): v.strip() if v else '' for k, v in row.items() if k is not None}
+            # Extract name - try multiple column names
+            name = (
+                norm_row.get('name', '') or
+                norm_row.get('name/initial purchase date', '') or
+                norm_row.get('description', '') or
+                ''
+            ).strip()
 
-        # Skip total/summary rows and money market cash positions
-        if any(skip in norm_row.get('name', '').lower() for skip in ['account total', 'total', 'pending']):
-            continue
-        if any(skip in norm_row.get('name/initial purchase date', '').lower() for skip in ['account total', 'total']):
-            continue
-        if 'money market' in norm_row.get('description', '').lower():
-            continue
+            if not name:
+                continue
 
-        # Extract name - try multiple column names
-        name = (
-            norm_row.get('name', '') or
-            norm_row.get('name/initial purchase date', '') or
-            norm_row.get('description', '') or
-            ''
-        ).strip()
+            # Clean multi-line name (remove date lines like "01/30/2025")
+            name_parts = name.split('\n')
+            name = name_parts[0].strip()
 
-        if not name:
-            continue
+            # Extract or find ticker
+            ticker = (
+                norm_row.get('symbol', '') or
+                norm_row.get('ticker', '') or
+                _extract_ticker(name) or
+                ''
+            ).strip().upper()
 
-        # Clean multi-line name (remove date lines like "01/30/2025")
-        name_parts = name.split('\n')
-        name = name_parts[0].strip()
+            # Get balance/value
+            balance = _parse_money(
+                norm_row.get('balance', '') or
+                norm_row.get('value', '') or
+                norm_row.get('current value', '') or
+                '0'
+            )
 
-        # Extract or find ticker
-        ticker = (
-            norm_row.get('symbol', '') or
-            norm_row.get('ticker', '') or
-            _extract_ticker(name) or
-            ''
-        ).strip().upper()
+            # Get cost basis
+            cost_basis = _parse_money(
+                norm_row.get('cost basis total', '') or
+                norm_row.get('cost basis', '') or
+                norm_row.get('cost', '') or
+                '0'
+            )
 
-        # Get balance/value
-        balance = _parse_money(
-            norm_row.get('balance', '') or
-            norm_row.get('value', '') or
-            norm_row.get('current value', '') or
-            '0'
-        )
+            if balance <= 0:
+                continue
 
-        # Get cost basis
-        cost_basis = _parse_money(
-            norm_row.get('cost basis total', '') or
-            norm_row.get('cost basis', '') or
-            norm_row.get('cost', '') or
-            '0'
-        )
+            # Get asset class/category
+            asset_class_raw = norm_row.get('asset class', '') or ''
+            category_raw = norm_row.get('category', '') or ''
+            asset_class = _classify_category(category_raw, asset_class_raw)
 
-        if balance <= 0:
-            continue
+            # Determine if manual (no yfinance ticker)
+            is_manual = not _is_valid_ticker(ticker)
 
-        # Get asset class/category
-        asset_class_raw = norm_row.get('asset class', '') or ''
-        category_raw = norm_row.get('category', '') or ''
-        asset_class = _classify_category(category_raw, asset_class_raw)
+            if is_manual:
+                # Generate a ticker code from the name
+                ticker = _sanitize_name_to_ticker(name)
 
-        # Determine if manual (no yfinance ticker)
-        is_manual = not _is_valid_ticker(ticker)
+            # Compute shares and avg_cost
+            # For mutual funds, we might have quantity/price
+            quantity = norm_row.get('quantity', '') or norm_row.get('shares', '')
+            price = norm_row.get('price', '') or norm_row.get('last price', '')
 
-        if is_manual:
-            # Generate a ticker code from the name
-            ticker = _sanitize_name_to_ticker(name)
+            if quantity and price:
+                shares = float(re.sub(r'[^\d.\-]', '', quantity) or '0')
+                current_price = float(re.sub(r'[^\d.\-]', '', price) or '0')
+            else:
+                # Estimate: for funds without explicit qty/price, treat balance as 1 share.
+                current_price = balance
+                shares = 1.0
 
-        # Compute shares and avg_cost
-        # For mutual funds, we might have quantity/price
-        quantity = norm_row.get('quantity', '') or norm_row.get('shares', '')
-        price = norm_row.get('price', '') or norm_row.get('last price', '')
+            # Use average cost basis column if available, otherwise compute from total
+            avg_cost_raw = norm_row.get('average cost basis', '')
+            if avg_cost_raw:
+                avg_cost = _parse_money(avg_cost_raw)
+            else:
+                avg_cost = cost_basis / shares if shares > 0 else current_price
 
-        if quantity and price:
-            shares = float(re.sub(r'[^\d.\-]', '', quantity) or '0')
-            current_price = float(re.sub(r'[^\d.\-]', '', price) or '0')
-        elif balance > 0:
-            # Estimate: for funds, use balance and cost basis
-            # Assume current_price = some reasonable per-share value
-            current_price = balance  # Treat as 1 share with value = balance
-            shares = 1.0
+            entry = {
+                "ticker": ticker,
+                "name": name,
+                "manual_name": name if is_manual else None,
+                "shares": round(shares, 6),
+                "avg_cost": round(avg_cost, 4),
+                "current_price": round(current_price, 4) if current_price else round(balance, 2),
+                "asset_class": asset_class,
+                "is_manual": is_manual,
+                "type": "Fund",
+                "benchmark_ticker": BENCHMARK_MAP.get(asset_class) if is_manual else None,
+            }
 
-        # Use average cost basis column if available, otherwise compute from total
-        avg_cost_raw = norm_row.get('average cost basis', '')
-        if avg_cost_raw:
-            avg_cost = _parse_money(avg_cost_raw)
-        else:
-            avg_cost = cost_basis / shares if shares > 0 else current_price
+            holdings.append(entry)
+        except Exception as exc:
+            best_name = ''
+            try:
+                best_name = (row.get('Name') or row.get('Description') or row.get('Symbol') or '').strip()
+            except Exception:
+                pass
+            errors.append({
+                "row": row_index,
+                "name": best_name,
+                "error": str(exc),
+            })
 
-        entry = {
-            "ticker": ticker,
-            "name": name,
-            "manual_name": name if is_manual else None,
-            "shares": round(shares, 6),
-            "avg_cost": round(avg_cost, 4),
-            "current_price": round(current_price, 4) if current_price else round(balance, 2),
-            "asset_class": asset_class,
-            "is_manual": is_manual,
-            "type": "Fund",
-            "benchmark_ticker": BENCHMARK_MAP.get(asset_class) if is_manual else None,
-        }
-
-        holdings.append(entry)
-
-    return holdings
+    return holdings, errors

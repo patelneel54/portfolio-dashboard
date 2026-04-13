@@ -368,7 +368,7 @@ export default function BondsTab({ holdings }) {
       </div>
 
       {/* ── Sub-tab pills ───────────────────────────────── */}
-      <div style={{
+      <div data-no-swipe style={{
         display: 'flex', gap: 2,
         background: C.bg, borderRadius: 10, padding: 3,
         border: `1px solid ${C.border}`, overflowX: 'auto',
@@ -710,7 +710,7 @@ export default function BondsTab({ holdings }) {
             </ResponsiveContainer>
 
             {/* Ladder rungs table */}
-            <div style={{ marginTop: 14, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <div data-no-swipe style={{ marginTop: 14, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
               <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 4px' }}>
                 <thead>
                   <tr>

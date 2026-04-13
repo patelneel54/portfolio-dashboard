@@ -16,13 +16,16 @@ const ACCOUNT_TABS = [
 /**
  * @param {Object} props
  * @param {import('../types').Holding[]} props.holdings - All holdings (unfiltered)
+ * @param {Array} [props.accounts] - Named accounts from /api/accounts
  * @param {() => void} props.onClose - Close the modal
  * @param {() => Promise<void>} props.onUpdate - Callback to refresh holdings data
  * @param {string} props.accountFilter - Current account filter ('all'|'brokerage'|'401k'|'crypto')
+ * @param {number|null} [props.activeAccountId] - Currently-selected named account id (from Dashboard)
  */
-export default function ManageHoldings({ holdings, onClose, onUpdate, accountFilter }) {
+export default function ManageHoldings({ holdings, accounts = [], onClose, onUpdate, accountFilter, activeAccountId }) {
   const initialTab = accountFilter === 'all' ? 'brokerage' : accountFilter || 'brokerage';
   const [activeAccount, setActiveAccount] = useState(initialTab);
+  const [selectedAccountId, setSelectedAccountId] = useState(activeAccountId ?? null);
   const [ticker, setTicker] = useState('');
   const [shares, setShares] = useState('');
   const [avgCost, setAvgCost] = useState('');
@@ -89,6 +92,7 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
         target_allocation: isBrokerage ? (parseFloat(target) || 0) : 0,
         purchase_date: purchaseDate || null,
         account_type: activeAccount,
+        account_id: selectedAccountId || undefined,
         is_manual: isManual,
         manual_name: isManual ? manualName : null,
         asset_class: assetClass || null,
@@ -224,10 +228,34 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
 
   const switchTab = (tabId) => {
     setActiveAccount(tabId);
+    setSelectedAccountId(null);
     setEditingId(null);
     setError('');
     setMenuOpenId(null);
     setSearchQuery('');
+  };
+
+  const accountsForTab = accounts.filter(a => a.account_type === activeAccount);
+
+  const renderAccountPicker = (mobile) => {
+    if (accountsForTab.length === 0) return null;
+    return (
+      <div style={{ marginBottom: mobile ? 10 : 12 }}>
+        <label style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, display: 'block', marginBottom: 4 }}>
+          Account
+        </label>
+        <select
+          value={selectedAccountId || ''}
+          onChange={e => setSelectedAccountId(e.target.value ? Number(e.target.value) : null)}
+          style={{ ...baseInputStyle, width: '100%' }}
+        >
+          <option value="">Default {activeAccount}</option>
+          {accountsForTab.map(a => (
+            <option key={a.id} value={a.id}>{a.name}{a.institution ? ` · ${a.institution}` : ''}</option>
+          ))}
+        </select>
+      </div>
+    );
   };
 
   // --- Render helpers ---
@@ -306,6 +334,7 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
             <div style={{ fontSize: 12, color: C.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>
               Add {isCrypto ? 'Crypto' : activeAccount === '401k' ? '401k' : 'Brokerage'} Holding
             </div>
+            {renderAccountPicker(false)}
             {activeAccount === '401k' && (
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: C.textMuted, cursor: 'pointer' }}>
                 <input type="checkbox" checked={isManual} onChange={e => setIsManual(e.target.checked)} style={{ accentColor: C.purple }} />
@@ -544,6 +573,7 @@ export default function ManageHoldings({ holdings, onClose, onUpdate, accountFil
                 )}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {renderAccountPicker(true)}
                 {isManual ? (
                   <>
                     <div>

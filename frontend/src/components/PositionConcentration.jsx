@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { C, MONO } from '../styles/theme';
 import { cardStyle, sectionTitle, srOnly } from '../styles/shared';
+import { useIsMobile } from '../hooks/useMediaQuery';
 
 const BAR_COLORS = {
   ETF: { bar: '#4f46e5', barBg: '#4f46e520' },
@@ -12,6 +13,7 @@ const BAR_COLORS = {
 const THRESHOLD_LINES = [50, 80];
 
 export default function PositionConcentration({ holdings = [], totalValue = 0 }) {
+  const isMobile = useIsMobile();
   const [hoveredIdx, setHoveredIdx] = useState(null);
   const [showAll, setShowAll] = useState(false);
 
@@ -72,6 +74,7 @@ export default function PositionConcentration({ holdings = [], totalValue = 0 })
                 </div>
               )}
               <div
+                tabIndex={0}
                 aria-label={`${h.ticker}: ${h.pct.toFixed(1)}% of portfolio, $${h.market_value.toLocaleString(undefined, { maximumFractionDigits: 0 })}, ${(h.gain_loss_pct || 0) >= 0 ? 'gain' : 'loss'} ${Math.abs(h.gain_loss_pct || 0).toFixed(1)}%`}
                 style={{
                   display: 'grid',
@@ -83,16 +86,19 @@ export default function PositionConcentration({ holdings = [], totalValue = 0 })
                   cursor: 'default',
                   transition: 'background 0.15s',
                   background: isHovered ? `${C.border}88` : 'transparent',
+                  outline: 'none',
                 }}
-                onMouseEnter={() => setHoveredIdx(i)}
-                onMouseLeave={() => setHoveredIdx(null)}
+                onMouseEnter={isMobile ? undefined : () => setHoveredIdx(i)}
+                onMouseLeave={isMobile ? undefined : () => setHoveredIdx(null)}
+                onFocus={() => setHoveredIdx(i)}
+                onBlur={() => setHoveredIdx(prev => prev === i ? null : prev)}
               >
                 {/* Ticker */}
                 <span style={{
                   fontFamily: MONO,
                   fontSize: 11,
                   fontWeight: 600,
-                  color: isHovered ? C.text : C.textMuted,
+                  color: isMobile || isHovered ? C.text : C.textMuted,
                   transition: 'color 0.15s',
                 }}>
                   {h.is_manual && h.manual_name ? h.manual_name.substring(0, 14) : h.ticker}
@@ -123,14 +129,14 @@ export default function PositionConcentration({ holdings = [], totalValue = 0 })
                     top: 0, left: 0, bottom: 0,
                     width: `${barWidth}%`,
                     borderRadius: 4,
-                    background: isHovered
+                    background: isMobile || isHovered
                       ? colors.bar
                       : `${colors.bar}99`,
                     transition: 'background 0.15s, width 0.4s ease',
                   }} />
 
-                  {/* Hover tooltip overlay */}
-                  {isHovered && (
+                  {/* Tooltip overlay — always visible on mobile, hover-only on desktop */}
+                  {(isMobile || isHovered) && (
                     <div style={{
                       position: 'absolute',
                       top: 0, left: 0, right: 0, bottom: 0,

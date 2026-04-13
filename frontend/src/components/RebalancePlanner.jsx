@@ -2,23 +2,31 @@ import { useState, useMemo } from 'react';
 import { C, MONO } from '../styles/theme';
 import { cardStyle, inputStyle, sectionTitle, tableHeader, labelStyle } from '../styles/shared';
 import useMediaQuery from '../hooks/useMediaQuery';
+import useReducedMotion from '../hooks/useReducedMotion';
 
 export default function RebalancePlanner({ holdings = [], totalValue = 0 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [budget, setBudget] = useState('');
   const [mode, setMode] = useState('buyOnly');
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
   const isMobile = useMediaQuery('(max-width: 767px)');
+  const reduced = useReducedMotion();
 
   const parsedBudget = parseFloat(budget.replace(/[^0-9.]/g, '')) || 0;
 
-  // Only brokerage holdings with a target allocation participate
-  const eligible = useMemo(() =>
-    holdings.filter(h =>
-      (h.account_type || 'brokerage') === 'brokerage' &&
-      h.target_allocation > 0 &&
-      h.current_price > 0
-    ), [holdings]);
+  // Holdings with a target allocation participate; drift is recomputed
+  // against the current totalValue so filtering to a single account scopes correctly.
+  const eligible = useMemo(() => {
+    if (!totalValue) return [];
+    return holdings
+      .filter(h => h.target_allocation > 0 && h.current_price > 0)
+      .map(h => {
+        const actual = (h.market_value / totalValue) * 100;
+        const drift = Number((actual - h.target_allocation).toFixed(2));
+        return { ...h, actual_allocation: Number(actual.toFixed(2)), drift };
+      });
+  }, [holdings, totalValue]);
 
   const plan = useMemo(() => {
     if (!eligible.length || !totalValue) return [];
@@ -92,7 +100,12 @@ export default function RebalancePlanner({ holdings = [], totalValue = 0 }) {
 
     navigator.clipboard.writeText(lines.join('\n')).then(() => {
       setCopied(true);
+      setCopyError(false);
       setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      setCopyError(true);
+      setCopied(false);
+      setTimeout(() => setCopyError(false), 2000);
     });
   };
 
@@ -116,9 +129,9 @@ export default function RebalancePlanner({ holdings = [], totalValue = 0 }) {
 
       {/* Collapsible body */}
       <div style={{
-        maxHeight: isOpen ? 2000 : 0,
+        maxHeight: isOpen ? 4000 : 0,
         overflow: 'hidden',
-        transition: 'max-height 250ms ease',
+        transition: reduced ? 'none' : 'max-height 250ms ease',
       }}>
         <div style={{ padding: '0 24px 24px' }}>
           {/* Controls */}
@@ -284,15 +297,16 @@ export default function RebalancePlanner({ holdings = [], totalValue = 0 }) {
 
                 <button
                   onClick={copyPlan}
+                  aria-live="polite"
                   style={{
                     padding: '8px 16px', borderRadius: 6, fontSize: 12, fontWeight: 600,
                     cursor: 'pointer', minHeight: 36, transition: 'background 0.15s, color 0.15s',
-                    background: copied ? C.green + '22' : 'transparent',
-                    border: `1px solid ${copied ? C.green : C.accent}`,
-                    color: copied ? C.green : C.accent,
+                    background: copyError ? C.red + '22' : copied ? C.green + '22' : 'transparent',
+                    border: `1px solid ${copyError ? C.red : copied ? C.green : C.accent}`,
+                    color: copyError ? C.red : copied ? C.green : C.accent,
                   }}
                 >
-                  {copied ? 'Copied!' : 'Copy Plan'}
+                  {copyError ? 'Copy failed' : copied ? 'Copied!' : 'Copy Plan'}
                 </button>
               </div>
             </>

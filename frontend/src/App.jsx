@@ -28,8 +28,8 @@ export default function App() {
         <div style={{
           position: 'fixed',
           top: 0,
-          left: 0,
-          right: 0,
+          left: 'env(safe-area-inset-left, 0px)',
+          right: 'env(safe-area-inset-right, 0px)',
           zIndex: 1200,
           background: C.accent,
           color: '#fff',

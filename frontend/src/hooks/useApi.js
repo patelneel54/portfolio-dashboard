@@ -28,8 +28,15 @@ async function apiFetch(path, options = {}) {
   }
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: 'Request failed' }));
-    throw new Error(err.detail || 'Request failed');
+    const body = await res.json().catch(() => ({ detail: 'Request failed' }));
+    const detail = body.detail;
+    const message = typeof detail === 'string'
+      ? detail
+      : (detail && typeof detail === 'object' && detail.message) || 'Request failed';
+    const error = new Error(message);
+    error.status = res.status;
+    error.detail = detail;
+    throw error;
   }
 
   return res.json();
@@ -146,10 +153,12 @@ export const api = {
   // Settings management
   /** @param {string} currentPin @param {string} newPin @returns {Promise<{status: string}>} */
   changePin: (currentPin, newPin) => apiFetch('/auth/change-pin', { method: 'POST', body: JSON.stringify({ current_pin: currentPin, new_pin: newPin }) }),
-  /** @param {'csv'|'json'} format @returns {Promise<Blob>} */
-  exportData: async (format) => {
+  /** @param {'csv'|'json'} format @param {string} [accountType] @returns {Promise<void>} */
+  exportData: async (format, accountType) => {
     const token = localStorage.getItem('auth_token');
-    const res = await fetch(`${API_BASE}/export?format=${format}`, {
+    const params = new URLSearchParams({ format });
+    if (accountType) params.set('account_type', accountType);
+    const res = await fetch(`${API_BASE}/export?${params.toString()}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
     if (res.status === 401) { localStorage.removeItem('auth_token'); window.location.href = '/login'; throw new Error('Unauthorized'); }
@@ -158,7 +167,7 @@ export const api = {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `portfolio.${format}`;
+    a.download = `portfolio${accountType ? `-${accountType}` : ''}.${format}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -175,4 +184,13 @@ export const api = {
   webauthnAuthVerify: (credential) => apiFetch('/webauthn/auth-verify', { method: 'POST', body: JSON.stringify({ credential }) }),
   webauthnDeleteCredential: () => apiFetch('/webauthn/credential', { method: 'DELETE' }),
   webauthnStatus: () => apiFetch('/webauthn/status'),
+  // Accounts
+  /** @returns {Promise<Array<{id: number, name: string, account_type: string, institution: string|null, holding_count: number, total_value: number}>>} */
+  listAccounts: () => apiFetch('/accounts'),
+  /** @param {{name: string, account_type: string, institution?: string}} data */
+  createAccount: (data) => apiFetch('/accounts', { method: 'POST', body: JSON.stringify(data) }),
+  /** @param {number} id @param {{name?: string, account_type?: string, institution?: string}} data */
+  updateAccount: (id, data) => apiFetch(`/accounts/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  /** @param {number} id */
+  deleteAccount: (id) => apiFetch(`/accounts/${id}`, { method: 'DELETE' }),
 };

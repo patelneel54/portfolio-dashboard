@@ -26,9 +26,11 @@ export default function AssetClassBreakdown({ holdings, totalValue, accountFilte
           if (data.model?.age) setAge(data.model.age);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) setSuggestions({ suggestions: [], model: {} });
+      });
     return () => { cancelled = true; };
-  }, [accountFilter, holdings]);
+  }, [accountFilter]);
 
   if (!holdings.length || totalValue <= 0) return null;
 
@@ -142,6 +144,8 @@ export default function AssetClassBreakdown({ holdings, totalValue, accountFilte
         <div style={{ ...cardStyle }}>
           <button
             onClick={() => setShowSuggestions(!showSuggestions)}
+            aria-expanded={showSuggestions}
+            aria-controls="rebalance-suggestions-body"
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               width: '100%', background: 'none', border: 'none', cursor: 'pointer',
@@ -157,13 +161,13 @@ export default function AssetClassBreakdown({ holdings, totalValue, accountFilte
                 {suggestions.suggestions.length}
               </span>
             </div>
-            <span style={{ fontSize: 14, color: C.textMuted, transform: showSuggestions ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+            <span aria-hidden="true" style={{ fontSize: 14, color: C.textMuted, transform: showSuggestions ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
               &#9660;
             </span>
           </button>
 
           {showSuggestions && (
-            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div id="rebalance-suggestions-body" style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
               {suggestions.suggestions.map((s, i) => (
                 <div key={i} style={{
                   padding: '10px 12px', borderRadius: 8,

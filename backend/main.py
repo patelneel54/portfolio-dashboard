@@ -3,7 +3,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, UploadFile, File, Query
+from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, UploadFile, File, Query, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,7 +15,16 @@ load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 from database import init_db, get_db
-from auth import verify_pin, verify_pin_async, create_token, require_auth, update_pin_hash
+from auth import (
+    verify_pin,
+    verify_pin_async,
+    create_token,
+    require_auth,
+    update_pin_hash,
+    check_rate_limit,
+    record_auth_failure,
+    reset_auth_failures,
+)
 from webauthn_routes import (
     webauthn_register_options,
     webauthn_register_verify,
@@ -45,7 +54,7 @@ from stock_service import (
 )
 from fidelity_csv import parse_fidelity_csv
 
-VALID_ACCOUNT_TYPES = ("brokerage", "401k", "crypto")
+VALID_ACCOUNT_TYPES = ("brokerage", "401k", "crypto", "ira", "roth_ira", "hsa")
 VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "")
 VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "")
 
@@ -174,6 +183,7 @@ class HoldingCreate(BaseModel):
     target_allocation: float = 0
     purchase_date: str | None = None
     account_type: str = "brokerage"
+    account_id: int | None = None
     is_manual: bool = False
     manual_name: str | None = None
     asset_class: str | None = None
@@ -187,10 +197,23 @@ class HoldingUpdate(BaseModel):
     target_allocation: float | None = None
     purchase_date: str | None = None
     account_type: str | None = None
+    account_id: int | None = None
     asset_class: str | None = None
     current_price: float | None = None
     manual_name: str | None = None
     benchmark_ticker: str | None = None
+
+
+class AccountCreate(BaseModel):
+    name: str
+    account_type: str
+    institution: str | None = None
+
+
+class AccountUpdate(BaseModel):
+    name: str | None = None
+    account_type: str | None = None
+    institution: str | None = None
 
 
 class SettingsUpdate(BaseModel):
@@ -221,9 +244,12 @@ class WebAuthnCredential(BaseModel):
 
 
 @app.post("/api/auth/login")
-async def login(req: LoginRequest):
+async def login(req: LoginRequest, request: Request):
+    check_rate_limit(request)
     if not await verify_pin_async(req.pin):
+        record_auth_failure(request)
         raise HTTPException(status_code=401, detail="Invalid PIN")
+    reset_auth_failures(request)
     token = create_token()
     return {"token": token}
 
@@ -234,12 +260,15 @@ async def check_auth(_=Depends(require_auth)):
 
 
 @app.post("/api/auth/change-pin")
-async def change_pin(req: ChangePinRequest, _=Depends(require_auth)):
+async def change_pin(req: ChangePinRequest, request: Request, _=Depends(require_auth)):
     """Change the user's PIN. Verifies current PIN first."""
+    check_rate_limit(request)
     if len(req.new_pin) < 4:
         raise HTTPException(status_code=400, detail="New PIN must be at least 4 characters")
     if not await verify_pin_async(req.current_pin):
+        record_auth_failure(request)
         raise HTTPException(status_code=401, detail="Current PIN is incorrect")
+    reset_auth_failures(request)
     await update_pin_hash(req.new_pin)
     return {"status": "ok"}
 
@@ -277,13 +306,140 @@ async def wa_status(_=Depends(require_auth)):
     return await webauthn_get_status()
 
 
+# ── Accounts Routes ──
+
+
+async def _get_default_account_id(db, account_type: str) -> int:
+    cursor = await db.execute(
+        "SELECT id FROM accounts WHERE name = ? AND account_type = ?",
+        (f"Default {account_type}", account_type),
+    )
+    row = await cursor.fetchone()
+    if row:
+        return row["id"]
+    cursor = await db.execute(
+        "INSERT INTO accounts (name, account_type) VALUES (?, ?)",
+        (f"Default {account_type}", account_type),
+    )
+    await db.commit()
+    return cursor.lastrowid
+
+
+@app.get("/api/accounts")
+async def list_accounts(_=Depends(require_auth)):
+    async with get_db() as db:
+        cursor = await db.execute(
+            """SELECT a.id, a.name, a.account_type, a.institution, a.created_at,
+                      COUNT(h.id) AS holding_count,
+                      COALESCE(SUM(h.shares * COALESCE(h.current_price, h.avg_cost, 0)), 0) AS total_value
+               FROM accounts a
+               LEFT JOIN holdings h ON h.account_id = a.id
+               GROUP BY a.id
+               ORDER BY a.account_type, a.name"""
+        )
+        rows = await cursor.fetchall()
+        return [dict(r) for r in rows]
+
+
+@app.post("/api/accounts")
+async def create_account(account: AccountCreate, _=Depends(require_auth)):
+    if account.account_type not in VALID_ACCOUNT_TYPES:
+        raise HTTPException(status_code=400, detail=f"account_type must be one of {VALID_ACCOUNT_TYPES}")
+    name = account.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="name is required")
+    async with get_db() as db:
+        try:
+            cursor = await db.execute(
+                "INSERT INTO accounts (name, account_type, institution) VALUES (?, ?, ?)",
+                (name, account.account_type, (account.institution or None)),
+            )
+            await db.commit()
+            return {
+                "id": cursor.lastrowid,
+                "name": name,
+                "account_type": account.account_type,
+                "institution": account.institution,
+            }
+        except Exception as e:
+            if "UNIQUE" in str(e).upper():
+                raise HTTPException(status_code=409, detail=f"Account '{name}' already exists")
+            raise
+
+
+@app.patch("/api/accounts/{account_id}")
+async def update_account(account_id: int, update: AccountUpdate, _=Depends(require_auth)):
+    async with get_db() as db:
+        cursor = await db.execute("SELECT * FROM accounts WHERE id = ?", (account_id,))
+        existing = await cursor.fetchone()
+        if not existing:
+            raise HTTPException(status_code=404, detail="Account not found")
+
+        updates: dict = {}
+        if update.name is not None:
+            nm = update.name.strip()
+            if not nm:
+                raise HTTPException(status_code=400, detail="name cannot be empty")
+            updates["name"] = nm
+        if update.account_type is not None:
+            if update.account_type not in VALID_ACCOUNT_TYPES:
+                raise HTTPException(status_code=400, detail=f"account_type must be one of {VALID_ACCOUNT_TYPES}")
+            updates["account_type"] = update.account_type
+        if update.institution is not None:
+            updates["institution"] = update.institution or None
+
+        if not updates:
+            return {"status": "ok"}
+
+        set_clause = ", ".join(f"{k} = ?" for k in updates)
+        values = list(updates.values()) + [account_id]
+        try:
+            await db.execute(f"UPDATE accounts SET {set_clause} WHERE id = ?", values)
+        except Exception as e:
+            if "UNIQUE" in str(e).upper():
+                raise HTTPException(status_code=409, detail="Account name already in use")
+            raise
+
+        if "account_type" in updates:
+            await db.execute(
+                "UPDATE holdings SET account_type = ? WHERE account_id = ?",
+                (updates["account_type"], account_id),
+            )
+        await db.commit()
+    return {"status": "ok"}
+
+
+@app.delete("/api/accounts/{account_id}")
+async def delete_account(account_id: int, _=Depends(require_auth)):
+    async with get_db() as db:
+        cursor = await db.execute(
+            "SELECT COUNT(*) AS c FROM holdings WHERE account_id = ?", (account_id,)
+        )
+        row = await cursor.fetchone()
+        if row and row["c"] > 0:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Account has {row['c']} holding(s). Move or delete them first.",
+            )
+        cursor = await db.execute("DELETE FROM accounts WHERE id = ?", (account_id,))
+        await db.commit()
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Account not found")
+    return {"status": "ok"}
+
+
 # ── Holdings Routes ──
 
 
 @app.get("/api/holdings")
 async def list_holdings(_=Depends(require_auth)):
     async with get_db() as db:
-        cursor = await db.execute("SELECT * FROM holdings ORDER BY id")
+        cursor = await db.execute(
+            """SELECT h.*, a.name AS account_name
+               FROM holdings h
+               LEFT JOIN accounts a ON a.id = h.account_id
+               ORDER BY h.id"""
+        )
         rows = await cursor.fetchall()
         lr_cursor = await db.execute("SELECT MAX(last_updated) as lr FROM holdings")
         lr_row = await lr_cursor.fetchone()
@@ -375,22 +531,39 @@ async def add_holding(
             info["type"] = "Crypto"
 
     async with get_db() as db:
+        # Resolve target account
+        if holding.account_id is not None:
+            cursor = await db.execute(
+                "SELECT id, name, account_type FROM accounts WHERE id = ?",
+                (holding.account_id,),
+            )
+            acct = await cursor.fetchone()
+            if not acct:
+                raise HTTPException(status_code=404, detail="Account not found")
+            account_id = acct["id"]
+            account_type = acct["account_type"]
+            account_label = acct["name"]
+        else:
+            account_type = holding.account_type
+            account_id = await _get_default_account_id(db, account_type)
+            account_label = f"Default {account_type}"
+
         # Check for duplicate (same ticker + same account)
         cursor = await db.execute(
-            "SELECT id FROM holdings WHERE ticker = ? AND account_type = ?",
-            (ticker, holding.account_type),
+            "SELECT id FROM holdings WHERE ticker = ? AND account_id = ?",
+            (ticker, account_id),
         )
         if await cursor.fetchone():
             raise HTTPException(
                 status_code=409,
-                detail=f"{ticker} already exists in {holding.account_type}",
+                detail=f"{ticker} already exists in {account_label}",
             )
 
         await db.execute(
             """INSERT INTO holdings (ticker, type, shares, avg_cost, target_allocation,
-               purchase_date, account_type, current_price, previous_close, last_updated,
+               purchase_date, account_type, account_id, current_price, previous_close, last_updated,
                is_manual, manual_name, asset_class, benchmark_ticker)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?, ?, ?, ?)""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?, ?, ?, ?)""",
             (
                 ticker,
                 info["type"],
@@ -398,7 +571,8 @@ async def add_holding(
                 holding.avg_cost,
                 holding.target_allocation,
                 holding.purchase_date,
-                holding.account_type,
+                account_type,
+                account_id,
                 info["price"],
                 info["previous_close"],
                 1 if holding.is_manual else 0,
@@ -407,6 +581,14 @@ async def add_holding(
                 holding.benchmark_ticker.upper().strip() if holding.benchmark_ticker else None,
             ),
         )
+        # Mirror target into account_targets
+        if holding.target_allocation and holding.target_allocation > 0:
+            await db.execute(
+                """INSERT INTO account_targets (account_id, ticker, target_allocation)
+                   VALUES (?, ?, ?)
+                   ON CONFLICT(account_id, ticker) DO UPDATE SET target_allocation = excluded.target_allocation""",
+                (account_id, ticker, holding.target_allocation),
+            )
         await db.commit()
 
     # Fetch price history in background (skip for manual holdings)
@@ -451,23 +633,45 @@ async def update_holding(
             updates["previous_close"] = existing["current_price"] or update.current_price
             updates["current_price"] = update.current_price
             updates["last_updated"] = "datetime_now"  # placeholder handled below
-        if update.account_type is not None:
+        # Move between named accounts
+        if update.account_id is not None:
+            cursor = await db.execute(
+                "SELECT id, name, account_type FROM accounts WHERE id = ?",
+                (update.account_id,),
+            )
+            acct = await cursor.fetchone()
+            if not acct:
+                raise HTTPException(status_code=404, detail="Account not found")
+            dup = await db.execute(
+                "SELECT id FROM holdings WHERE ticker = ? AND account_id = ? AND id != ?",
+                (existing["ticker"], acct["id"], holding_id),
+            )
+            if await dup.fetchone():
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"{existing['ticker']} already exists in {acct['name']}",
+                )
+            updates["account_id"] = acct["id"]
+            updates["account_type"] = acct["account_type"]
+        elif update.account_type is not None:
             if update.account_type not in VALID_ACCOUNT_TYPES:
                 raise HTTPException(
                     status_code=400,
                     detail=f"account_type must be one of {VALID_ACCOUNT_TYPES}",
                 )
-            # Check for duplicate when changing account_type
+            # Map to default account of the new type
+            new_account_id = await _get_default_account_id(db, update.account_type)
             dup = await db.execute(
-                "SELECT id FROM holdings WHERE ticker = ? AND account_type = ? AND id != ?",
-                (existing["ticker"], update.account_type, holding_id),
+                "SELECT id FROM holdings WHERE ticker = ? AND account_id = ? AND id != ?",
+                (existing["ticker"], new_account_id, holding_id),
             )
             if await dup.fetchone():
                 raise HTTPException(
                     status_code=409,
-                    detail=f"{existing['ticker']} already exists in {update.account_type}",
+                    detail=f"{existing['ticker']} already exists in Default {update.account_type}",
                 )
             updates["account_type"] = update.account_type
+            updates["account_id"] = new_account_id
 
         if updates:
             # Handle datetime('now') for last_updated
@@ -481,6 +685,21 @@ async def update_holding(
             await db.execute(
                 f"UPDATE holdings SET {set_clause} WHERE id = ?", values
             )
+
+            # Mirror target / account moves into account_targets
+            if update.target_allocation is not None or update.account_id is not None:
+                cursor = await db.execute(
+                    "SELECT ticker, account_id, target_allocation FROM holdings WHERE id = ?",
+                    (holding_id,),
+                )
+                cur = await cursor.fetchone()
+                if cur and cur["account_id"]:
+                    await db.execute(
+                        """INSERT INTO account_targets (account_id, ticker, target_allocation)
+                           VALUES (?, ?, ?)
+                           ON CONFLICT(account_id, ticker) DO UPDATE SET target_allocation = excluded.target_allocation""",
+                        (cur["account_id"], cur["ticker"], cur["target_allocation"] or 0),
+                    )
             await db.commit()
 
     return {"status": "ok"}
@@ -548,10 +767,23 @@ async def update_settings(body: SettingsUpdate, _=Depends(require_auth)):
 
 
 @app.get("/api/export")
-async def export_data(format: str = Query("csv", pattern="^(csv|json)$"), _=Depends(require_auth)):
-    """Export all holdings as CSV or JSON."""
+async def export_data(
+    format: str = Query("csv", pattern="^(csv|json)$"),
+    account_type: str | None = None,
+    _=Depends(require_auth),
+):
+    """Export holdings as CSV or JSON, optionally filtered to one account type."""
+    if account_type is not None and account_type not in VALID_ACCOUNT_TYPES:
+        raise HTTPException(status_code=400, detail=f"account_type must be one of {VALID_ACCOUNT_TYPES}")
+
     async with get_db() as db:
-        cursor = await db.execute("SELECT * FROM holdings ORDER BY account_type, ticker")
+        if account_type:
+            cursor = await db.execute(
+                "SELECT * FROM holdings WHERE account_type = ? ORDER BY ticker",
+                (account_type,),
+            )
+        else:
+            cursor = await db.execute("SELECT * FROM holdings ORDER BY account_type, ticker")
         rows = [dict(r) for r in await cursor.fetchall()]
 
     # Calculate market_value and gain_loss for each row
@@ -722,31 +954,47 @@ async def dismiss_alert(alert_id: int, _=Depends(require_auth)):
 @app.post("/api/import/fidelity-csv")
 async def import_fidelity_csv(
     file: UploadFile = File(...),
+    account_id: int | None = Query(None),
     background_tasks: BackgroundTasks = None,
     _=Depends(require_auth),
 ):
-    """Import holdings from a Fidelity 401k CSV export."""
+    """Import holdings from a Fidelity 401k CSV export into the given account (defaults to Default 401k)."""
     content = await file.read()
     try:
         text = content.decode("utf-8")
     except UnicodeDecodeError:
         text = content.decode("latin-1")
 
-    parsed = parse_fidelity_csv(text)
-    if not parsed:
+    parsed, parse_errors = parse_fidelity_csv(text)
+    if not parsed and not parse_errors:
         raise HTTPException(status_code=400, detail="No holdings found in CSV. Check file format.")
+
+    # Resolve destination account
+    async with get_db() as db:
+        if account_id is not None:
+            cursor = await db.execute(
+                "SELECT id, account_type FROM accounts WHERE id = ?", (account_id,)
+            )
+            acct = await cursor.fetchone()
+            if not acct:
+                raise HTTPException(status_code=404, detail="Account not found")
+            target_account_id = acct["id"]
+            target_account_type = acct["account_type"]
+        else:
+            target_account_id = await _get_default_account_id(db, "401k")
+            target_account_type = "401k"
 
     added = 0
     updated = 0
-    errors = []
+    errors: list[dict] = list(parse_errors)
 
     for entry in parsed:
         ticker = entry["ticker"]
         try:
             async with get_db() as db:
                 cursor = await db.execute(
-                    "SELECT id, current_price FROM holdings WHERE ticker = ? AND account_type = '401k'",
-                    (ticker,),
+                    "SELECT id, current_price FROM holdings WHERE ticker = ? AND account_id = ?",
+                    (ticker, target_account_id),
                 )
                 existing = await cursor.fetchone()
 
@@ -770,12 +1018,13 @@ async def import_fidelity_csv(
                     # Insert new holding
                     await db.execute(
                         """INSERT INTO holdings (ticker, type, shares, avg_cost, target_allocation,
-                           account_type, current_price, previous_close, last_updated,
+                           account_type, account_id, current_price, previous_close, last_updated,
                            is_manual, manual_name, asset_class, benchmark_ticker)
-                           VALUES (?, ?, ?, ?, 0, '401k', ?, ?, datetime('now'), ?, ?, ?, ?)""",
+                           VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, datetime('now'), ?, ?, ?, ?)""",
                         (
                             ticker, entry.get("type", "Fund"), entry["shares"],
-                            entry["avg_cost"], entry["current_price"], entry["current_price"],
+                            entry["avg_cost"], target_account_type, target_account_id,
+                            entry["current_price"], entry["current_price"],
                             1 if entry["is_manual"] else 0, entry.get("manual_name"),
                             entry["asset_class"], entry.get("benchmark_ticker"),
                         ),
@@ -788,6 +1037,15 @@ async def import_fidelity_csv(
                 await db.commit()
         except Exception as e:
             errors.append({"ticker": ticker, "error": str(e)})
+
+    if added == 0 and updated == 0 and errors:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "No holdings imported. All rows failed.",
+                "errors": errors[:20],
+            },
+        )
 
     return {"added": added, "updated": updated, "errors": errors}
 

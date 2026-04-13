@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../hooks/useApi';
 import { C, MONO, SANS } from '../styles/theme';
-import useCountUp from '../hooks/useCountUp';
+import useReducedMotion from '../hooks/useReducedMotion';
 import { cardStyle, buttonPrimary, buttonSecondary, labelStyle, srOnly } from '../styles/shared';
 import OverviewTab from './OverviewTab';
 import AllocationTab from './AllocationTab';
@@ -34,13 +34,23 @@ function formatRefreshTime(date) {
   })}`;
 }
 
-const Stat = ({ label, value, sub, color, index }) => (
-  <div style={{ ...cardStyle, padding: '14px 18px', minWidth: 0, flex: 1, animation: 'fadeSlideUp 0.35s ease-out both', animationDelay: `${(index || 0) * 0.07}s` }}>
-    <div style={labelStyle}>{label}</div>
-    <div style={{ fontSize: 28, fontWeight: 700, color: color || C.text, marginTop: 3, fontFamily: SANS, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
-    {sub && <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{sub}</div>}
-  </div>
-);
+const Stat = ({ label, value, sub, color, index }) => {
+  const reduced = useReducedMotion();
+  return (
+    <div style={{
+      ...cardStyle,
+      padding: '14px 18px',
+      minWidth: 0,
+      flex: 1,
+      animation: reduced ? 'none' : 'fadeSlideUp 0.35s ease-out both',
+      animationDelay: reduced ? '0s' : `${(index || 0) * 0.07}s`,
+    }}>
+      <div style={labelStyle}>{label}</div>
+      <div style={{ fontSize: 28, fontWeight: 700, color: color || C.text, marginTop: 3, fontFamily: SANS, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{sub}</div>}
+    </div>
+  );
+};
 
 /** @returns {JSX.Element} Main dashboard with tabs, stats, alerts banner, and holdings management. */
 export default function Dashboard() {
@@ -53,6 +63,8 @@ export default function Dashboard() {
   const [showFilterSheet, setShowFilterSheet] = useState(false);
 
   const [accountFilter, setAccountFilter] = useState('brokerage');
+  const [activeAccountId, setActiveAccountId] = useState(null);
+  const [accounts, setAccounts] = useState([]);
   const [fetchError, setFetchError] = useState(null);
   const [lastRefreshedAt, setLastRefreshedAt] = useState(null);
   const [triggeredAlerts, setTriggeredAlerts] = useState([]);
@@ -62,12 +74,14 @@ export default function Dashboard() {
   const fetchData = useCallback(async () => {
     setFetchError(null);
     try {
-      const [holdingsData, settingsData] = await Promise.all([
+      const [holdingsData, settingsData, accountsData] = await Promise.all([
         api.getHoldings(),
         api.getSettings(),
+        api.listAccounts().catch(() => []),
       ]);
       setData(holdingsData);
       setSettings(settingsData);
+      setAccounts(accountsData || []);
       const serverTs = holdingsData.last_refreshed;
       setLastRefreshedAt(serverTs ? new Date(serverTs + 'Z') : new Date());
     } catch (err) {
@@ -103,6 +117,13 @@ export default function Dashboard() {
     return () => navigator.serviceWorker.removeEventListener('message', handler);
   }, [fetchData]);
 
+  // Refetch when Settings saves new assumptions so Projections picks them up.
+  useEffect(() => {
+    const handler = () => fetchData();
+    window.addEventListener('settings-updated', handler);
+    return () => window.removeEventListener('settings-updated', handler);
+  }, [fetchData]);
+
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
@@ -134,9 +155,15 @@ export default function Dashboard() {
   }
 
   const allHoldings = data?.holdings || [];
-  const filteredHoldings = accountFilter === 'all'
+  const byCategory = accountFilter === 'all'
     ? allHoldings
     : allHoldings.filter(h => (h.account_type || 'brokerage') === accountFilter);
+  const filteredHoldings = activeAccountId != null
+    ? byCategory.filter(h => h.account_id === activeAccountId)
+    : byCategory;
+  const activeAccount = activeAccountId != null
+    ? accounts.find(a => a.id === activeAccountId)
+    : null;
 
   // Recompute aggregates from filtered holdings
   const totalValue = filteredHoldings.reduce((s, h) => s + h.market_value, 0);
@@ -198,7 +225,7 @@ export default function Dashboard() {
               width: 8, height: 8, borderRadius: 4,
               background: accountFilter === 'all' ? C.accent : accountFilter === 'brokerage' ? C.blue : accountFilter === '401k' ? C.purple : '#F7931A',
             }} />
-            {accountFilter === 'all' ? 'All Accounts' : accountFilter === 'brokerage' ? 'Brokerage' : accountFilter === '401k' ? '401k' : 'Crypto'}
+            {activeAccount ? activeAccount.name : accountFilter === 'all' ? 'All Accounts' : accountFilter === 'brokerage' ? 'Brokerage' : accountFilter === '401k' ? '401k' : 'Crypto'}
             <svg aria-hidden="true" width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
               <path d="M6 9l6 6 6-6" />
             </svg>
@@ -241,7 +268,7 @@ export default function Dashboard() {
               style={{
                 background: C.accent, color: '#fff', border: 'none',
                 borderRadius: 6, padding: '6px 12px', fontSize: 11, fontWeight: 600,
-                cursor: 'pointer', minHeight: 32,
+                cursor: 'pointer', minHeight: 44,
               }}
             >
               Enable
@@ -250,7 +277,7 @@ export default function Dashboard() {
               onClick={() => { setShowPushPrompt(false); localStorage.setItem('push_prompt_dismissed', '1'); }}
               style={{
                 background: 'none', border: 'none', color: C.textDim,
-                cursor: 'pointer', padding: '6px 8px', fontSize: 11, minHeight: 32,
+                cursor: 'pointer', padding: '6px 8px', fontSize: 11, minHeight: 44,
               }}
             >
               Later
@@ -277,7 +304,7 @@ export default function Dashboard() {
             style={{
               background: 'none', border: `1px solid ${C.amber}44`, color: C.amber,
               borderRadius: 6, padding: '6px 12px', fontSize: 11, fontWeight: 600,
-              cursor: 'pointer', minHeight: 36,
+              cursor: 'pointer', minHeight: 44,
             }}
           >
             Dismiss All
@@ -331,13 +358,16 @@ export default function Dashboard() {
       </div>
 
       {/* Manage Holdings Modal */}
-      {showManage && <ManageHoldings holdings={allHoldings} onClose={() => setShowManage(false)} onUpdate={fetchData} accountFilter={accountFilter} />}
+      {showManage && <ManageHoldings holdings={allHoldings} accounts={accounts} onClose={() => setShowManage(false)} onUpdate={fetchData} accountFilter={accountFilter} activeAccountId={activeAccountId} />}
 
       <AccountFilterSheet
         isOpen={showFilterSheet}
         onClose={() => setShowFilterSheet(false)}
         accountFilter={accountFilter}
-        onSelect={(id) => { setAccountFilter(id); setActiveTab('overview'); }}
+        activeAccountId={activeAccountId}
+        accounts={accounts}
+        onSelect={(id) => { setAccountFilter(id); setActiveAccountId(null); setActiveTab('overview'); }}
+        onSelectAccount={(acct) => { setAccountFilter(acct.account_type); setActiveAccountId(acct.id); setActiveTab('overview'); }}
       />
 
       <BottomTabBar activeTab={activeTab} onTabChange={(tab) => { haptic(); setActiveTab(tab); }} accountFilter={accountFilter} />

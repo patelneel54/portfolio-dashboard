@@ -26,11 +26,12 @@ export default function FundComparison({ holdings }) {
   }
   const comparableClasses = Object.entries(classFunds).filter(([, funds]) => funds.length >= 2);
 
-  // Auto-select first comparable class
+  // Auto-select first comparable class — once, on initial mount when nothing is selected.
+  // Guard with functional setState so we don't clobber a user's explicit selection.
   useEffect(() => {
-    if (!selectedClass && comparableClasses.length > 0) {
-      setSelectedClass(comparableClasses[0][0]);
-    }
+    if (comparableClasses.length === 0) return;
+    const firstKey = comparableClasses[0][0];
+    setSelectedClass(prev => prev || firstKey);
   }, [comparableClasses.length]);
 
   const fundsInClass = classFunds[selectedClass] || [];
@@ -48,11 +49,11 @@ export default function FundComparison({ holdings }) {
       .map(t => api.getFundamentals(t).then(data => ({ ticker: t, data })).catch(() => ({ ticker: t, data: {} })));
 
     Promise.all(fetches).then(results => {
-      const newFundamentals = { ...fundamentals };
+      const byTicker = {};
       for (const { ticker, data } of results) {
-        newFundamentals[ticker] = data;
+        byTicker[ticker] = data;
       }
-      setFundamentals(newFundamentals);
+      setFundamentals(prev => ({ ...prev, ...byTicker }));
       setLoading(false);
     });
   }, [selectedTickers.join(',')]);
@@ -229,7 +230,7 @@ export default function FundComparison({ holdings }) {
 
           {/* Metrics table */}
           {!loading && (
-            <div style={{ overflowX: 'auto' }}>
+            <div data-no-swipe style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                 <thead>
                   <tr>
