@@ -1,8 +1,11 @@
-import { C, MONO, SANS } from './theme';
+import { C, MONO, SANS, RADIUS, SHADOW, MOTION } from './theme';
+
+const transition = (...props) =>
+  props.map((p) => `${p} ${MOTION.fast} ${MOTION.ease}`).join(', ');
 
 export const cardStyle = {
   background: C.card,
-  borderRadius: 16,
+  borderRadius: RADIUS.xl,
   border: `1px solid ${C.border}`,
   padding: 24,
 };
@@ -14,7 +17,7 @@ export const inputStyle = {
   fontFamily: MONO,
   background: C.elevated,
   border: `1px solid ${C.border}`,
-  borderRadius: 8,
+  borderRadius: RADIUS.md,
   color: C.text,
   outline: 'none',
   boxSizing: 'border-box',
@@ -24,28 +27,28 @@ export const buttonPrimary = {
   background: C.accent,
   color: '#fff',
   border: 'none',
-  borderRadius: 10,
+  borderRadius: RADIUS.lg,
   padding: '10px 16px',
   fontSize: 14,
   fontWeight: 600,
   fontFamily: SANS,
   cursor: 'pointer',
   minHeight: 44,
-  transition: 'background 0.15s, opacity 0.15s',
+  transition: transition('background', 'opacity'),
 };
 
 export const buttonSecondary = {
   background: 'transparent',
   border: `1px solid ${C.border}`,
   color: C.textMuted,
-  borderRadius: 10,
+  borderRadius: RADIUS.lg,
   padding: '10px 16px',
   fontSize: 12,
   fontWeight: 600,
   fontFamily: SANS,
   cursor: 'pointer',
   minHeight: 44,
-  transition: 'background 0.15s, border-color 0.15s, color 0.15s',
+  transition: transition('background', 'border-color', 'color'),
 };
 
 export const sectionTitle = {
@@ -79,9 +82,9 @@ export const tableHeader = {
 export const tooltipStyle = {
   background: C.elevated,
   border: `1px solid ${C.border}`,
-  borderRadius: 10,
+  borderRadius: RADIUS.lg,
   padding: '10px 14px',
-  boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+  boxShadow: SHADOW.pop,
 };
 
 export const srOnly = {
@@ -96,7 +99,7 @@ export const srOnly = {
 export const badge = (color) => ({
   fontSize: 9,
   padding: '2px 6px',
-  borderRadius: 4,
+  borderRadius: RADIUS.xs,
   fontWeight: 700,
   textTransform: 'uppercase',
   background: color + '22',
@@ -107,14 +110,14 @@ export const dangerButton = {
   background: C.red + '22',
   color: C.red,
   border: `1px solid ${C.red}44`,
-  borderRadius: 8,
+  borderRadius: RADIUS.md,
   padding: '10px 24px',
   fontSize: 13,
   fontWeight: 600,
   fontFamily: SANS,
   cursor: 'pointer',
   minHeight: 44,
-  transition: 'background 0.15s, opacity 0.15s',
+  transition: transition('background', 'opacity'),
 };
 
 export const inputGroupWrapper = {

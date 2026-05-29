@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Components — Portfolio Command Center</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
+
+  .demo {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--r-xl);
+    padding: 24px;
+  }
+  .demo__head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 18px;
+  }
+  .demo__name { font-size: 13px; font-weight: 700; color: var(--text); }
+  .demo__token { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+  .demo__caption { font-size: 11px; color: var(--text-muted); margin-top: 14px; line-height: 1.5; }
+
+  /* Buttons */
+  .btn-primary {
+    background: var(--accent); color: #fff; border: 0;
+    border-radius: var(--r-lg); padding: 10px 16px; font-size: 14px; font-weight: 600;
+    font-family: var(--sans); cursor: pointer; min-height: 44px;
+    transition: background var(--t-fast), opacity var(--t-fast);
+  }
+  .btn-primary:hover { background: #757DFF; }
+  .btn-secondary {
+    background: transparent; border: 1px solid var(--border); color: var(--text-muted);
+    border-radius: var(--r-lg); padding: 10px 16px; font-size: 12px; font-weight: 600;
+    font-family: var(--sans); cursor: pointer; min-height: 44px;
+  }
+  .btn-secondary:hover { border-color: var(--border-active); color: var(--text); }
+  .btn-tinted {
+    background: #636AFF22; border: 1px solid #636AFF; color: var(--accent);
+    border-radius: var(--r-sm); padding: 10px 16px; font-size: 12px; font-weight: 600;
+    font-family: var(--sans); cursor: pointer; min-height: 44px;
+  }
+  .btn-danger {
+    background: #FF3B3022; color: var(--red); border: 1px solid #FF3B3044;
+    border-radius: var(--r-md); padding: 10px 24px; font-size: 13px; font-weight: 600;
+    font-family: var(--sans); cursor: pointer; min-height: 44px;
+  }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* Filter chip */
+  .filter-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; min-height: 44px;
+    background: #636AFF18; border: 1px solid #636AFF44; border-radius: var(--r-pill);
+    cursor: pointer; font-size: 12px; font-weight: 600; color: var(--accent);
+    font-family: var(--sans);
+  }
+  .filter-chip__dot { width: 8px; height: 8px; border-radius: 4px; }
+
+  /* Inputs */
+  .input {
+    width: 100%; padding: 10px 12px; font-size: 16px; font-family: var(--mono);
+    background: var(--elevated); border: 1px solid var(--border); border-radius: var(--r-md);
+    color: var(--text); outline: none; box-sizing: border-box;
+  }
+  .input:focus { border-color: var(--accent); }
+  .input--pin {
+    padding: 14px 16px; font-size: 24px; text-align: center; letter-spacing: 8px;
+    border-radius: var(--r-lg);
+  }
+  .input-label { display: block; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; margin-bottom: 6px; }
+
+  /* Stat card */
+  .stat {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--r-xl);
+    padding: 14px 18px;
+  }
+  .stat__label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; }
+  .stat__value { font-size: 28px; font-weight: 700; margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .stat__sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  /* Holding card (collapsed + expanded) */
+  .holding-card {
+    background: var(--card); border-radius: var(--r-xl); overflow: hidden;
+  }
+  .holding-card.expanded { border-left: 3px solid var(--accent); border: 1px solid var(--border); border-left: 3px solid var(--accent); }
+  .holding-card.collapsed { border: 1px solid var(--border); }
+  .holding-card__head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 14px; min-height: 44px; cursor: pointer;
+  }
+  .holding-card__l { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .holding-card__ticker { font-family: var(--mono); font-weight: 700; font-size: 14px; color: var(--text); }
+  .holding-card__r { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .holding-card__value { font-family: var(--mono); font-size: 13px; color: var(--text); }
+  .holding-card__pct {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    padding: 2px 8px; border-radius: 10px;
+  }
+  .holding-card__details {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px;
+    padding: 0 14px 14px;
+  }
+  .detail-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .detail-value { font-family: var(--mono); font-size: 13px; color: var(--text); margin-top: 2px; }
+
+  /* Badges */
+  .badge {
+    font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    font-family: var(--sans);
+  }
+  .pct-pill {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    padding: 3px 10px; border-radius: var(--r-pill);
+  }
+
+  /* Banner */
+  .banner {
+    border-radius: var(--r-lg); padding: 10px 14px;
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  }
+  .banner--alert { background: #FFB02018; border: 1px solid #FFB02044; }
+  .banner--info { background: #636AFF14; border: 1px solid #636AFF33; }
+  .banner__title { font-size: 13px; font-weight: 600; }
+  .banner__caption { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+  /* Bottom tab bar */
+  .tabbar {
+    background: var(--card); border-top: 1px solid var(--border);
+    border-radius: var(--r-md);
+    height: 56px; display: flex; justify-content: space-around; align-items: center;
+    padding: 0 4px;
+  }
+  .tabbar__btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    flex: 1; border: 0; background: transparent; cursor: pointer;
+    padding: 6px 2px; gap: 2px; min-height: 44px; color: var(--text-muted);
+    font-size: 10px; font-weight: 600; font-family: var(--sans);
+  }
+  .tabbar__btn.active { color: var(--accent); }
+
+  /* Money line / hero */
+  .money {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--r-xl);
+    padding: 28px;
+    display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center;
+  }
+  .money__label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .money__value { font-size: 44px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .money__sub { font-family: var(--mono); font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+  .money__delta {
+    font-family: var(--mono); font-size: 13px; font-weight: 600;
+    background: var(--green-bg); color: var(--green);
+    padding: 6px 14px; border-radius: var(--r-pill);
+  }
+
+  /* Drift bar */
+  .drift {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--r-xl);
+    padding: 18px 20px;
+    display: grid; grid-template-columns: 80px 1fr 80px; gap: 16px; align-items: center;
+  }
+  .drift__ticker { font-family: var(--mono); font-weight: 700; font-size: 14px; }
+  .drift__bar {
+    position: relative; height: 8px; background: var(--elevated); border-radius: var(--r-pill);
+  }
+  .drift__bar::before {
+    content: ''; position: absolute; left: 50%; top: -4px; bottom: -4px; width: 1px; background: var(--border-active);
+  }
+  .drift__bar__fill {
+    position: absolute; height: 100%; border-radius: var(--r-pill);
+  }
+  .drift__bar__actual {
+    position: absolute; top: -4px; bottom: -4px; width: 3px; background: var(--text); border-radius: 2px;
+  }
+  .drift__pct { font-family: var(--mono); font-size: 13px; text-align: right; }
+</style>
+</head>
+<body>
+<main class="ds-page">
+  <div class="ds-page__eyebrow">System · 04</div>
+  <h1 class="ds-page__title">Components</h1>
+  <p class="ds-page__lede">
+    The repeated parts. Every screen in the app is a recombination of these — buttons, stats,
+    holding cards, badges, banners, and the bottom tab bar. All inline-styled in the codebase
+    (no CSS framework), all built from <code>--text</code>, <code>--card</code>, <code>--accent</code>.
+  </p>
+  <hr class="ds-page__rule">
+
+  <h2 class="ds-h2">Buttons</h2>
+  <p class="ds-h2-sub">Three roles. <b>Primary</b> drives the next step (one per view). <b>Secondary</b>
+    is the dashboard chrome (Refresh, Settings). <b>Tinted</b> uses the accent at low-alpha for emphasis
+    without primary weight (Manage). All buttons hit a 44 px minimum height.</p>
+
+  <div class="grid-3">
+    <div class="demo">
+      <div class="demo__head"><span class="demo__name">Primary</span><span class="demo__token">buttonPrimary</span></div>
+      <div class="btn-row"><button class="btn-primary">Add Holdings</button><button class="btn-primary" disabled style="opacity:0.6;">Loading…</button></div>
+      <div class="demo__caption">Solid <code>--accent</code>. Used once per view — the next step.</div>
+    </div>
+    <div class="demo">
+      <div class="demo__head"><span class="demo__name">Secondary</span><span class="demo__token">buttonSecondary</span></div>
+      <div class="btn-row"><button class="btn-secondary">Refresh</button><button class="btn-secondary">Settings</button></div>
+      <div class="demo__caption">Outline-only chrome. Sits in the header next to the page title.</div>
+    </div>
+    <div class="demo">
+      <div class="demo__head"><span class="demo__name">Tinted accent</span><span class="demo__token">accent + 22</span></div>
+      <div class="btn-row"><button class="btn-tinted">Manage</button><button class="btn-danger">Remove holding</button></div>
+      <div class="demo__caption">Tinted background uses the role color at α 22; tinted danger for destructive actions.</div>
+    </div>
+  </div>
+
+  <h2 class="ds-h2">Filter chip · pin input</h2>
+  <div class="grid-2">
+    <div class="demo">
+      <div class="demo__head"><span class="demo__name">Account filter chip</span><span class="demo__token">--r-pill</span></div>
+      <div class="btn-row">
+        <button class="filter-chip"><span class="filter-chip__dot" style="background:var(--blue);"></span>Brokerage<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+        <button class="filter-chip" style="background:#A855F718; border-color:#A855F744; color:#A855F7;"><span class="filter-chip__dot" style="background:#A855F7;"></span>401k<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+        <button class="filter-chip" style="background:#F7931A18; border-color:#F7931A44; color:#F7931A;"><span class="filter-chip__dot" style="background:#F7931A;"></span>Crypto<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+      </div>
+      <div class="demo__caption">Color follows the active account. Trailing chevron opens a sheet.</div>
+    </div>
+    <div class="demo">
+      <div class="demo__head"><span class="demo__name">PIN input</span><span class="demo__token">inputStyle</span></div>
+      <input class="input input--pin" type="password" value="••••" readonly>
+      <div class="demo__caption">8 px tracking, 24 px type. Mono. Border switches to <code>--red</code> on error.</div>
+    </div>
+  </div>
+
+  <h2 class="ds-h2">Stat cards · the 2×2 grid</h2>
+  <p class="ds-h2-sub">Every dashboard tab opens with this grid. Top-left is always Total Value; top-right
+    is colored by direction. Sub-stat carries cost basis or count.</p>
+
+  <div class="grid-2" style="grid-template-columns: repeat(4, 1fr);">
+    <div class="stat">
+      <div class="stat__label">Total Value</div>
+      <div class="stat__value" style="color: var(--text);">$87.2k</div>
+      <div class="stat__sub">Cost: $74.8k</div>
+    </div>
+    <div class="stat">
+      <div class="stat__label">Total Gain</div>
+      <div class="stat__value" style="color: var(--green);">+$12.4k</div>
+      <div class="stat__sub">+14.2% return</div>
+    </div>
+    <div class="stat">
+      <div class="stat__label">Funds / Stock</div>
+      <div class="stat__value" style="color: var(--blue);">62% / 28%</div>
+      <div class="stat__sub">$54.1k / $24.4k / $8.7k</div>
+    </div>
+    <div class="stat">
+      <div class="stat__label">Positions</div>
+      <div class="stat__value" style="color: var(--purple);">24</div>
+      <div class="stat__sub">12 ETFs · 8 Stocks · 4 Crypto</div>
+    </div>
+  </div>
+
+  <h2 class="ds-h2">Holding card</h2>
+  <p class="ds-h2-sub">The list-item primitive. Collapsed shows ticker + value + direction. Tapping reveals a
+    2-column detail grid; the left border swaps to a 3 px accent stripe to mark expanded state.</p>
+
+  <div class="grid-2">
+    <div class="holding-card collapsed">
+      <div class="holding-card__head">
+        <div class="holding-card__l">
+          <span class="holding-card__ticker">VTI</span>
+          <span class="badge" style="background:#636AFF22; color:#636AFF;">brokerage</span>
+          <span style="color:#636AFF; font-size:10px; font-weight:600;">ETF</span>
+        </div>
+        <div class="holding-card__r">
+          <span class="holding-card__value">$28,402</span>
+          <span class="holding-card__pct" style="background: var(--green-bg); color: var(--green);">+12.4%</span>
+        </div>
+      </div>
+    </div>
+    <div class="holding-card expanded" style="border-left: 3px solid var(--accent);">
+      <div class="holding-card__head">
+        <div class="holding-card__l">
+          <span class="holding-card__ticker">NVDA</span>
+          <span class="badge" style="background:#636AFF22; color:#636AFF;">brokerage</span>
+          <span style="color:#A855F7; font-size:10px; font-weight:600;">Stock</span>
+        </div>
+        <div class="holding-card__r">
+          <span class="holding-card__value">$11,840</span>
+          <span class="holding-card__pct" style="background: var(--red-bg); color: var(--red);">−2.6%</span>
+        </div>
+      </div>
+      <div class="holding-card__details">
+        <div><div class="detail-label">Shares</div><div class="detail-value">28.50</div></div>
+        <div><div class="detail-label">Avg Cost</div><div class="detail-value">$426.80</div></div>
+        <div><div class="detail-label">Current Price</div><div class="detail-value">$415.40</div></div>
+        <div><div class="detail-label">G/L $</div><div class="detail-value" style="color: var(--red);">−$325</div></div>
+        <div><div class="detail-label">Actual %</div><div class="detail-value">13.6%</div></div>
+        <div><div class="detail-label">Target %</div><div class="detail-value">12.0%</div></div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="ds-h2">Badges · pills</h2>
+  <div class="demo" style="margin-bottom: 28px;">
+    <div class="demo__head"><span class="demo__name">Account, type, status</span><span class="demo__token">badge(color)</span></div>
+    <div style="display: flex; gap: 14px; flex-wrap: wrap; align-items: center;">
+      <span class="badge" style="background:#636AFF22; color:#636AFF;">brokerage</span>
+      <span class="badge" style="background:#A855F722; color:#A855F7;">401k</span>
+      <span class="badge" style="background:#F7931A22; color:#F7931A;">crypto</span>
+      <span class="badge" style="background:#00DC5A22; color:#00DC5A;">active</span>
+      <span class="badge" style="background:#FFB02022; color:#FFB020;">triggered</span>
+      <span class="pct-pill" style="background: var(--green-bg); color: var(--green);">+14.2%</span>
+      <span class="pct-pill" style="background: var(--red-bg); color: var(--red);">−5.6%</span>
+    </div>
+    <div class="demo__caption">Two shapes: square 4-radius badges (account / status) and pill % chips (numbers).</div>
+  </div>
+
+  <h2 class="ds-h2">Banners</h2>
+  <div class="grid-2">
+    <div class="banner banner--alert">
+      <span style="color:var(--amber); font-size:13px; font-weight:600;">3 alerts triggered</span>
+      <button style="background:none; border:1px solid #FFB02044; color:var(--amber); border-radius:var(--r-sm); padding:6px 12px; font-size:11px; font-weight:600; cursor:pointer; min-height:36px; font-family:var(--sans);">Dismiss All</button>
+    </div>
+    <div class="banner banner--info">
+      <div>
+        <div class="banner__title" style="color:var(--accent);">Enable Notifications</div>
+        <div class="banner__caption">Get alerts when stocks hit price targets</div>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <button class="btn-primary" style="padding:6px 12px; font-size:11px; min-height:36px;">Enable</button>
+        <button style="background:none; border:none; color:var(--text-dim); cursor:pointer; padding:6px 8px; font-size:11px; min-height:36px; font-family:var(--sans);">Later</button>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="ds-h2">Drift bar · spec composition</h2>
+  <p class="ds-h2-sub">An example of how primitives compose into a domain pattern. Tracks target vs actual
+    allocation. Center tick = 0 drift; fill direction shows over- / under-weight.</p>
+
+  <div class="demo" style="margin-bottom: 28px;">
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div class="drift">
+        <div class="drift__ticker">VTI</div>
+        <div class="drift__bar">
+          <div class="drift__bar__fill" style="background: var(--red); left: 50%; width: 12%;"></div>
+          <div class="drift__bar__actual" style="left: calc(50% + 12%);"></div>
+        </div>
+        <div class="drift__pct" style="color: var(--red);">+2.4%</div>
+      </div>
+      <div class="drift">
+        <div class="drift__ticker">VXUS</div>
+        <div class="drift__bar">
+          <div class="drift__bar__fill" style="background: var(--green); left: calc(50% - 8%); width: 8%;"></div>
+          <div class="drift__bar__actual" style="left: calc(50% - 8%);"></div>
+        </div>
+        <div class="drift__pct" style="color: var(--green);">−1.6%</div>
+      </div>
+      <div class="drift">
+        <div class="drift__ticker">BND</div>
+        <div class="drift__bar">
+          <div class="drift__bar__actual" style="left: calc(50% + 1%);"></div>
+        </div>
+        <div class="drift__pct" style="color: var(--text-dim);">+0.2%</div>
+      </div>
+    </div>
+    <div class="demo__caption" style="margin-top: 18px;">Red = overweight (buy less). Green = underweight (top up).
+      Within ±0.5% the bar dims to <code>--text-dim</code>: not actionable.</div>
+  </div>
+
+  <h2 class="ds-h2">Money line</h2>
+  <div class="money" style="margin-bottom: 28px;">
+    <div>
+      <div class="money__label">Total Portfolio · Brokerage</div>
+      <div class="money__value">$87,219<span style="color:var(--text-dim); font-weight:500;">.40</span></div>
+      <div class="money__sub">COST $74,811 · 24 POSITIONS · UPDATED 2M AGO</div>
+    </div>
+    <div class="money__delta">▲ +$12,408 · +14.2%</div>
+  </div>
+
+  <h2 class="ds-h2">Bottom tab bar</h2>
+  <div class="demo" style="padding: 0; overflow: hidden;">
+    <div class="tabbar">
+      <button class="tabbar__btn active">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20V16"/></svg>
+        Overview
+      </button>
+      <button class="tabbar__btn">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+        Allocation
+      </button>
+      <button class="tabbar__btn">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/></svg>
+        Performance
+      </button>
+      <button class="tabbar__btn">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 8a4 4 0 1 0 4 4"/><path d="M12 12h.01"/></svg>
+        Projections
+      </button>
+      <button class="tabbar__btn">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/><path d="M19 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/><path d="M5 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
+        More
+      </button>
+    </div>
+  </div>
+</main>
+</body>
+</html>

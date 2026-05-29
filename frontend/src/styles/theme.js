@@ -22,6 +22,26 @@ export const C = {
   chartCrosshair: "#4A4A60",
 };
 
+// Lighter accent for primary-button hover (pointer devices). See design-system/components.html.
+export const ACCENT_HOVER = "#757DFF";
+
+// ── Design-system scales (mirror styles/tokens.css) ──────────────────────────
+// Radius — mostly soft. xl (16) is the default card; md (8) is for inputs; pills use `pill`.
+export const RADIUS = { xs: 4, sm: 6, md: 8, lg: 10, xl: 16, pill: 9999 };
+
+// Spacing — base-4. Card padding is 24 (xl), stat-grid gap 8 (sm), section gap 16 (lg).
+export const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, huge: 56 };
+
+// Elevation — shadows are for true overlays only; on-page cards stack via border + surface tint.
+export const SHADOW = {
+  card: "0 1px 0 rgba(255,255,255,0.02) inset",
+  pop: "0 8px 32px rgba(0,0,0,0.4)", // popovers, sheets, modal cards
+  bar: "0 -4px 20px rgba(0,0,0,0.4)", // bottom tab bar lift
+};
+
+// Motion — fast for state changes, base for larger transitions; ease-out throughout.
+export const MOTION = { fast: "0.15s", base: "0.3s", ease: "ease-out" };
+
 export const TICKER_COLORS = [
   "#00DC5A", "#636AFF", "#FF6B6B", "#FFB020", "#00C9DB", "#A855F7", "#F472B6",
   "#00DC5A99", "#636AFF99", "#FF6B6B99", "#FFB02099", "#00C9DB99", "#A855F799",

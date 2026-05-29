@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Colors — Portfolio Command Center</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .swatch-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 36px; }
+  .swatch {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-xl);
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    transition: border-color var(--t-fast);
+  }
+  .swatch:hover { border-color: var(--border-active); }
+  .swatch__chip { height: 96px; position: relative; }
+  .swatch__chip::after {
+    content: ''; position: absolute; inset: 0;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+  }
+  .swatch__meta { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 4px; }
+  .swatch__name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .swatch__role { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  .swatch__hex {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+
+  /* Surface stack visualization */
+  .surface-stack {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--r-xl);
+    padding: 28px;
+    margin-bottom: 36px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    align-items: center;
+  }
+  .surface-demo {
+    background: var(--card);
+    border-radius: var(--r-xl);
+    padding: 22px;
+    border: 1px solid var(--border);
+  }
+  .surface-demo__inner {
+    background: var(--elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 14px 16px;
+    margin-top: 14px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .stack-rows { display: flex; flex-direction: column; gap: 8px; font-family: var(--mono); font-size: 12px; }
+  .stack-row { display: flex; align-items: center; gap: 12px; padding: 8px 12px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r-md); }
+  .stack-row__chip { width: 22px; height: 22px; border-radius: var(--r-xs); border: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+  .stack-row__name { color: var(--text); flex: 1; }
+  .stack-row__hex { color: var(--text-dim); }
+
+  /* Account + type strip */
+  .accounts-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 36px;
+  }
+  .account-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-xl);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .account-card__dot { width: 10px; height: 10px; border-radius: var(--r-pill); }
+  .account-card__head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .account-card__name { font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: 0.02em; }
+  .account-card__use { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+  .account-card__chip {
+    display: inline-block; margin-top: 12px;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 3px 8px; border-radius: var(--r-xs);
+  }
+
+  .signal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .signal-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--r-xl);
+    padding: 22px; display: flex; align-items: center; gap: 18px;
+  }
+  .signal-num {
+    font-family: var(--mono); font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums;
+  }
+  .signal-num.up { color: var(--green); }
+  .signal-num.down { color: var(--red); }
+  .signal-pill {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    padding: 3px 10px; border-radius: var(--r-pill);
+  }
+  .signal-pill.up { background: var(--green-bg); color: var(--green); }
+  .signal-pill.down { background: var(--red-bg); color: var(--red); }
+  .signal-card__label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .signal-card__caption { font-size: 12px; color: var(--text-dim); }
+
+  /* Asset class grid */
+  .asset-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  .asset-cell {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--r-md);
+    padding: 14px 12px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .asset-cell__bar { height: 6px; border-radius: var(--r-pill); }
+  .asset-cell__name { font-size: 12px; font-weight: 600; color: var(--text); }
+  .asset-cell__hex { font-family: var(--mono); font-size: 10px; color: var(--text-dim); }
+</style>
+</head>
+<body>
+<main class="ds-page">
+  <div class="ds-page__eyebrow">Foundations · 01</div>
+  <h1 class="ds-page__title">Color</h1>
+  <p class="ds-page__lede">
+    The dashboard runs in a single dark theme tuned for late-night glances at quotes. Surfaces stack from
+    near-black up through three subtle elevations. Color earns its place — every accent encodes a meaning:
+    account type, asset class, or financial direction.
+  </p>
+  <hr class="ds-page__rule">
+
+  <h2 class="ds-h2">Surfaces</h2>
+  <p class="ds-h2-sub">Four-step stack. The page sits on <code>--bg</code>, primary cards on <code>--card</code>,
+    inputs and popovers on <code>--elevated</code>. Hairline borders, never shadows, separate same-tier surfaces.</p>
+
+  <div class="surface-stack">
+    <div>
+      <div class="stack-rows">
+        <div class="stack-row"><span class="stack-row__chip" style="background:#0B0B0F"></span><span class="stack-row__name">--bg</span><span class="stack-row__hex">#0B0B0F</span></div>
+        <div class="stack-row"><span class="stack-row__chip" style="background:#16161D"></span><span class="stack-row__name">--card</span><span class="stack-row__hex">#16161D</span></div>
+        <div class="stack-row"><span class="stack-row__chip" style="background:#1E1E27"></span><span class="stack-row__name">--card-hover</span><span class="stack-row__hex">#1E1E27</span></div>
+        <div class="stack-row"><span class="stack-row__chip" style="background:#26263A"></span><span class="stack-row__name">--elevated</span><span class="stack-row__hex">#26263A</span></div>
+        <div class="stack-row"><span class="stack-row__chip" style="background:#2A2A3A"></span><span class="stack-row__name">--border</span><span class="stack-row__hex">#2A2A3A</span></div>
+        <div class="stack-row"><span class="stack-row__chip" style="background:#3D3D55"></span><span class="stack-row__name">--border-active</span><span class="stack-row__hex">#3D3D55</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="surface-demo">
+        <div class="ds-label">Total Value</div>
+        <div style="font-size:28px; font-weight:700; font-family:var(--sans); margin-top:3px;">$87.2k</div>
+        <div class="surface-demo__inner">2,148.50 SHARES · AVG $40.62</div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="ds-h2">Text</h2>
+  <p class="ds-h2-sub">Three weights of legibility. Body type holds at <code>--text</code>; supporting metadata
+    falls to <code>--text-muted</code>; everything decorative or low-priority sits on <code>--text-dim</code>.</p>
+
+  <div class="swatch-grid" style="grid-template-columns: repeat(3, 1fr);">
+    <div class="swatch">
+      <div class="swatch__chip" style="background: var(--card); display:flex; align-items:center; padding:0 22px;">
+        <span style="color:#F0F0F5; font-size:22px; font-weight:600;">Primary</span>
+      </div>
+      <div class="swatch__meta">
+        <span class="swatch__name">--text</span>
+        <span class="swatch__role">Headings, key metrics</span>
+        <span class="swatch__hex">#F0F0F5</span>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch__chip" style="background: var(--card); display:flex; align-items:center; padding:0 22px;">
+        <span style="color:#8E8EA0; font-size:22px; font-weight:600;">Muted</span>
+      </div>
+      <div class="swatch__meta">
+        <span class="swatch__name">--text-muted</span>
+        <span class="swatch__role">Labels, supporting copy</span>
+        <span class="swatch__hex">#8E8EA0</span>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch__chip" style="background: var(--card); display:flex; align-items:center; padding:0 22px;">
+        <span style="color:#5A5A6E; font-size:22px; font-weight:600;">Dim</span>
+      </div>
+      <div class="swatch__meta">
+        <span class="swatch__name">--text-dim</span>
+        <span class="swatch__role">Footnotes, hex values</span>
+        <span class="swatch__hex">#5A5A6E</span>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="ds-h2">Direction · Gain &amp; Loss</h2>
+  <p class="ds-h2-sub">The two most-rendered colors in the product. Used as foreground tint <em>and</em>
+    a tinted background pill (color + <code>18</code> alpha). Never as a solid background under a value.</p>
+
+  <div class="signal-row" style="margin-bottom: 36px;">
+    <div class="signal-card">
+      <div>
+        <div class="signal-card__label">Gain</div>
+        <div class="signal-num up">+$12,408</div>
+        <div class="signal-card__caption">--green · #00DC5A · text + <code>--green-bg</code></div>
+      </div>
+      <span class="signal-pill up">+14.2%</span>
+    </div>
+    <div class="signal-card">
+      <div>
+        <div class="signal-card__label">Loss</div>
+        <div class="signal-num down">−$3,180</div>
+        <div class="signal-card__caption">--red · #FF3B30 · text + <code>--red-bg</code></div>
+      </div>
+      <span class="signal-pill down">−5.6%</span>
+    </div>
+  </div>
+
+  <h2 class="ds-h2">Account Identity</h2>
+  <p class="ds-h2-sub">Every holding belongs to one of three account types. The same three colors track that
+    holding from filter chip → tab bar → table badge → chart segment.</p>
+
+  <div class="accounts-strip">
+    <div class="account-card">
+      <div class="account-card__head">
+        <span class="account-card__dot" style="background:#636AFF"></span>
+        <span class="account-card__name">Brokerage</span>
+      </div>
+      <div class="account-card__use">Self-directed taxable. Owns drift &amp; rebalance logic. Default tab.</div>
+      <span class="account-card__chip" style="background:#636AFF22; color:#636AFF;">brokerage</span>
+      <div class="swatch__hex" style="margin-top:10px;">#636AFF · --blue / --accent</div>
+    </div>
+    <div class="account-card">
+      <div class="account-card__head">
+        <span class="account-card__dot" style="background:#A855F7"></span>
+        <span class="account-card__name">401k</span>
+      </div>
+      <div class="account-card__use">Retirement. Often manual holdings + benchmark proxy ticker.</div>
+      <span class="account-card__chip" style="background:#A855F722; color:#A855F7;">401k</span>
+      <div class="swatch__hex" style="margin-top:10px;">#A855F7 · --purple</div>
+    </div>
+    <div class="account-card">
+      <div class="account-card__head">
+        <span class="account-card__dot" style="background:#F7931A"></span>
+        <span class="account-card__name">Crypto</span>
+      </div>
+      <div class="account-card__use">Tickers auto-suffixed with <code>-USD</code>. Switches the whole tab bar.</div>
+      <span class="account-card__chip" style="background:#F7931A22; color:#F7931A;">crypto</span>
+      <div class="swatch__hex" style="margin-top:10px;">#F7931A · bitcoin orange</div>
+    </div>
+  </div>
+
+  <h2 class="ds-h2">Asset Class Palette</h2>
+  <p class="ds-h2-sub">Used by treemaps, allocation pies, asset-class drill-downs. Hand-picked so adjacent
+    categories stay distinguishable at a 6px chart segment.</p>
+
+  <div class="asset-grid" style="margin-bottom: 36px;">
+    <div class="asset-cell"><div class="asset-cell__bar" style="background:#636AFF"></div><div class="asset-cell__name">Large Cap</div><div class="asset-cell__hex">#636AFF</div></div>
+    <div class="asset-cell"><div class="asset-cell__bar" style="background:#A855F7"></div><div class="asset-cell__name">Mid Cap</div><div class="asset-cell__hex">#A855F7</div></div>
+    <div class="asset-cell"><div class="asset-cell__bar" style="background:#00C9DB"></div><div class="asset-cell__name">Small Cap</div><div class="asset-cell__hex">#00C9DB</div></div>
+    <div class="asset-cell"><div class="asset-cell__bar" style="background:#00DC5A"></div><div class="asset-cell__name">International</div><div class="asset-cell__hex">#00DC5A</div></div>
+    <div class="asset-cell"><div class="asset-cell__bar" style="background:#FFB020"></div><div class="asset-cell__name">Bond / Fixed</div><div class="asset-cell__hex">#FFB020</div></div>
+    <div class="asset-cell"><div class="asset-cell__bar" style="background:#F472B6"></div><div class="asset-cell__name">Specialty / REIT</div><div class="asset-cell__hex">#F472B6</div></div>
+    <div class="asset-cell"><div class="asset-cell__bar" style="background:#00C9DB"></div><div class="asset-cell__name">Target Date</div><div class="asset-cell__hex">#00C9DB</div></div>
+    <div class="asset-cell"><div class="asset-cell__bar" style="background:#5A5A6E"></div><div class="asset-cell__name">Money Market</div><div class="asset-cell__hex">#5A5A6E</div></div>
+    <div class="asset-cell"><div class="asset-cell__bar" style="background:#A855F7"></div><div class="asset-cell__name">Blended</div><div class="asset-cell__hex">#A855F7</div></div>
+    <div class="asset-cell"><div class="asset-cell__bar" style="background:#F7931A"></div><div class="asset-cell__name">Crypto</div><div class="asset-cell__hex">#F7931A</div></div>
+    <div class="asset-cell"><div class="asset-cell__bar" style="background:#636AFF"></div><div class="asset-cell__name">Stable Value</div><div class="asset-cell__hex">#636AFF</div></div>
+    <div class="asset-cell"><div class="asset-cell__bar" style="background:#3D3D55"></div><div class="asset-cell__name">Unclassified</div><div class="asset-cell__hex">#3D3D55</div></div>
+  </div>
+
+  <h2 class="ds-h2">Utility</h2>
+  <p class="ds-h2-sub">State accents and chart scaffolding. Amber is the only warning color and is reserved
+    for triggered alerts and stale-data banners.</p>
+
+  <div class="swatch-grid">
+    <div class="swatch">
+      <div class="swatch__chip" style="background:#FFB020"></div>
+      <div class="swatch__meta">
+        <span class="swatch__name">--amber</span>
+        <span class="swatch__role">Triggered alerts, stale data</span>
+        <span class="swatch__hex">#FFB020</span>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch__chip" style="background:#00C9DB"></div>
+      <div class="swatch__meta">
+        <span class="swatch__name">--cyan</span>
+        <span class="swatch__role">Small-cap, target date charts</span>
+        <span class="swatch__hex">#00C9DB</span>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch__chip" style="background:#F472B6"></div>
+      <div class="swatch__meta">
+        <span class="swatch__name">--pink</span>
+        <span class="swatch__role">Specialty / REIT segments</span>
+        <span class="swatch__hex">#F472B6</span>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch__chip" style="background:#1A1A28"></div>
+      <div class="swatch__meta">
+        <span class="swatch__name">--chart-grid</span>
+        <span class="swatch__role">Recharts gridlines</span>
+        <span class="swatch__hex">#1A1A28</span>
+      </div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

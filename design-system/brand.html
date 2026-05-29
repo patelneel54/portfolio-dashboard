@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Brand &amp; Iconography — Portfolio Command Center</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .hero {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--r-xl);
+    padding: 48px; margin-bottom: 32px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center;
+  }
+  .hero__icon-wrap {
+    aspect-ratio: 1; max-width: 280px;
+    background: var(--bg); border-radius: 56px;
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+    margin: 0 auto;
+  }
+  .hero__lockup {
+    display: flex; align-items: center; gap: 18px;
+    margin-bottom: 24px;
+  }
+  .hero__lockup img { width: 56px; height: 56px; border-radius: 12px; }
+  .hero__title-stack { line-height: 1.1; }
+  .hero__product { font-size: 24px; font-weight: 700; letter-spacing: -0.01em; color: var(--text); }
+  .hero__sub { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+  .hero__voice { font-size: 14px; line-height: 1.6; color: var(--text-muted); margin-bottom: 16px; max-width: 50ch; }
+  .hero__voice b { color: var(--text); }
+
+  .icon-card-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 32px;
+  }
+  .icon-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--r-xl);
+    padding: 20px;
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+  }
+  .icon-card__bezel {
+    width: 72px; height: 72px; border-radius: 18px;
+    background: #0a0e17;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border);
+  }
+  .icon-card__name { font-family: var(--mono); font-size: 11px; color: var(--text); }
+  .icon-card__use { font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.45; }
+
+  /* Icon library */
+  .lib {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--r-xl);
+    padding: 28px; margin-bottom: 32px;
+  }
+  .lib__head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .lib__title { font-size: 13px; font-weight: 700; color: var(--text); }
+  .lib__token { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+  .lib__grid {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px;
+  }
+  .lib__cell {
+    background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-md);
+    padding: 18px 8px 12px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .lib__cell svg { color: var(--text); }
+  .lib__cell-label { font-size: 10px; color: var(--text-muted); font-family: var(--mono); }
+
+  /* Voice card */
+  .voice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .voice-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--r-xl);
+    padding: 24px;
+  }
+  .voice-card__head { font-size: 13px; font-weight: 700; margin-bottom: 14px; }
+  .voice-card.do .voice-card__head { color: var(--green); }
+  .voice-card.dont .voice-card__head { color: var(--red); }
+  .voice-card ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .voice-card li {
+    font-size: 13px; line-height: 1.55; padding: 10px 14px;
+    border-radius: var(--r-md);
+  }
+  .voice-card.do li { background: var(--green-bg); color: var(--text); border-left: 2px solid var(--green); }
+  .voice-card.dont li { background: var(--red-bg); color: var(--text-muted); border-left: 2px solid var(--red); text-decoration: line-through; }
+</style>
+</head>
+<body>
+<main class="ds-page">
+  <div class="ds-page__eyebrow">Brand · 05</div>
+  <h1 class="ds-page__title">Brand &amp; Iconography</h1>
+  <p class="ds-page__lede">
+    The product is named <b style="color:var(--text)">Portfolio Command Center</b>, "Portfolio CC" on the home
+    screen. The mark — a four-bar chart with a connecting trend line — captures the dual identity:
+    holdings (the bars) and performance (the line).
+  </p>
+  <hr class="ds-page__rule">
+
+  <div class="hero">
+    <div class="hero__icon-wrap">
+      <img src="../frontend/public/icon.svg" alt="Portfolio Command Center icon" style="width: 100%; height: auto;">
+    </div>
+    <div>
+      <div class="hero__lockup">
+        <img src="../frontend/public/icon.svg" alt="">
+        <div class="hero__title-stack">
+          <div class="hero__product">Portfolio Command Center</div>
+          <div class="hero__sub">Stock portfolio tracker &amp; analyzer · iOS PWA</div>
+        </div>
+      </div>
+      <p class="hero__voice">
+        The icon stays on a <b>#0a0e17</b> rounded square — the only place an off-token color is allowed,
+        because Apple's home-screen mask demands a dense backplate. Bars run blue → green → indigo → amber;
+        the trend line sweeps from lower-left to upper-right in <b>#e2e8f0</b>.
+      </p>
+      <p class="hero__voice">
+        Tone is <b>direct, confident, never financial-bro</b>. We say "Brokerage" not "Wealth". "Drift" not
+        "Asset Allocation Variance". Numbers do the bragging — adjectives stay quiet.
+      </p>
+    </div>
+  </div>
+
+  <h2 class="ds-h2">App icon · sizes</h2>
+  <p class="ds-h2-sub">Three packaged sizes plus the SVG master. The <code>maskable</code> purpose tells iOS
+    and Android that the icon's safe zone is centered with a 12% padding, so no element is clipped by the
+    home-screen mask.</p>
+
+  <div class="icon-card-grid">
+    <div class="icon-card">
+      <div class="icon-card__bezel"><img src="../frontend/public/icon.svg" alt="" style="width: 56px; height: 56px;"></div>
+      <div class="icon-card__name">icon.svg</div>
+      <div class="icon-card__use">Vector master · favicon · 512 viewBox</div>
+    </div>
+    <div class="icon-card">
+      <div class="icon-card__bezel"><img src="../frontend/public/icon-192.png" alt="" style="width: 56px; height: 56px;"></div>
+      <div class="icon-card__name">icon-192.png</div>
+      <div class="icon-card__use">Maskable · Android home screen, PWA install</div>
+    </div>
+    <div class="icon-card">
+      <div class="icon-card__bezel" style="width: 88px; height: 88px;"><img src="../frontend/public/icon-512.png" alt="" style="width: 64px; height: 64px;"></div>
+      <div class="icon-card__name">icon-512.png</div>
+      <div class="icon-card__use">Maskable · splash screens, app switcher</div>
+    </div>
+  </div>
+
+  <h2 class="ds-h2">Iconography</h2>
+  <p class="ds-h2-sub">Linear icons, 24×24 viewBox, 2 px stroke, round caps and joins. Hand-rolled in
+    <code>BottomTabBar</code> as path arrays — no icon library. Always inherits <code>currentColor</code>:
+    one icon per concept; never paired with an emoji or filled glyph.</p>
+
+  <div class="lib">
+    <div class="lib__head">
+      <span class="lib__title">Tab bar &amp; navigation</span>
+      <span class="lib__token">2px stroke · linecap round · 24px</span>
+    </div>
+    <div class="lib__grid">
+      <div class="lib__cell">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20V16"/></svg>
+        <span class="lib__cell-label">chartBar</span>
+      </div>
+      <div class="lib__cell">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+        <span class="lib__cell-label">pieChart</span>
+      </div>
+      <div class="lib__cell">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/></svg>
+        <span class="lib__cell-label">trendingUp</span>
+      </div>
+      <div class="lib__cell">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 8a4 4 0 1 0 4 4"/><path d="M12 12h.01"/></svg>
+        <span class="lib__cell-label">target</span>
+      </div>
+      <div class="lib__cell">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <span class="lib__cell-label">activity</span>
+      </div>
+      <div class="lib__cell">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        <span class="lib__cell-label">layers</span>
+      </div>
+      <div class="lib__cell">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        <span class="lib__cell-label">bookOpen</span>
+      </div>
+      <div class="lib__cell">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span class="lib__cell-label">shield</span>
+      </div>
+      <div class="lib__cell">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/></svg>
+        <span class="lib__cell-label">globe</span>
+      </div>
+      <div class="lib__cell">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M22 12h-4"/><path d="M6 12H2"/><path d="M12 6V2"/><path d="M12 22v-4"/></svg>
+        <span class="lib__cell-label">crosshair</span>
+      </div>
+      <div class="lib__cell">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V14"/><path d="M4 10V3"/><path d="M12 21V12"/><path d="M12 8V3"/><path d="M20 21V16"/><path d="M20 12V3"/><path d="M1 14h6"/><path d="M9 8h6"/><path d="M17 16h6"/></svg>
+        <span class="lib__cell-label">sliders</span>
+      </div>
+      <div class="lib__cell">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+        <span class="lib__cell-label">briefcase</span>
+      </div>
+      <div class="lib__cell">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+        <span class="lib__cell-label">more</span>
+      </div>
+      <div class="lib__cell">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        <span class="lib__cell-label">chevron</span>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="ds-h2">Voice</h2>
+  <p class="ds-h2-sub">The product is for one user — its owner. Copy is terse, reads like a fluent operator,
+    and never apologizes. Numbers and ticker symbols carry the weight; prose stays out of the way.</p>
+
+  <div class="voice-grid">
+    <div class="voice-card do">
+      <div class="voice-card__head">Say this</div>
+      <ul>
+        <li>"Updated 2m ago"</li>
+        <li>"3 alerts triggered"</li>
+        <li>"Get alerts when stocks hit price targets"</li>
+        <li>"+14.2% return"</li>
+        <li>"24 positions across 3 accounts"</li>
+        <li>"Prices refresh daily at market close"</li>
+      </ul>
+    </div>
+    <div class="voice-card dont">
+      <div class="voice-card__head">Not this</div>
+      <ul>
+        <li>"Your data was last synchronized two minutes ago"</li>
+        <li>"Attention: 3 of your alert subscriptions have triggered"</li>
+        <li>"Stay informed about your investments with notifications!"</li>
+        <li>"You are up an impressive 14.2%"</li>
+        <li>"You currently hold 24 different investment products"</li>
+        <li>"Quotes are subject to delay; please check back later"</li>
+      </ul>
+    </div>
+  </div>
+</main>
+</body>
+</html>

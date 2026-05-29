@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spacing &amp; Surfaces — Portfolio Command Center</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  /* Spacing scale */
+  .scale-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; margin-bottom: 36px; }
+  .scale-cell {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--r-md);
+    padding: 16px 14px; display: flex; flex-direction: column; gap: 12px; align-items: flex-start;
+  }
+  .scale-cell__bar { background: var(--accent); border-radius: 2px; height: 8px; }
+  .scale-cell__name { font-family: var(--mono); font-size: 11px; color: var(--text); }
+  .scale-cell__px { font-family: var(--mono); font-size: 10px; color: var(--text-dim); }
+  .scale-cell__use { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+
+  /* Radius row */
+  .radius-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 36px; }
+  .radius-cell {
+    background: var(--card); border: 1px solid var(--border); padding: 22px 18px;
+    display: flex; flex-direction: column; gap: 12px; align-items: flex-start;
+  }
+  .radius-cell__sample {
+    width: 64px; height: 64px; background: var(--elevated);
+    border: 1px solid var(--border-active);
+  }
+  .radius-cell__name { font-family: var(--mono); font-size: 11px; color: var(--text); }
+  .radius-cell__px { font-family: var(--mono); font-size: 10px; color: var(--text-dim); }
+  .radius-cell__use { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+
+  /* Layout demo — anatomy of a card */
+  .anatomy {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--r-xl);
+    padding: 36px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: center;
+    margin-bottom: 36px;
+  }
+  .anatomy__demo {
+    background: var(--bg); border-radius: var(--r-xl);
+    padding: 22px; position: relative;
+  }
+  .ann-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--r-xl);
+    padding: 24px; position: relative;
+  }
+  .ann {
+    position: absolute; font-family: var(--mono); font-size: 10px;
+    color: var(--accent); white-space: nowrap;
+    background: var(--bg); padding: 2px 6px; border-radius: var(--r-xs);
+    border: 1px solid var(--accent);
+  }
+  .ann.t { top: -10px; left: 50%; transform: translateX(-50%); }
+  .ann.l { left: -10px; top: 50%; transform: translateY(-50%) rotate(-90deg); }
+  .ann.r { right: -10px; top: 50%; transform: translateY(-50%) rotate(90deg); }
+  .ann.b { bottom: -10px; left: 50%; transform: translateX(-50%); }
+  .anatomy__notes ul { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+  .anatomy__notes li { font-size: 13px; color: var(--text-muted); line-height: 1.55; padding-left: 18px; position: relative; }
+  .anatomy__notes li::before { content: ''; position: absolute; left: 0; top: 9px; width: 6px; height: 6px; border-radius: 6px; background: var(--accent); }
+  .anatomy__notes b { color: var(--text); font-weight: 600; }
+
+  /* Density demo */
+  .density {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 36px;
+  }
+  .density-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--r-xl); padding: 24px; }
+  .density-card__title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .density-card__desc { font-size: 11px; color: var(--text-dim); margin-bottom: 18px; }
+  .density-card__rows { display: flex; flex-direction: column; }
+  .density-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .density-row:last-child { border-bottom: 0; }
+  .density-row__l { display: flex; gap: 8px; align-items: center; }
+  .density-row__ticker { font-family: var(--mono); font-weight: 700; font-size: 14px; color: var(--text); }
+  .density-row__type { font-size: 10px; font-weight: 600; }
+  .density-row__r { display: flex; align-items: center; gap: 10px; }
+  .density-row__price { font-family: var(--mono); font-size: 13px; color: var(--text); }
+  .density-row__pct {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    padding: 2px 8px; border-radius: var(--r-pill);
+  }
+
+  /* Elevation */
+  .elev-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .elev-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--r-xl);
+    padding: 28px; min-height: 180px;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .elev-card.pop {
+    background: var(--card); box-shadow: var(--shadow-pop);
+    border: 1px solid var(--border);
+  }
+  .elev-card.bar {
+    background: var(--card); box-shadow: var(--shadow-bar);
+  }
+  .elev-card__name { font-size: 13px; font-weight: 700; color: var(--text); }
+  .elev-card__use { font-size: 11px; color: var(--text-muted); line-height: 1.5; margin-top: 6px; }
+  .elev-card__token { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+</style>
+</head>
+<body>
+<main class="ds-page">
+  <div class="ds-page__eyebrow">Foundations · 03</div>
+  <h1 class="ds-page__title">Spacing &amp; Surfaces</h1>
+  <p class="ds-page__lede">
+    A 4-step radius scale and a base-4 spacing scale — both narrow on purpose. The mobile dashboard packs four
+    stat cards, a chart, a holdings list, and a tab bar into a 390 pt screen, so each token has to earn its width.
+  </p>
+  <hr class="ds-page__rule">
+
+  <h2 class="ds-h2">Spacing</h2>
+  <p class="ds-h2-sub">Base-4 increments, biased to the values that actually appear in the codebase. Padding inside
+    a card is almost always 24, gap between stat cards is 8, gap between sections is 16.</p>
+
+  <div class="scale-grid">
+    <div class="scale-cell">
+      <div class="scale-cell__bar" style="width: 4px;"></div>
+      <div><div class="scale-cell__name">space-1</div><div class="scale-cell__px">4px</div></div>
+      <div class="scale-cell__use">Icon-to-text gap, micro padding</div>
+    </div>
+    <div class="scale-cell">
+      <div class="scale-cell__bar" style="width: 8px;"></div>
+      <div><div class="scale-cell__name">space-2</div><div class="scale-cell__px">8px</div></div>
+      <div class="scale-cell__use">Stat grid gap, inline pill gap</div>
+    </div>
+    <div class="scale-cell">
+      <div class="scale-cell__bar" style="width: 12px;"></div>
+      <div><div class="scale-cell__name">space-3</div><div class="scale-cell__px">12px</div></div>
+      <div class="scale-cell__use">Page side padding (mobile)</div>
+    </div>
+    <div class="scale-cell">
+      <div class="scale-cell__bar" style="width: 16px;"></div>
+      <div><div class="scale-cell__name">space-4</div><div class="scale-cell__px">16px</div></div>
+      <div class="scale-cell__use">Section gap, header margin</div>
+    </div>
+    <div class="scale-cell">
+      <div class="scale-cell__bar" style="width: 24px;"></div>
+      <div><div class="scale-cell__name">space-6</div><div class="scale-cell__px">24px</div></div>
+      <div class="scale-cell__use">Card interior padding (default)</div>
+    </div>
+    <div class="scale-cell">
+      <div class="scale-cell__bar" style="width: 32px;"></div>
+      <div><div class="scale-cell__name">space-8</div><div class="scale-cell__px">32px</div></div>
+      <div class="scale-cell__use">Section dividers, modal padding</div>
+    </div>
+    <div class="scale-cell">
+      <div class="scale-cell__bar" style="width: 56px;"></div>
+      <div><div class="scale-cell__name">space-14</div><div class="scale-cell__px">56px</div></div>
+      <div class="scale-cell__use">Tab-bar height, hit target</div>
+    </div>
+  </div>
+
+  <h2 class="ds-h2">Radius</h2>
+  <p class="ds-h2-sub">Mostly soft. <code>--r-xl</code> (16) is the default card; <code>--r-md</code> (8) is for
+    inputs. Pills use <code>--r-pill</code>. We don't use sharp 0-radius surfaces — the design feels approachable, not industrial.</p>
+
+  <div class="radius-row">
+    <div class="radius-cell">
+      <div class="radius-cell__sample" style="border-radius: 4px;"></div>
+      <div><div class="radius-cell__name">--r-xs</div><div class="radius-cell__px">4px</div></div>
+      <div class="radius-cell__use">Inline code, tiny chips</div>
+    </div>
+    <div class="radius-cell">
+      <div class="radius-cell__sample" style="border-radius: 6px;"></div>
+      <div><div class="radius-cell__name">--r-sm</div><div class="radius-cell__px">6px</div></div>
+      <div class="radius-cell__use">Header buttons</div>
+    </div>
+    <div class="radius-cell">
+      <div class="radius-cell__sample" style="border-radius: 8px;"></div>
+      <div><div class="radius-cell__name">--r-md</div><div class="radius-cell__px">8px</div></div>
+      <div class="radius-cell__use">Inputs, list rows</div>
+    </div>
+    <div class="radius-cell">
+      <div class="radius-cell__sample" style="border-radius: 10px;"></div>
+      <div><div class="radius-cell__name">--r-lg</div><div class="radius-cell__px">10px</div></div>
+      <div class="radius-cell__use">Primary CTAs, banners</div>
+    </div>
+    <div class="radius-cell">
+      <div class="radius-cell__sample" style="border-radius: 16px;"></div>
+      <div><div class="radius-cell__name">--r-xl</div><div class="radius-cell__px">16px</div></div>
+      <div class="radius-cell__use">Cards (default)</div>
+    </div>
+    <div class="radius-cell">
+      <div class="radius-cell__sample" style="border-radius: 9999px;"></div>
+      <div><div class="radius-cell__name">--r-pill</div><div class="radius-cell__px">∞</div></div>
+      <div class="radius-cell__use">Filter chips, % pills</div>
+    </div>
+  </div>
+
+  <h2 class="ds-h2">Anatomy of a Card</h2>
+  <p class="ds-h2-sub">The default surface. Twenty-four pixels of padding inside a 16-pixel radius, separated
+    from siblings by a hairline border (never a shadow on same-tier cards).</p>
+
+  <div class="anatomy">
+    <div class="anatomy__demo">
+      <div class="ann-card">
+        <div class="ann t">padding: 24</div>
+        <div class="ann l">padding: 24</div>
+        <div class="ann r">padding: 24</div>
+        <div class="ann b">radius: 16 · border 1px</div>
+
+        <div class="ds-label">Total Value</div>
+        <div style="font-size: 28px; font-weight: 700; margin-top: 3px;">$87,219.40</div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Cost: $74,811</div>
+      </div>
+    </div>
+    <div class="anatomy__notes">
+      <ul>
+        <li><b>Card surface</b> uses <code>--card</code> (#16161D), one step above the page.</li>
+        <li><b>Border</b> is always 1 px <code>--border</code>. On hover or active, swap to <code>--border-active</code>; never bump width.</li>
+        <li><b>Padding</b> is 24 on the four sides at desktop, 14 px headers + 14 px body on dense mobile lists.</li>
+        <li><b>Internal gap</b> between label and value is 3 px — the label is small enough to feel attached.</li>
+        <li><b>Sub-stat</b> sits 2 px below the value in <code>--text-muted</code>. Never centered, never italic.</li>
+        <li><b>Active card</b> swaps the left border to a 3 px <code>--accent</code> stripe (used in <code>HoldingCard</code> when expanded).</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2 class="ds-h2">Density</h2>
+  <p class="ds-h2-sub">Two list densities. <b>Comfortable</b> is the default holdings card: 12 px row padding,
+    44 px minimum hit target. <b>Tight</b> is reserved for read-only summary tables.</p>
+
+  <div class="density">
+    <div class="density-card">
+      <div class="density-card__title">Comfortable · default</div>
+      <div class="density-card__desc">Tap target 44 px. Row padding 12 / 0. Used everywhere a finger touches.</div>
+      <div class="density-card__rows">
+        <div class="density-row">
+          <div class="density-row__l">
+            <span class="density-row__ticker">VTI</span>
+            <span style="font-size:9px; padding:2px 6px; border-radius:4px; font-weight:700; text-transform:uppercase; background:#636AFF22; color:#636AFF;">brokerage</span>
+            <span class="density-row__type" style="color:#636AFF;">ETF</span>
+          </div>
+          <div class="density-row__r">
+            <span class="density-row__price">$28,402</span>
+            <span class="density-row__pct" style="background: var(--green-bg); color: var(--green);">+12.4%</span>
+          </div>
+        </div>
+        <div class="density-row">
+          <div class="density-row__l">
+            <span class="density-row__ticker">VOO</span>
+            <span style="font-size:9px; padding:2px 6px; border-radius:4px; font-weight:700; text-transform:uppercase; background:#636AFF22; color:#636AFF;">brokerage</span>
+            <span class="density-row__type" style="color:#636AFF;">ETF</span>
+          </div>
+          <div class="density-row__r">
+            <span class="density-row__price">$19,108</span>
+            <span class="density-row__pct" style="background: var(--green-bg); color: var(--green);">+8.1%</span>
+          </div>
+        </div>
+        <div class="density-row">
+          <div class="density-row__l">
+            <span class="density-row__ticker">NVDA</span>
+            <span style="font-size:9px; padding:2px 6px; border-radius:4px; font-weight:700; text-transform:uppercase; background:#636AFF22; color:#636AFF;">brokerage</span>
+            <span class="density-row__type" style="color:#A855F7;">Stock</span>
+          </div>
+          <div class="density-row__r">
+            <span class="density-row__price">$11,840</span>
+            <span class="density-row__pct" style="background: var(--red-bg); color: var(--red);">−2.6%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="density-card">
+      <div class="density-card__title">Tight · summary tables</div>
+      <div class="density-card__desc">8 / 0 padding. Read-only contexts only — no tap actions on these rows.</div>
+      <div class="density-card__rows">
+        <div class="density-row" style="padding: 7px 0;">
+          <div class="density-row__l">
+            <span class="density-row__ticker" style="font-size:13px;">FXAIX</span>
+            <span class="density-row__type" style="color:#00DC5A;">Fund</span>
+          </div>
+          <div class="density-row__r">
+            <span class="density-row__price" style="font-size:12px;">$22.4k</span>
+            <span class="density-row__pct" style="background: var(--green-bg); color: var(--green);">+11.0%</span>
+          </div>
+        </div>
+        <div class="density-row" style="padding: 7px 0;">
+          <div class="density-row__l">
+            <span class="density-row__ticker" style="font-size:13px;">FSPSX</span>
+            <span class="density-row__type" style="color:#00DC5A;">Fund</span>
+          </div>
+          <div class="density-row__r">
+            <span class="density-row__price" style="font-size:12px;">$8.1k</span>
+            <span class="density-row__pct" style="background: var(--green-bg); color: var(--green);">+6.2%</span>
+          </div>
+        </div>
+        <div class="density-row" style="padding: 7px 0;">
+          <div class="density-row__l">
+            <span class="density-row__ticker" style="font-size:13px;">FXNAX</span>
+            <span class="density-row__type" style="color:#00DC5A;">Fund</span>
+          </div>
+          <div class="density-row__r">
+            <span class="density-row__price" style="font-size:12px;">$3.9k</span>
+            <span class="density-row__pct" style="background: var(--red-bg); color: var(--red);">−1.1%</span>
+          </div>
+        </div>
+        <div class="density-row" style="padding: 7px 0;">
+          <div class="density-row__l">
+            <span class="density-row__ticker" style="font-size:13px;">BTC-USD</span>
+            <span class="density-row__type" style="color:#F7931A;">Crypto</span>
+          </div>
+          <div class="density-row__r">
+            <span class="density-row__price" style="font-size:12px;">$5.2k</span>
+            <span class="density-row__pct" style="background: var(--green-bg); color: var(--green);">+24.8%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="ds-h2">Elevation</h2>
+  <p class="ds-h2-sub">Shadows are <em>only</em> for true overlays — popovers, tab-bar drop, sheets. On-page
+    cards stack via surface tint + border, not shadow. This keeps the dark UI from looking smudgy.</p>
+
+  <div class="elev-row">
+    <div class="elev-card">
+      <div>
+        <div class="elev-card__name">Resting card</div>
+        <div class="elev-card__use">No shadow. Borders + surface tint do the lifting.</div>
+      </div>
+      <div class="elev-card__token">--shadow-card · 0 1px 0 rgba(255,255,255,0.02) inset</div>
+    </div>
+    <div class="elev-card pop">
+      <div>
+        <div class="elev-card__name">Popover</div>
+        <div class="elev-card__use">Account filter sheet, more-tabs overflow menu, modal cards.</div>
+      </div>
+      <div class="elev-card__token">--shadow-pop · 0 8px 32px rgba(0,0,0,0.4)</div>
+    </div>
+    <div class="elev-card bar">
+      <div>
+        <div class="elev-card__name">Bottom tab bar</div>
+        <div class="elev-card__use">Inverted shadow lifts off the page above the safe area.</div>
+      </div>
+      <div class="elev-card__token">--shadow-bar · 0 −4px 20px rgba(0,0,0,0.4)</div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

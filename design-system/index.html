@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Portfolio Command Center · Design System</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  body { min-height: 100vh; }
+  .index-hero {
+    padding: 80px 56px 64px;
+    max-width: 1280px; margin: 0 auto;
+    display: grid; grid-template-columns: 1.3fr 1fr; gap: 64px; align-items: end;
+    border-bottom: 1px solid var(--border);
+  }
+  .index-eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--text-dim); margin-bottom: 14px;
+  }
+  .index-title {
+    font-size: 64px; font-weight: 700; letter-spacing: -0.025em; line-height: 1;
+    background: linear-gradient(135deg, var(--text), var(--accent));
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .index-sub { font-size: 17px; color: var(--text-muted); line-height: 1.55; margin-top: 22px; max-width: 56ch; }
+  .index-meta { display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px; }
+  .index-meta__row {
+    display: flex; justify-content: space-between; gap: 18px;
+    font-family: var(--mono); font-size: 12px;
+    border-bottom: 1px solid var(--border); padding-bottom: 8px;
+  }
+  .index-meta__row span:first-child { color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  .index-meta__row span:last-child { color: var(--text-muted); }
+
+  .index-grid {
+    padding: 64px 56px 96px; max-width: 1280px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--r-xl);
+    padding: 32px; text-decoration: none; color: inherit;
+    display: flex; flex-direction: column; gap: 18px;
+    transition: border-color var(--t-fast), background var(--t-fast);
+    position: relative; min-height: 240px;
+  }
+  .card:hover { border-color: var(--border-active); background: var(--card-hover); }
+  .card__num {
+    font-family: var(--mono); font-size: 11px; color: var(--text-dim); letter-spacing: 0.06em;
+  }
+  .card__name {
+    font-size: 26px; font-weight: 700; letter-spacing: -0.01em; color: var(--text);
+  }
+  .card__lede { font-size: 13px; color: var(--text-muted); line-height: 1.55; max-width: 50ch; }
+  .card__meta { font-family: var(--mono); font-size: 11px; color: var(--text-dim); margin-top: auto; }
+  .card__arrow {
+    position: absolute; top: 32px; right: 32px;
+    width: 36px; height: 36px; border-radius: var(--r-pill);
+    border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted);
+  }
+  .card:hover .card__arrow { color: var(--accent); border-color: var(--accent); }
+
+  /* Vis row in each card */
+  .card__vis { height: 60px; display: flex; align-items: flex-end; gap: 6px; }
+  .vis-color > * { border-radius: var(--r-xs); flex: 1; }
+  .vis-type {
+    align-items: baseline; gap: 14px;
+    color: var(--text);
+  }
+  .vis-type .a { font-family: var(--sans); font-size: 36px; font-weight: 700; letter-spacing: -0.02em; }
+  .vis-type .b { font-family: var(--mono); font-size: 26px; font-weight: 600; color: var(--text-muted); }
+  .vis-spacing { height: 60px; display: flex; align-items: center; gap: 8px; }
+  .vis-spacing > * { background: var(--accent); border-radius: 2px; height: 8px; }
+  .vis-comp { display: flex; align-items: center; gap: 10px; height: 60px; }
+  .vis-comp__btn {
+    background: var(--accent); color:#fff; border-radius: var(--r-lg);
+    padding: 10px 16px; font-size: 13px; font-weight: 600;
+  }
+  .vis-comp__pill {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    padding: 3px 10px; border-radius: var(--r-pill);
+    background: var(--green-bg); color: var(--green);
+  }
+  .vis-comp__badge {
+    font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 700;
+    text-transform: uppercase; background:#636AFF22; color:#636AFF;
+  }
+  .vis-brand { display: flex; align-items: center; gap: 14px; height: 60px; }
+  .vis-brand img { width: 48px; height: 48px; border-radius: 12px; }
+  .vis-brand__name { font-size: 16px; font-weight: 700; }
+  .vis-brand__sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+</style>
+</head>
+<body>
+<header class="index-hero">
+  <div>
+    <div class="index-eyebrow">Design System · v1.0 · Apr 2026</div>
+    <h1 class="index-title">Portfolio<br>Command Center</h1>
+    <p class="index-sub">
+      A self-hosted portfolio tracker for one user. Dark, dense, mobile-first — designed
+      to load fast on a phone at the edge of cell service and stay legible at 6 a.m. before coffee.
+      This system documents the surface, type, color and components that the product is built from.
+    </p>
+  </div>
+  <div class="index-meta">
+    <div class="index-meta__row"><span>Faces</span><span>DM Sans · JetBrains Mono</span></div>
+    <div class="index-meta__row"><span>Theme</span><span>Dark only · #0B0B0F</span></div>
+    <div class="index-meta__row"><span>Accent</span><span>#636AFF</span></div>
+    <div class="index-meta__row"><span>Stack</span><span>React 19 · Vite · FastAPI</span></div>
+    <div class="index-meta__row"><span>Form factor</span><span>iOS PWA · 1200 max-w</span></div>
+  </div>
+</header>
+
+<main class="index-grid">
+  <a class="card" href="colors.html">
+    <span class="card__arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 5l7 7-7 7"/></svg></span>
+    <span class="card__num">01 · Foundations</span>
+    <span class="card__name">Color</span>
+    <p class="card__lede">Four-step surface stack, three account identities, gain &amp; loss treatments,
+      and a 12-color asset-class palette tuned for chart legibility.</p>
+    <div class="card__vis vis-color">
+      <div style="background:#0B0B0F"></div>
+      <div style="background:#16161D"></div>
+      <div style="background:#26263A"></div>
+      <div style="background:#636AFF"></div>
+      <div style="background:#A855F7"></div>
+      <div style="background:#F7931A"></div>
+      <div style="background:#00DC5A"></div>
+      <div style="background:#FF3B30"></div>
+      <div style="background:#FFB020"></div>
+      <div style="background:#00C9DB"></div>
+    </div>
+    <div class="card__meta">colors.html · 4 surfaces · 3 accounts · 12 asset classes</div>
+  </a>
+
+  <a class="card" href="typography.html">
+    <span class="card__arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 5l7 7-7 7"/></svg></span>
+    <span class="card__num">02 · Foundations</span>
+    <span class="card__name">Type</span>
+    <p class="card__lede">DM Sans for prose &amp; chrome. JetBrains Mono with tabular figures for every
+      number. Eight-step scale, the money-line pattern, and six composition rules.</p>
+    <div class="card__vis vis-type">
+      <span class="a">Aa</span>
+      <span class="b">$87,219.40</span>
+      <span style="font-family: var(--mono); font-size: 11px; color: var(--text-dim);">11–56 px</span>
+    </div>
+    <div class="card__meta">typography.html · 2 faces · 8 scale steps · tabular nums</div>
+  </a>
+
+  <a class="card" href="spacing.html">
+    <span class="card__arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 5l7 7-7 7"/></svg></span>
+    <span class="card__num">03 · Foundations</span>
+    <span class="card__name">Spacing &amp; Surfaces</span>
+    <p class="card__lede">Base-4 spacing, six radii, two density tiers. Card anatomy, the 24-padding
+      rule, and elevation reserved for true overlays only.</p>
+    <div class="card__vis vis-spacing">
+      <div style="width:4px"></div><div style="width:8px"></div><div style="width:12px"></div>
+      <div style="width:16px"></div><div style="width:24px"></div><div style="width:32px"></div>
+      <div style="width:56px"></div>
+      <span style="font-family: var(--mono); font-size: 11px; color: var(--text-dim); margin-left: auto;">4 · 8 · 12 · 16 · 24 · 32 · 56</span>
+    </div>
+    <div class="card__meta">spacing.html · base-4 scale · 6 radii · 3 elevations</div>
+  </a>
+
+  <a class="card" href="components.html">
+    <span class="card__arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 5l7 7-7 7"/></svg></span>
+    <span class="card__num">04 · System</span>
+    <span class="card__name">Components</span>
+    <p class="card__lede">Buttons, the 2×2 stat grid, the holding card primitive, badges &amp; pills,
+      banners, the drift bar, and the bottom tab bar. The repeated parts of the app.</p>
+    <div class="card__vis vis-comp">
+      <div class="vis-comp__btn">Add Holding</div>
+      <span class="vis-comp__badge">brokerage</span>
+      <span class="vis-comp__pill">+14.2%</span>
+    </div>
+    <div class="card__meta">components.html · buttons · stats · holding card · drift · tab bar</div>
+  </a>
+
+  <a class="card" href="brand.html" style="grid-column: span 2;">
+    <span class="card__arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 5l7 7-7 7"/></svg></span>
+    <span class="card__num">05 · Brand</span>
+    <span class="card__name">Brand &amp; Iconography</span>
+    <p class="card__lede">The app mark, lockup, three packaged icon sizes, the 14-glyph linear icon
+      library, and a do/don't voice guide. Direct, confident, never financial-bro.</p>
+    <div class="card__vis vis-brand">
+      <img src="../frontend/public/icon.svg" alt="">
+      <div>
+        <div class="vis-brand__name">Portfolio Command Center</div>
+        <div class="vis-brand__sub">Stock portfolio tracker · iOS PWA · Self-hosted</div>
+      </div>
+    </div>
+    <div class="card__meta">brand.html · app mark · 3 icon sizes · 14 glyphs · voice</div>
+  </a>
+</main>
+</body>
+</html>

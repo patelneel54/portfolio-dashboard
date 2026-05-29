@@ -1,0 +1,148 @@
+/* Portfolio Command Center — Design Tokens
+   ───────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  /* ── Surface palette (dark theme only) ── */
+  --bg:            #0B0B0F;  /* page */
+  --card:          #16161D;  /* primary surface */
+  --card-hover:    #1E1E27;
+  --elevated:      #26263A;  /* inputs, popovers */
+  --border:        #2A2A3A;
+  --border-active: #3D3D55;
+
+  /* ── Text ── */
+  --text:       #F0F0F5;
+  --text-muted: #8E8EA0;
+  --text-dim:   #5A5A6E;
+
+  /* ── Semantic / state ── */
+  --green:    #00DC5A;  --green-bg: #00DC5A18;  /* gain  */
+  --red:      #FF3B30;  --red-bg:   #FF3B3018;  /* loss  */
+  --amber:    #FFB020;                          /* warn  */
+
+  /* ── Account / brand ── */
+  --accent:   #636AFF;  /* primary CTA, brokerage */
+  --blue:     #636AFF;  /* brokerage */
+  --purple:   #A855F7;  /* 401k */
+  --crypto:   #F7931A;  /* crypto (bitcoin orange) */
+  --cyan:     #00C9DB;
+  --pink:     #F472B6;
+
+  /* ── Chart utility ── */
+  --chart-grid:       #1A1A28;
+  --chart-crosshair:  #4A4A60;
+
+  /* ── Type ── */
+  --sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* ── Radius ── */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 10px;
+  --r-xl: 16px;
+  --r-pill: 9999px;
+
+  /* ── Elevation ── */
+  --shadow-card: 0 1px 0 rgba(255,255,255,0.02) inset;
+  --shadow-pop:  0 8px 32px rgba(0,0,0,0.4);
+  --shadow-bar:  0 -4px 20px rgba(0,0,0,0.4);
+
+  /* ── Motion ── */
+  --t-fast: 0.15s;
+  --t-base: 0.3s;
+  --ease:   ease-out;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); color: var(--text); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+.mono, [data-mono] { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* Reusable atoms used across the system pages */
+.ds-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: 24px;
+}
+.ds-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+}
+.ds-section-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin: 0 0 14px;
+}
+
+/* Page chrome shared by every system page */
+.ds-page {
+  min-height: 100vh;
+  padding: 48px 56px 80px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+.ds-page__eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+.ds-page__title {
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--text), var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.ds-page__lede {
+  margin-top: 12px;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  max-width: 70ch;
+}
+.ds-page__rule {
+  margin: 32px 0 40px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--border) 0%, transparent 80%);
+  border: 0;
+}
+
+/* Subhead used inside a page */
+.ds-h2 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+.ds-h2-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+  max-width: 64ch;
+  line-height: 1.5;
+}
+
+/* Code chips */
+code, .ds-code {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  padding: 2px 6px;
+  border-radius: var(--r-xs);
+}

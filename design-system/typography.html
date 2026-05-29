@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Typography — Portfolio Command Center</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .type-row {
+    display: grid;
+    grid-template-columns: 200px 1fr 220px;
+    gap: 32px;
+    align-items: baseline;
+    padding: 22px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .type-row:first-of-type { border-top: 1px solid var(--border); }
+  .type-row__meta { display: flex; flex-direction: column; gap: 4px; }
+  .type-row__name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .type-row__use { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  .type-row__specs { font-family: var(--mono); font-size: 11px; color: var(--text-muted); line-height: 1.7; text-align: right; }
+  .type-row__sample { color: var(--text); }
+
+  .pair-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 28px; }
+  .pair-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--r-xl);
+    padding: 28px;
+  }
+  .pair-card__head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 22px;
+  }
+  .pair-card__face {
+    font-family: var(--sans); font-size: 26px; font-weight: 700; color: var(--text);
+  }
+  .pair-card__face.mono { font-family: var(--mono); }
+  .pair-card__role { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  .pair-card__alphabet { font-size: 16px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5; }
+  .pair-card__digits { font-size: 22px; color: var(--text); letter-spacing: 0.02em; }
+
+  .pair-card__weights { display: flex; flex-direction: column; gap: 10px; margin-top: 22px; }
+  .pair-card__weight { display: flex; align-items: baseline; gap: 14px; }
+  .pair-card__weight-label { font-family: var(--mono); font-size: 11px; color: var(--text-dim); width: 88px; }
+  .pair-card__weight-sample { font-size: 18px; color: var(--text); }
+
+  /* The "money line" — flagship type behavior */
+  .money-line {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--r-xl);
+    padding: 36px 32px;
+    display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: center;
+    margin-top: 22px;
+  }
+  .money-line__label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .money-line__value {
+    font-family: var(--sans); font-size: 56px; font-weight: 700; letter-spacing: -0.02em;
+    color: var(--text); line-height: 1;
+  }
+  .money-line__sub {
+    font-family: var(--mono); font-size: 13px; color: var(--text-muted); margin-top: 10px;
+  }
+  .money-line__delta {
+    font-family: var(--mono); font-size: 14px; font-weight: 600;
+    background: var(--green-bg); color: var(--green);
+    padding: 6px 14px; border-radius: var(--r-pill);
+  }
+
+  /* Hierarchy demonstration */
+  .hierarchy {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--r-xl);
+    padding: 32px; margin-top: 22px;
+    display: grid; grid-template-columns: 1.2fr 1fr; gap: 32px;
+  }
+  .hierarchy__example { padding-right: 24px; border-right: 1px solid var(--border); }
+  .hierarchy h3 {
+    font-size: 22px; font-weight: 700; letter-spacing: -0.005em;
+    background: linear-gradient(135deg, var(--text), var(--accent));
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 4px;
+  }
+  .hierarchy__date { font-size: 12px; color: var(--text-muted); margin-bottom: 18px; }
+  .hierarchy__stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .hierarchy__stat-value { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 3px; }
+  .hierarchy__stat-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  .rules-list { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+  .rules-list li {
+    display: grid; grid-template-columns: 24px 1fr; gap: 14px;
+    font-size: 13px; line-height: 1.55; color: var(--text-muted);
+  }
+  .rules-list li b { color: var(--text); font-weight: 600; }
+  .rules-list__num {
+    font-family: var(--mono); font-size: 11px; color: var(--accent);
+    background: var(--elevated); border: 1px solid var(--border);
+    width: 24px; height: 24px; border-radius: var(--r-xs);
+    display: flex; align-items: center; justify-content: center;
+  }
+</style>
+</head>
+<body>
+<main class="ds-page">
+  <div class="ds-page__eyebrow">Foundations · 02</div>
+  <h1 class="ds-page__title">Type</h1>
+  <p class="ds-page__lede">
+    Two faces, two jobs. <b style="color:var(--text)">DM Sans</b> handles UI chrome, headings, and prose.
+    <b style="color:var(--text)">JetBrains Mono</b> renders every number — prices, percentages, dates, share counts —
+    with tabular figures so columns align without effort.
+  </p>
+  <hr class="ds-page__rule">
+
+  <h2 class="ds-h2">Faces</h2>
+  <p class="ds-h2-sub">Both ship from Google Fonts. The split is deliberate: humans read prose in proportional
+    type but parse numbers faster in monospace, especially when scanning a holdings table.</p>
+
+  <div class="pair-grid">
+    <div class="pair-card">
+      <div class="pair-card__head">
+        <span class="pair-card__face">DM Sans</span>
+        <span class="pair-card__role">UI · Prose · Headings</span>
+      </div>
+      <div class="pair-card__alphabet">The quick brown fox jumps over the lazy dog</div>
+      <div class="pair-card__digits">A B C D E · 1 2 3 4 5 · &amp; ? !</div>
+      <div class="pair-card__weights">
+        <div class="pair-card__weight"><span class="pair-card__weight-label">400 Regular</span><span class="pair-card__weight-sample" style="font-weight:400">Total holdings updated</span></div>
+        <div class="pair-card__weight"><span class="pair-card__weight-label">500 Medium</span><span class="pair-card__weight-sample" style="font-weight:500">Total holdings updated</span></div>
+        <div class="pair-card__weight"><span class="pair-card__weight-label">600 Semibold</span><span class="pair-card__weight-sample" style="font-weight:600">Total holdings updated</span></div>
+        <div class="pair-card__weight"><span class="pair-card__weight-label">700 Bold</span><span class="pair-card__weight-sample" style="font-weight:700">Total holdings updated</span></div>
+      </div>
+    </div>
+
+    <div class="pair-card">
+      <div class="pair-card__head">
+        <span class="pair-card__face mono">JetBrains Mono</span>
+        <span class="pair-card__role">Numbers · Tickers · Code</span>
+      </div>
+      <div class="pair-card__alphabet" style="font-family:var(--mono)">$87,219.40 · +14.2% · 2,148.50 sh</div>
+      <div class="pair-card__digits" style="font-family:var(--mono); font-variant-numeric: tabular-nums;">
+        0 1 2 3 4 5 6 7 8 9
+      </div>
+      <div class="pair-card__weights">
+        <div class="pair-card__weight"><span class="pair-card__weight-label" style="font-family:var(--mono)">400 Regular</span><span class="pair-card__weight-sample" style="font-family:var(--mono); font-weight:400">VTI · $284.91 · +0.8%</span></div>
+        <div class="pair-card__weight"><span class="pair-card__weight-label" style="font-family:var(--mono)">500 Medium</span><span class="pair-card__weight-sample" style="font-family:var(--mono); font-weight:500">VTI · $284.91 · +0.8%</span></div>
+        <div class="pair-card__weight"><span class="pair-card__weight-label" style="font-family:var(--mono)">600 Semibold</span><span class="pair-card__weight-sample" style="font-family:var(--mono); font-weight:600">VTI · $284.91 · +0.8%</span></div>
+        <div class="pair-card__weight"><span class="pair-card__weight-label" style="font-family:var(--mono)">700 Bold</span><span class="pair-card__weight-sample" style="font-family:var(--mono); font-weight:700">VTI · $284.91 · +0.8%</span></div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="ds-page__rule">
+
+  <h2 class="ds-h2">Scale</h2>
+  <p class="ds-h2-sub">Mobile-first, with a single hero size reserved for the headline metric on each tab.
+    Sub-12 px is forbidden anywhere a finger can tap; it appears only as caption text under stats.</p>
+
+  <div class="type-row">
+    <div class="type-row__meta">
+      <span class="type-row__name">Hero stat</span>
+      <span class="type-row__use">Top-of-tab metric</span>
+    </div>
+    <div class="type-row__sample" style="font-size:56px; font-weight:700; letter-spacing:-0.02em; line-height:1;">$87,219</div>
+    <div class="type-row__specs">56 / 56<br>700 · −0.02em<br>tabular-nums</div>
+  </div>
+  <div class="type-row">
+    <div class="type-row__meta">
+      <span class="type-row__name">Page title</span>
+      <span class="type-row__use">Header gradient</span>
+    </div>
+    <div class="type-row__sample" style="font-size:22px; font-weight:700; letter-spacing:-0.01em; background: linear-gradient(135deg, var(--text), var(--accent)); -webkit-background-clip: text; background-clip:text; -webkit-text-fill-color: transparent;">
+      Portfolio Command Center
+    </div>
+    <div class="type-row__specs">22 / 28<br>700 · −0.01em<br>gradient fill</div>
+  </div>
+  <div class="type-row">
+    <div class="type-row__meta">
+      <span class="type-row__name">Stat value</span>
+      <span class="type-row__use">2×2 stat grid</span>
+    </div>
+    <div class="type-row__sample" style="font-size:28px; font-weight:700; font-variant-numeric: tabular-nums;">$87.2k</div>
+    <div class="type-row__specs">28 / 32<br>700 · 0<br>tabular-nums</div>
+  </div>
+  <div class="type-row">
+    <div class="type-row__meta">
+      <span class="type-row__name">Section title</span>
+      <span class="type-row__use">Card header</span>
+    </div>
+    <div class="type-row__sample" style="font-size:18px; font-weight:700; color:var(--text-muted);">Top Movers Today</div>
+    <div class="type-row__specs">18 / 24<br>700 · 0<br>--text-muted</div>
+  </div>
+  <div class="type-row">
+    <div class="type-row__meta">
+      <span class="type-row__name">Body / button</span>
+      <span class="type-row__use">CTA, ticker name</span>
+    </div>
+    <div class="type-row__sample" style="font-size:14px; font-weight:600;">Add Holdings</div>
+    <div class="type-row__specs">14 / 20<br>500-700<br>--sans</div>
+  </div>
+  <div class="type-row">
+    <div class="type-row__meta">
+      <span class="type-row__name">Numeric body</span>
+      <span class="type-row__use">Table cells, prices</span>
+    </div>
+    <div class="type-row__sample" style="font-family:var(--mono); font-size:13px; font-variant-numeric: tabular-nums;">VTI &nbsp; $284.91 &nbsp; 2,148.50 sh &nbsp; +0.8%</div>
+    <div class="type-row__specs">13 / 18<br>400-600 · mono<br>tabular-nums</div>
+  </div>
+  <div class="type-row">
+    <div class="type-row__meta">
+      <span class="type-row__name">Caption</span>
+      <span class="type-row__use">Sub-stat detail</span>
+    </div>
+    <div class="type-row__sample" style="font-size:12px; color: var(--text-muted);">Cost basis: $74,811 · 78 positions across 3 accounts</div>
+    <div class="type-row__specs">12 / 16<br>400-500<br>--text-muted</div>
+  </div>
+  <div class="type-row">
+    <div class="type-row__meta">
+      <span class="type-row__name">Label · ALL CAPS</span>
+      <span class="type-row__use">Metric labels, eyebrows</span>
+    </div>
+    <div class="type-row__sample" style="font-size:11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500;">Total Value</div>
+    <div class="type-row__specs">11 / 14<br>500 · +0.06em<br>uppercase</div>
+  </div>
+  <div class="type-row">
+    <div class="type-row__meta">
+      <span class="type-row__name">Pill / badge</span>
+      <span class="type-row__use">Account, gain pill</span>
+    </div>
+    <div class="type-row__sample">
+      <span style="font-family:var(--mono); font-size:11px; font-weight:600; padding:3px 10px; border-radius:var(--r-pill); background:var(--green-bg); color:var(--green);">+14.2%</span>
+      &nbsp;
+      <span style="font-size:9px; padding:2px 6px; border-radius:4px; font-weight:700; text-transform:uppercase; background:#636AFF22; color:#636AFF;">brokerage</span>
+    </div>
+    <div class="type-row__specs">9–11 / 14<br>600-700<br>tinted bg</div>
+  </div>
+
+  <hr class="ds-page__rule">
+
+  <h2 class="ds-h2">The Money Line</h2>
+  <p class="ds-h2-sub">A flagship pattern. Every tab opens with one. Sans hero number for shape, mono caption
+    for precision, tinted pill for direction. Negative space carries the meaning.</p>
+
+  <div class="money-line">
+    <div>
+      <div class="money-line__label">Total Portfolio · Brokerage</div>
+      <div class="money-line__value">$87,219<span style="color:var(--text-dim); font-weight:500">.40</span></div>
+      <div class="money-line__sub">COST $74,811 · UPDATED 2M AGO · 24 POSITIONS</div>
+    </div>
+    <div class="money-line__delta">▲ +$12,408 · +14.2%</div>
+  </div>
+
+  <hr class="ds-page__rule">
+
+  <h2 class="ds-h2">Composition Rules</h2>
+  <div class="hierarchy">
+    <div class="hierarchy__example">
+      <h3>Portfolio Command Center</h3>
+      <div class="hierarchy__date">Apr 27, 2026 · Updated just now</div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+        <div>
+          <div class="hierarchy__stat-label">Total Value</div>
+          <div class="hierarchy__stat-value" style="font-family:var(--sans);">$87.2k</div>
+          <div class="hierarchy__stat-sub">Cost: $74.8k</div>
+        </div>
+        <div>
+          <div class="hierarchy__stat-label">Total Gain</div>
+          <div class="hierarchy__stat-value" style="font-family:var(--sans); color: var(--green);">+$12.4k</div>
+          <div class="hierarchy__stat-sub">+14.2% return</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <ol class="rules-list">
+        <li><span class="rules-list__num">1</span><span><b>Numbers belong to mono.</b> Even when only the digit is mono and the dollar sign is sans — the row aligns.</span></li>
+        <li><span class="rules-list__num">2</span><span><b>Hero stats are sans.</b> Sans renders large weights with more shape; switch to mono only when comparing values column-to-column.</span></li>
+        <li><span class="rules-list__num">3</span><span><b>Labels are 11 px ALL CAPS</b> with <code>0.06em</code> tracking, in <code>--text-muted</code>. Never bigger.</span></li>
+        <li><span class="rules-list__num">4</span><span><b>Page title gets the gradient</b> — once per screen, never on body copy or stats.</span></li>
+        <li><span class="rules-list__num">5</span><span><b>Tabular nums always.</b> The <code>html</code> rule auto-applies to anything in JetBrains Mono.</span></li>
+        <li><span class="rules-list__num">6</span><span><b>No italics, no underlines</b> outside link contexts. Weight + color carry emphasis.</span></li>
+      </ol>
+    </div>
+  </div>
+</main>
+</body>
+</html>
