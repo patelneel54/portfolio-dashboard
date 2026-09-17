@@ -33,6 +33,8 @@ Production deploys go through Portainer on a UGREEN NAS — see `README.md` for 
 
 ## Architecture
 
+**Roadmap for agents:** `docs/redesign-roadmap.md` is the authoritative task list for the redesign (bug register, phased tasks with acceptance criteria and verify commands, status table). Pick the next unblocked task there and update its status row when done.
+
 ### Single-process FastAPI app serving its own SPA
 `backend/main.py` is the entrypoint. In production, the FastAPI app both serves `/api/*` and mounts `frontend/dist` as static files (`main.py:1063+`), with a catch-all that falls back to `index.html` for client-side routing. In dev, Vite proxies `/api` to port 8000 (`frontend/vite.config.js`), so the same code path works in both modes.
 
