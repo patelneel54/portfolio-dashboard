@@ -78,6 +78,21 @@ CREATE TABLE IF NOT EXISTS account_targets (
     target_allocation REAL NOT NULL DEFAULT 0,
     PRIMARY KEY (account_id, ticker)
 );
+
+CREATE TABLE IF NOT EXISTS valuation_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    holding_id INTEGER NOT NULL,
+    account_id INTEGER,
+    ticker TEXT NOT NULL,
+    quantity REAL NOT NULL,
+    price REAL NOT NULL,
+    value REAL NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(date, holding_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_valuation_snapshots_date ON valuation_snapshots(date);
 """
 
 DEFAULT_SETTINGS = {

@@ -1,7 +1,8 @@
 import asyncio
 import time
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from urllib.request import urlopen, Request
 import yfinance as yf
 import pandas as pd
@@ -58,12 +59,13 @@ async def refresh_all_prices():
     """Fetch current prices for all holdings and update price history."""
     async with get_db() as db:
         cursor = await db.execute(
-            "SELECT DISTINCT ticker, is_manual, benchmark_ticker, current_price FROM holdings"
+            "SELECT id, ticker, is_manual, benchmark_ticker, current_price, last_updated "
+            "FROM holdings"
         )
         rows = [dict(r) for r in await cursor.fetchall()]
 
     # Separate auto vs manual holdings
-    auto_tickers = [r["ticker"] for r in rows if not r["is_manual"]]
+    auto_tickers = list({r["ticker"] for r in rows if not r["is_manual"]})
     manual_with_bench = [r for r in rows if r["is_manual"] and r["benchmark_ticker"]]
 
     # Collect all tickers to fetch (auto + benchmarks for manual)
@@ -74,6 +76,7 @@ async def refresh_all_prices():
         return
 
     data = await asyncio.to_thread(_fetch_prices_sync, all_fetch_tickers)
+    today_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     async with get_db() as db:
         # Update auto holdings directly
@@ -86,21 +89,27 @@ async def refresh_all_prices():
                     (info["price"], info["previous_close"], ticker),
                 )
 
-        # Update manual holdings via benchmark proxy
+        # Update manual holdings via benchmark proxy — at most once per day.
+        # The proxy applies the benchmark's *day* move to the stored price, so
+        # every extra run in the same day (startup, cron, manual refresh) would
+        # compound the same move again. last_updated is UTC (SQLite datetime('now')).
         for manual in manual_with_bench:
             bench = manual["benchmark_ticker"]
-            if bench in data and manual["current_price"]:
-                bench_info = data[bench]
-                # Get the benchmark's previous close to compute % change
-                if bench_info.get("previous_close") and bench_info["previous_close"] > 0:
-                    pct_change = (bench_info["price"] - bench_info["previous_close"]) / bench_info["previous_close"]
-                    new_price = manual["current_price"] * (1 + pct_change)
-                    await db.execute(
-                        """UPDATE holdings
-                           SET current_price = ?, previous_close = ?, last_updated = datetime('now')
-                           WHERE ticker = ? AND is_manual = 1""",
-                        (round(new_price, 4), manual["current_price"], manual["ticker"]),
-                    )
+            if bench not in data or not manual["current_price"]:
+                continue
+            if (manual["last_updated"] or "")[:10] == today_utc:
+                continue
+            bench_info = data[bench]
+            # Get the benchmark's previous close to compute % change
+            if bench_info.get("previous_close") and bench_info["previous_close"] > 0:
+                pct_change = (bench_info["price"] - bench_info["previous_close"]) / bench_info["previous_close"]
+                new_price = manual["current_price"] * (1 + pct_change)
+                await db.execute(
+                    """UPDATE holdings
+                       SET current_price = ?, previous_close = ?, last_updated = datetime('now')
+                       WHERE id = ?""",
+                    (round(new_price, 4), manual["current_price"], manual["id"]),
+                )
 
         await db.commit()
 
@@ -110,6 +119,41 @@ async def refresh_all_prices():
             await fetch_price_history(ticker, period="1mo")
         except Exception:
             continue
+
+
+async def record_valuation_snapshots(snapshot_date: str | None = None) -> int:
+    """Persist one valuation row per holding for the given trading date.
+
+    Defaults to today's US/Eastern date. Re-running on the same date replaces
+    that date's rows (UNIQUE(date, holding_id)), so the 16:30 ET job always
+    overwrites whatever the startup refresh wrote earlier that day.
+    Returns the number of rows written.
+    """
+    if snapshot_date is None:
+        snapshot_date = datetime.now(ZoneInfo("US/Eastern")).strftime("%Y-%m-%d")
+    async with get_db() as db:
+        cursor = await db.execute(
+            "SELECT id, account_id, ticker, shares, current_price, avg_cost FROM holdings"
+        )
+        rows = [dict(r) for r in await cursor.fetchall()]
+        for h in rows:
+            price = h["current_price"] or h["avg_cost"] or 0
+            await db.execute(
+                """INSERT OR REPLACE INTO valuation_snapshots
+                   (date, holding_id, account_id, ticker, quantity, price, value)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    snapshot_date,
+                    h["id"],
+                    h["account_id"],
+                    h["ticker"],
+                    h["shares"],
+                    price,
+                    round(h["shares"] * price, 2),
+                ),
+            )
+        await db.commit()
+    return len(rows)
 
 
 def _fetch_prices_sync(tickers: list[str]) -> dict:

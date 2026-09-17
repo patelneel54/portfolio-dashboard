@@ -35,6 +35,7 @@ from webauthn_routes import (
 )
 from stock_service import (
     refresh_all_prices,
+    record_valuation_snapshots,
     fetch_price_history,
     get_technicals,
     get_price_history,
@@ -133,8 +134,12 @@ async def check_alerts():
 
 
 async def daily_refresh_and_check():
-    """Refresh prices then check alerts."""
+    """Refresh prices, record today's valuation snapshot, then check alerts."""
     await refresh_all_prices()
+    try:
+        await record_valuation_snapshots()
+    except Exception as e:
+        print(f"Snapshot write failed: {e}")  # never let history block alerts
     await check_alerts()
 
 
@@ -735,8 +740,7 @@ async def delete_holding(holding_id: int, _=Depends(require_auth)):
 
 @app.post("/api/holdings/refresh-prices")
 async def manual_refresh(_=Depends(require_auth)):
-    await refresh_all_prices()
-    await check_alerts()
+    await daily_refresh_and_check()
     return {"status": "ok"}
 
 
